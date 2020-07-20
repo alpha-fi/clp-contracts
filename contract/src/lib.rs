@@ -25,6 +25,7 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E5" - not enough shares to redeem.
 // "E6" - computed amount of near or reserve tokens is smaller than user required minimums for shares redeemption.
 // "E7" - computed amount of buying tokens is smaller than user required minimum.
+// "E8" - computed amount of selling tokens is bigger than user required maximum.
 
 // Pool structure
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -144,7 +145,7 @@ impl NearCLP {
 
         env::log(
             format!(
-                "Minting {} of shares for {} NEAR and {} reseve tokens",
+                "Minting {} of shares for {} NEAR and {} reserve tokens",
                 shares_minted, near_amount, token_amount
             )
             .as_bytes(),
@@ -165,7 +166,7 @@ impl NearCLP {
     }
 
     // Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    // `min_near` tokens and `min_tokens` of resesrve. Shares are note exchengable between
+    // `min_near` tokens and `min_tokens` of reserve. Shares are note exchengable between
     // different pools
     pub fn remove_liquidity(
         &mut self,
@@ -182,7 +183,7 @@ impl NearCLP {
 
         let near_amount = shares * p.near_bal / p.total_shares;
         let token_amount = shares * p.token_bal / p.total_shares;
-        assert!(near_amount > min_near && token_amount > min_tokens, "E6");
+        assert!(near_amount >= min_near && token_amount >= min_tokens, "E6");
 
         env::log(
             format!(
@@ -217,8 +218,8 @@ impl NearCLP {
 
     #[payable]
     pub fn swap_near_to_reserve_exact_in(&mut self, token: AccountId, min_tokens: Balance) {
-        self.sell_reserve_exact_in(
-            token,
+        self._swap_near_exact_in(
+            &token,
             env::attached_deposit(),
             min_tokens,
             env::predecessor_account_id(),
@@ -227,13 +228,81 @@ impl NearCLP {
 
     /// swaps NEAR tokens to reserve tokens and transfers reserve tokens to a given recipient.
     #[payable]
-    pub fn swap_near_to_reserve_exact_out_xfr(
+    pub fn swap_near_to_reserve_exact_in_xfr(
         &mut self,
         token: AccountId,
         min_tokens: Balance,
         recipient: AccountId,
     ) {
-        self.sell_reserve_exact_in(token, env::attached_deposit(), min_tokens, recipient);
+        self._swap_near_exact_in(&token, env::attached_deposit(), min_tokens, recipient);
+    }
+
+    #[payable]
+    pub fn swap_near_to_reserve_exact_out(&mut self, token: AccountId, tokens_out: Balance) {
+        let b = env::predecessor_account_id();
+        self._swap_near_exact_out(&token, tokens_out, env::attached_deposit(), b.clone(), b);
+    }
+
+    #[payable]
+    pub fn swap_near_to_reserve_exact_out_xfr(
+        &mut self,
+        token: AccountId,
+        tokens_out: Balance,
+        recipient: AccountId,
+    ) {
+        self._swap_near_exact_out(
+            &token,
+            tokens_out,
+            env::attached_deposit(),
+            env::predecessor_account_id(),
+            recipient,
+        );
+    }
+
+    #[payable]
+    pub fn swap_reserve_to_near_exact_in(
+        &mut self,
+        token: AccountId,
+        tokens_paid: Balance,
+        min_near: Balance,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_reserve_exact_in(&token, tokens_paid, min_near, b.clone(), b);
+    }
+
+    #[payable]
+    pub fn swap_reserve_to_near_exact_in_xfr(
+        &mut self,
+        token: AccountId,
+        tokens_paid: Balance,
+        min_near: Balance,
+        recipient: AccountId,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_reserve_exact_in(&token, tokens_paid, min_near, b, recipient);
+    }
+
+    #[payable]
+    pub fn swap_reserve_to_near_exact_out(
+        &mut self,
+        token: AccountId,
+        near_out: Balance,
+        max_tokens: Balance,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_reserve_exact_out(&token, near_out, max_tokens, b.clone(), b);
+    }
+
+    #[payable]
+    pub fn swap_reserve_to_near_exact_out_xfr(
+        &mut self,
+        token: AccountId,
+        near_out: Balance,
+        max_tokens: Balance,
+        recipient: AccountId,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_reserve_exact_out(&token, near_out, max_tokens, b, recipient);
     }
 }
 
@@ -264,7 +333,7 @@ impl NearCLP {
         return in_net * out_bal / (in_bal * 1000 + in_net);
     }
 
-    /// Calculates amout of tokens a user must sell to buy `out_amount` tokens, when a total
+    /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
     /// balance in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens
     /// respectively.
     fn calc_in_amount(&self, out_amount: Balance, in_bal: Balance, out_bal: Balance) -> Balance {
@@ -272,75 +341,75 @@ impl NearCLP {
         return (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
     }
 
-    fn sell_reserve(
+    fn _swap_near(
         &mut self,
         p: &mut Pool,
-        token: AccountId,
+        token: &AccountId,
         near: Balance,
         reserve: Balance,
         recipient: AccountId,
     ) {
         env::log(
             format!(
-                "User purchasing {} reserve tokens for {} NEAR",
+                "User purchased {} reserve tokens for {} NEAR",
                 reserve, near
             )
             .as_bytes(),
         );
         p.token_bal -= reserve;
         p.near_bal += near;
-        self.set_pool(&token, p);
-        nep21::ext_nep21::transfer(recipient, reserve.into(), &token, 0, SINGLE_CALL_GAS);
+        self.set_pool(token, p);
+        nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS);
     }
 
-    /// Pool sells reserve token for `near_paid` NEAR tokens. Assert that a user buys at least
+    /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
     /// `min_tokens` of reserve tokens.
-    fn sell_reserve_exact_in(
+    fn _swap_near_exact_in(
         &mut self,
-        token: AccountId,
+        token: &AccountId,
         near_paid: Balance,
         min_tokens: Balance,
         recipient: AccountId,
     ) {
         assert!(near_paid > 0 && min_tokens > 0, "E2");
         let mut p = self.get_pool(&token);
-        let tokens_sold = self.calc_out_amount(near_paid, p.near_bal - near_paid, p.token_bal);
-        assert!(tokens_sold >= min_tokens, "E7");
-        self.sell_reserve(&mut p, token, near_paid, tokens_sold, recipient);
+        let tokens_out = self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
+        assert!(tokens_out >= min_tokens, "E7");
+        self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
     }
 
-    /// Pool sells `token_bought` reserve token for NEAR tokens. Assert that a user pays no more
+    /// Pool sells `tokens_out` reserve token for NEAR tokens. Asserts that a user pays no more
     /// than `max_near_paid`.
-    fn sell_reserve_exact_out(
+    fn _swap_near_exact_out(
         &mut self,
-        token: AccountId,
-        tokens_bought: Balance,
+        token: &AccountId,
+        tokens_out: Balance,
         max_near_paid: Balance,
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(tokens_bought > 0 && max_near_paid > 0, "E2");
+        assert!(tokens_out > 0 && max_near_paid > 0, "E2");
         let mut p = self.get_pool(&token);
-        let near_to_pay =
-            self.calc_in_amount(tokens_bought, p.near_bal - max_near_paid, p.token_bal);
+        let near_to_pay = self.calc_in_amount(tokens_out, p.near_bal, p.token_bal);
         let near_refund = max_near_paid - near_to_pay;
         if near_refund > 0 {
             Promise::new(buyer).transfer(near_refund as u128);
         }
-        self.sell_reserve(&mut p, token, near_to_pay, tokens_bought, recipient);
+        self._swap_near(&mut p, token, near_to_pay, tokens_out, recipient);
     }
 
-    fn sell_near(
+    fn _swap_reserve(
         &mut self,
         p: &mut Pool,
-        token: AccountId,
+        token: &AccountId,
         near: Balance,
         reserve: Balance,
+        buyer: AccountId,
         recipient: AccountId,
     ) {
         env::log(
             format!(
-                "User purchasing {} NEAR tokens for {} reserve tokens",
+                "User purchased {} NEAR tokens for {} reserve tokens",
                 near, reserve
             )
             .as_bytes(),
@@ -348,7 +417,50 @@ impl NearCLP {
         p.token_bal += reserve;
         p.near_bal -= near;
         self.set_pool(&token, p);
-        Promise::new(recipient).transfer(near as u128);
+        Promise::new(recipient)
+            .transfer(near as u128)
+            .and(nep21::ext_nep21::transfer_from(
+                buyer,
+                env::current_account_id(),
+                reserve.into(),
+                token,
+                0,
+                SINGLE_CALL_GAS,
+            ));
+    }
+
+    /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
+    /// `min_near`.
+    fn _swap_reserve_exact_in(
+        &mut self,
+        token: &AccountId,
+        tokens_paid: Balance,
+        min_near: Balance,
+        buyer: AccountId,
+        recipient: AccountId,
+    ) {
+        assert!(tokens_paid > 0 && min_near > 0, "E2");
+        let mut p = self.get_pool(&token);
+        let near_out = self.calc_out_amount(tokens_paid, p.token_bal, p.near_bal);
+        assert!(near_out >= min_near, "E7");
+        self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
+    }
+
+    /// Pool sells `tokens_out` reserve tokens for NEAR tokens. Asserts that a user pays
+    /// no more than `max_near_paid`.
+    fn _swap_reserve_exact_out(
+        &mut self,
+        token: &AccountId,
+        near_out: Balance,
+        max_tokens_paid: Balance,
+        buyer: AccountId,
+        recipient: AccountId,
+    ) {
+        assert!(near_out > 0 && max_tokens_paid > 0, "E2");
+        let mut p = self.get_pool(&token);
+        let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
+        assert!(tokens_to_pay <= max_tokens_paid, "E8");
+        self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
 }
 

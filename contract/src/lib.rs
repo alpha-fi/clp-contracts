@@ -15,8 +15,6 @@ mod util;
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 
-// TODO - convert this to a factory
-
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -26,6 +24,7 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E6" - computed amount of near or reserve tokens is smaller than user required minimums for shares redeemption.
 // "E7" - computed amount of buying tokens is smaller than user required minimum.
 // "E8" - computed amount of selling tokens is bigger than user required maximum.
+// "E9" - assets (tokens) must be different in token to token swap.
 
 // Pool structure
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -282,7 +281,6 @@ impl NearCLP {
         self._swap_reserve_exact_in(&token, tokens_paid, min_near, b, recipient);
     }
 
-    #[payable]
     pub fn swap_reserve_to_near_exact_out(
         &mut self,
         token: AccountId,
@@ -293,7 +291,6 @@ impl NearCLP {
         self._swap_reserve_exact_out(&token, near_out, max_tokens, b.clone(), b);
     }
 
-    #[payable]
     pub fn swap_reserve_to_near_exact_out_xfr(
         &mut self,
         token: AccountId,
@@ -303,6 +300,60 @@ impl NearCLP {
     ) {
         let b = env::predecessor_account_id();
         self._swap_reserve_exact_out(&token, near_out, max_tokens, b, recipient);
+    }
+
+    pub fn swap_tokens_exact_in(
+        &mut self,
+        from: AccountId,
+        to: AccountId,
+        tokens_from: Balance,
+        min_tokens_to: Balance,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_tokens_exact_in(&from, &to, tokens_from, min_tokens_to, b.clone(), b);
+    }
+
+    pub fn swap_tokens_exact_in_xfr(
+        &mut self,
+        from: AccountId,
+        to: AccountId,
+        tokens_from: Balance,
+        min_tokens_to: Balance,
+        recipient: AccountId,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_tokens_exact_in(&from, &to, tokens_from, min_tokens_to, b, recipient);
+    }
+
+    pub fn swap_tokens_exact_out(
+        &mut self,
+        from: AccountId,
+        to: AccountId,
+        tokens_from: Balance,
+        max_tokens_to: Balance,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_tokens_exact_out(&from, &to, tokens_from, max_tokens_to, b.clone(), b);
+    }
+
+    pub fn swap_tokens_exact_out_xfr(
+        &mut self,
+        from: AccountId,
+        to: AccountId,
+        tokens_from: Balance,
+        max_tokens_to: Balance,
+        recipient: AccountId,
+    ) {
+        let b = env::predecessor_account_id();
+        self._swap_tokens_exact_out(&from, &to, tokens_from, max_tokens_to, b, recipient);
+    }
+
+    /// Calculates the amount of tokens user will recieve when swapping `near_paid` for `token`
+    /// assets
+    pub fn price_near_to_token_in(&self, token: AccountId, near_paid: Balance) -> Balance {
+        assert!(near_paid > 0, "E2");
+        let p = self.get_pool(&token);
+        return self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
     }
 }
 
@@ -461,6 +512,108 @@ impl NearCLP {
         let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
         assert!(tokens_to_pay <= max_tokens_paid, "E8");
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
+    }
+
+    fn _swap_tokens(
+        &mut self,
+        p1: &mut Pool,
+        p2: &mut Pool,
+        token1: &AccountId,
+        token2: &AccountId,
+        token1_in: Balance,
+        token2_out: Balance,
+        near_swap: Balance,
+        buyer: AccountId,
+        recipient: AccountId,
+    ) {
+        env::log(
+            format!(
+                "User purchased {} {} tokens for {} {} tokens",
+                token2_out, token2, token1_in, token1
+            )
+            .as_bytes(),
+        );
+        p1.token_bal += token1_in;
+        p1.near_bal -= near_swap;
+        p2.token_bal -= token2_out;
+        p2.near_bal += near_swap;
+        self.set_pool(&token1, p1);
+        self.set_pool(&token2, p1);
+        nep21::ext_nep21::transfer_from(
+            buyer,
+            env::current_account_id(),
+            token1_in.into(),
+            token1,
+            0,
+            SINGLE_CALL_GAS,
+        )
+        .and(nep21::ext_nep21::transfer(
+            recipient,
+            token2_out.into(),
+            token2,
+            0,
+            SINGLE_CALL_GAS,
+        ));
+    }
+
+    fn _swap_tokens_exact_in(
+        &mut self,
+        token1: &AccountId,
+        token2: &AccountId,
+        tokens1_paid: Balance,
+        min_tokens2: Balance,
+        buyer: AccountId,
+        recipient: AccountId,
+    ) {
+        assert!(tokens1_paid > 0 && min_tokens2 > 0, "E2");
+        assert_ne!(token1, token2, "E9");
+        let mut p1 = self.get_pool(&token1);
+        let mut p2 = self.get_pool(&token2);
+        let near_swap = self.calc_out_amount(tokens1_paid, p1.token_bal, p1.near_bal);
+        let tokens2_out = self.calc_out_amount(near_swap, p2.near_bal, p2.token_bal);
+        assert!(tokens2_out >= min_tokens2, "E7");
+
+        self._swap_tokens(
+            &mut p1,
+            &mut p2,
+            token1,
+            token2,
+            tokens1_paid,
+            tokens2_out,
+            near_swap,
+            buyer,
+            recipient,
+        )
+    }
+
+    fn _swap_tokens_exact_out(
+        &mut self,
+        token1: &AccountId,
+        token2: &AccountId,
+        tokens2_out: Balance,
+        max_tokens1_paid: Balance,
+        buyer: AccountId,
+        recipient: AccountId,
+    ) {
+        assert!(tokens2_out > 0 && max_tokens1_paid > 0, "E2");
+        assert_ne!(token1, token2, "E9");
+        let mut p1 = self.get_pool(&token1);
+        let mut p2 = self.get_pool(&token2);
+        let near_swap = self.calc_in_amount(tokens2_out, p2.token_bal, p2.near_bal);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p1.near_bal, p1.token_bal);
+        assert!(tokens1_to_pay >= max_tokens1_paid, "E8");
+
+        self._swap_tokens(
+            &mut p1,
+            &mut p2,
+            token1,
+            token2,
+            tokens1_to_pay,
+            tokens2_out,
+            near_swap,
+            buyer,
+            recipient,
+        )
     }
 }
 

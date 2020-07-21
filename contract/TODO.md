@@ -2,6 +2,7 @@
 
 + add non integer type for balances to calculate expected amount. We can do it using [decimate](https://crates.io/crates/decimate)
 + add weights
++ change fees calculation for token 2 token swaps
 
 ### Economics
 

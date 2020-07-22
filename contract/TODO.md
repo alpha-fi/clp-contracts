@@ -1,3 +1,8 @@
+### Checks
+
++ For token->* swaps, validate token allowance before updating the contract state.
+  Currently the exception in the `transfer_from` function is not handled.
+
 ### CLP related functionality
 
 + add non integer type for balances to calculate expected amount. We can do it using [decimate](https://crates.io/crates/decimate)

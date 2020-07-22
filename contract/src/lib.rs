@@ -215,6 +215,9 @@ impl NearCLP {
     CLP market functions
     **********************/
 
+    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Caller attaches near tokens he wants to swap to the transacion under a condition of
+    /// receving at least `min_tokens`.
     #[payable]
     pub fn swap_near_to_reserve_exact_in(&mut self, token: AccountId, min_tokens: Balance) {
         self._swap_near_exact_in(
@@ -225,7 +228,8 @@ impl NearCLP {
         );
     }
 
-    /// swaps NEAR tokens to reserve tokens and transfers reserve tokens to a given recipient.
+    /// Same as `swap_near_to_reserve_exact_in`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     #[payable]
     pub fn swap_near_to_reserve_exact_in_xfr(
         &mut self,
@@ -236,12 +240,18 @@ impl NearCLP {
         self._swap_near_exact_in(&token, env::attached_deposit(), min_tokens, recipient);
     }
 
+    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Caller attaches maximum amount of NEAR he is willing to swap to receive `tokens_out`
+    /// of `token` wants to swap to the transacion. Surplus of NEAR tokens will be returned.
+    /// Transaction will panic if the caller doesn't attach enough NEAR tokens.
     #[payable]
     pub fn swap_near_to_reserve_exact_out(&mut self, token: AccountId, tokens_out: Balance) {
         let b = env::predecessor_account_id();
         self._swap_near_exact_out(&token, tokens_out, env::attached_deposit(), b.clone(), b);
     }
 
+    /// Same as `swap_near_to_reserve_exact_out`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     #[payable]
     pub fn swap_near_to_reserve_exact_out_xfr(
         &mut self,
@@ -258,6 +268,11 @@ impl NearCLP {
         );
     }
 
+    /// Swaps `token` to NEAR and transfers NEAR to the caller under a condition of
+    /// receving at least `min_near`.
+    /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
+    /// for this contract.
+    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_reserve_to_near_exact_in(
         &mut self,
@@ -269,6 +284,8 @@ impl NearCLP {
         self._swap_reserve_exact_in(&token, tokens_paid, min_near, b.clone(), b);
     }
 
+    /// Same as `swap_reserve_to_near_exact_in`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     #[payable]
     pub fn swap_reserve_to_near_exact_in_xfr(
         &mut self,
@@ -281,6 +298,12 @@ impl NearCLP {
         self._swap_reserve_exact_in(&token, tokens_paid, min_near, b, recipient);
     }
 
+    /// Swaps `token` to NEAR and transfers NEAR to the caller.
+    /// Caller defines the amount of NEAR he wants to receive under a condition of not spending
+    /// more than `max_tokens` of `token`.
+    /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
+    /// for this contract.
+    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     pub fn swap_reserve_to_near_exact_out(
         &mut self,
         token: AccountId,
@@ -291,6 +314,8 @@ impl NearCLP {
         self._swap_reserve_exact_out(&token, near_out, max_tokens, b.clone(), b);
     }
 
+    /// Same as `swap_reserve_to_near_exact_out`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     pub fn swap_reserve_to_near_exact_out_xfr(
         &mut self,
         token: AccountId,
@@ -302,6 +327,12 @@ impl NearCLP {
         self._swap_reserve_exact_out(&token, near_out, max_tokens, b, recipient);
     }
 
+    /// Swaps two different tokens.
+    /// Caller defines the amount of tokens he wants to swap under a condition of
+    /// receving at least `min_tokens_to`.
+    /// Preceeding to this transaction, caller has to create sufficient allowance of
+    /// `token_from` for this contract.
+    //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     pub fn swap_tokens_exact_in(
         &mut self,
         from: AccountId,
@@ -313,6 +344,8 @@ impl NearCLP {
         self._swap_tokens_exact_in(&from, &to, tokens_from, min_tokens_to, b.clone(), b);
     }
 
+    /// Same as `swap_tokens_exact_in`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     pub fn swap_tokens_exact_in_xfr(
         &mut self,
         from: AccountId,
@@ -325,35 +358,95 @@ impl NearCLP {
         self._swap_tokens_exact_in(&from, &to, tokens_from, min_tokens_to, b, recipient);
     }
 
+    /// Swaps two different tokens.
+    /// Caller defines the amount of tokens he wants to receive under a of not spending
+    /// more than `max_tokens_from`.
+    /// Preceeding to this transaction, caller has to create sufficient allowance of
+    /// `token_from` for this contract.
+    //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     pub fn swap_tokens_exact_out(
         &mut self,
         from: AccountId,
         to: AccountId,
-        tokens_from: Balance,
-        max_tokens_to: Balance,
+        tokens_to: Balance,
+        max_tokens_from: Balance,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_tokens_exact_out(&from, &to, tokens_from, max_tokens_to, b.clone(), b);
+        self._swap_tokens_exact_out(&from, &to, tokens_to, max_tokens_from, b.clone(), b);
     }
 
+    /// Same as `swap_tokens_exact_out`, but user additionly specifies the `recipient`
+    /// who will receive the tokens after the swap.
     pub fn swap_tokens_exact_out_xfr(
         &mut self,
         from: AccountId,
         to: AccountId,
-        tokens_from: Balance,
-        max_tokens_to: Balance,
+        tokens_to: Balance,
+        max_tokens_from: Balance,
         recipient: AccountId,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_tokens_exact_out(&from, &to, tokens_from, max_tokens_to, b, recipient);
+        self._swap_tokens_exact_out(&from, &to, tokens_to, max_tokens_from, b, recipient);
     }
 
-    /// Calculates the amount of tokens user will recieve when swapping `near_paid` for `token`
+    /// Calculates amount of tokens user will recieve when swapping `near_in` for `token`
     /// assets
-    pub fn price_near_to_token_in(&self, token: AccountId, near_paid: Balance) -> Balance {
-        assert!(near_paid > 0, "E2");
+    pub fn price_near_to_token_in(&self, token: AccountId, near_in: Balance) -> Balance {
+        assert!(near_in > 0, "E2");
         let p = self.get_pool(&token);
-        return self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
+        return self.calc_out_amount(near_in, p.near_bal, p.token_bal);
+    }
+
+    /// Calculates amount of NEAR user will need to swap if he wants to receive
+    /// `tokens_out` of `tokens`
+    pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: Balance) -> Balance {
+        assert!(tokens_out > 0, "E2");
+        let p = self.get_pool(&token);
+        return self.calc_in_amount(tokens_out, p.token_bal, p.near_bal);
+    }
+
+    /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
+    pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: Balance) -> Balance {
+        assert!(tokens_in > 0, "E2");
+        let p = self.get_pool(&token);
+        return self.calc_out_amount(tokens_in, p.token_bal, p.near_bal);
+    }
+
+    /// Calculates amount of tokens user will need to swap if he wants to receive
+    /// `tokens_out` of `tokens`
+    pub fn price_token_to_near_out(&self, token: AccountId, near_out: Balance) -> Balance {
+        assert!(near_out > 0, "E2");
+        let p = self.get_pool(&token);
+        return self.calc_in_amount(near_out, p.near_bal, p.token_bal);
+    }
+
+    /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
+    pub fn price_token_to_token_in(
+        &self,
+        from: AccountId,
+        to: AccountId,
+        tokens_in: Balance,
+    ) -> Balance {
+        assert!(tokens_in > 0, "E2");
+        let p1 = self.get_pool(&from);
+        let p2 = self.get_pool(&to);
+        let (_, tokens_out) = self._price_swap_tokens_in(&p1, &p2, tokens_in);
+        return tokens_out;
+    }
+
+    /// Calculates amount of tokens `from` user will need to swap if he wants to receive
+    /// `tokens_out` of tokens `to`
+    pub fn price_token_to_token_out(
+        &self,
+        from: AccountId,
+        to: AccountId,
+        tokens_out: Balance,
+    ) -> Balance {
+        assert!(tokens_out > 0, "E2");
+        let p1 = self.get_pool(&from);
+        let p2 = self.get_pool(&to);
+        let (_, tokens_in) = self._price_swap_tokens_out(&p1, &p2, tokens_out);
+        return tokens_in;
     }
 }
 
@@ -442,6 +535,7 @@ impl NearCLP {
         assert!(tokens_out > 0 && max_near_paid > 0, "E2");
         let mut p = self.get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.near_bal, p.token_bal);
+        // panics if near_to_pay > max_near_paid
         let near_refund = max_near_paid - near_to_pay;
         if near_refund > 0 {
             Promise::new(buyer).transfer(near_refund as u128);
@@ -556,6 +650,28 @@ impl NearCLP {
         ));
     }
 
+    fn _price_swap_tokens_in(
+        &self,
+        p_in: &Pool,
+        p_out: &Pool,
+        tokens_in: Balance,
+    ) -> (Balance, Balance) {
+        let near_swap = self.calc_out_amount(tokens_in, p_in.token_bal, p_in.near_bal);
+        let tokens2_out = self.calc_out_amount(near_swap, p_out.near_bal, p_out.token_bal);
+        return (near_swap, tokens2_out);
+    }
+
+    fn _price_swap_tokens_out(
+        &self,
+        p_in: &Pool,
+        p_out: &Pool,
+        tokens_out: Balance,
+    ) -> (Balance, Balance) {
+        let near_swap = self.calc_in_amount(tokens_out, p_out.token_bal, p_out.near_bal);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.near_bal, p_in.token_bal);
+        return (near_swap, tokens1_to_pay);
+    }
+
     fn _swap_tokens_exact_in(
         &mut self,
         token1: &AccountId,
@@ -569,8 +685,7 @@ impl NearCLP {
         assert_ne!(token1, token2, "E9");
         let mut p1 = self.get_pool(&token1);
         let mut p2 = self.get_pool(&token2);
-        let near_swap = self.calc_out_amount(tokens1_paid, p1.token_bal, p1.near_bal);
-        let tokens2_out = self.calc_out_amount(near_swap, p2.near_bal, p2.token_bal);
+        let (near_swap, tokens2_out) = self._price_swap_tokens_in(&p1, &p2, tokens1_paid);
         assert!(tokens2_out >= min_tokens2, "E7");
 
         self._swap_tokens(
@@ -599,8 +714,7 @@ impl NearCLP {
         assert_ne!(token1, token2, "E9");
         let mut p1 = self.get_pool(&token1);
         let mut p2 = self.get_pool(&token2);
-        let near_swap = self.calc_in_amount(tokens2_out, p2.token_bal, p2.near_bal);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p1.near_bal, p1.token_bal);
+        let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
         assert!(tokens1_to_pay >= max_tokens1_paid, "E8");
 
         self._swap_tokens(
@@ -625,12 +739,27 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
+    struct Accounts {
+        current: AccountId,
+        signer: AccountId,
+        predecessor: AccountId,
+    }
+
+    fn get_accounts() -> Accounts {
+        return Accounts {
+            current: "current_near".to_string(),
+            signer: "signer_near".to_string(),
+            predecessor: "pre_near".to_string(),
+        };
+    }
+
     fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
+        let accounts = get_accounts();
         VMContext {
-            current_account_id: "alice_near".to_string(),
-            signer_account_id: "bob_near".to_string(),
+            current_account_id: accounts.current,
+            signer_account_id: accounts.signer,
             signer_account_pk: vec![0, 1, 2],
-            predecessor_account_id: "carol_near".to_string(),
+            predecessor_account_id: accounts.predecessor,
             input,
             block_index: 0,
             block_timestamp: 0,
@@ -647,16 +776,15 @@ mod tests {
     }
 
     #[test]
-    fn set_get_message() {
+    fn change_owner() {
+        let accounts = get_accounts();
         let context = get_context(vec![], false);
         testing_env!(context);
-        let mut contract = Welcome::default();
-        contract.set_greeting("howdy".to_string());
-        assert_eq!(
-            "howdy".to_string(),
-            contract.get_greeting("bob_near".to_string())
-        );
+        let mut contract = NearCLP::default();
+        // contract.set_greeting("howdy".to_string());
+        assert_eq!(contract.owner, accounts.signer);
     }
+
 
     #[test]
     fn get_nonexistent_message() {

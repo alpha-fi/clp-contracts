@@ -734,21 +734,20 @@ impl NearCLP {
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
-    /*
     use super::*;
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
     struct Accounts {
         current: AccountId,
-        signer: AccountId,
+        owner: AccountId,
         predecessor: AccountId,
     }
 
     fn get_accounts() -> Accounts {
         return Accounts {
-            current: "current_near".to_string(),
-            signer: "signer_near".to_string(),
+            current: "clp_near".to_string(),
+            owner: "owner_near".to_string(),
             predecessor: "pre_near".to_string(),
         };
     }
@@ -757,7 +756,7 @@ mod tests {
         let accounts = get_accounts();
         VMContext {
             current_account_id: accounts.current,
-            signer_account_id: accounts.signer,
+            signer_account_id: accounts.owner,
             signer_account_pk: vec![0, 1, 2],
             predecessor_account_id: accounts.predecessor,
             input,
@@ -775,26 +774,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn change_owner() {
+    fn init() -> (Accounts, VMContext, NearCLP) {
         let accounts = get_accounts();
         let context = get_context(vec![], false);
-        testing_env!(context);
-        let mut contract = NearCLP::default();
-        // contract.set_greeting("howdy".to_string());
-        assert_eq!(contract.owner, accounts.signer);
+        testing_env!(context.clone());
+        let contract = NearCLP::new(accounts.owner.clone());
+        return (accounts, context, contract);
     }
-
 
     #[test]
-    fn get_nonexistent_message() {
-        let context = get_context(vec![], true);
-        testing_env!(context);
-        let contract = Welcome::default();
-        assert_eq!(
-            "Hello".to_string(),
-            contract.get_greeting("francis.near".to_string())
-        );
+    fn change_owner() {
+        let (accounts, mut ctx, mut c) = init();
+
+        assert_eq!(&c.owner, &accounts.owner);
+
+        ctx.predecessor_account_id = accounts.owner;
+        testing_env!(ctx.clone());
+        let owner2 = "new_owner_near".to_string();
+        c.change_owner(owner2.clone());
+        assert_eq!(c.owner, owner2);
     }
-    */
+
+    #[test]
+    #[should_panic(expected = "Only current owner can change owner")]
+    fn change_owner_other_account() {
+        let (_, _, mut c) = init();
+        let owner2 = "new_owner_near".to_string();
+        c.change_owner(owner2.clone());
+    }
 }

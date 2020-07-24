@@ -114,11 +114,13 @@ impl NearCLP {
     **********************/
 
     pub fn create_pool(&mut self, token: AccountId) {
-        if let Some(_) = self.pools.get(&token) {
-            env::panic(b"E1");
-        }
-        self.pools
-            .insert(&token, &Pool::new(token.as_bytes().to_vec()));
+        println!("Adding pool {}", token);
+        assert!(
+            self.pools
+                .insert(&token, &Pool::new(token.as_bytes().to_vec()))
+                .is_none(),
+            "E1"
+        );
     }
 
     /// Extracts public information about a `token` CLP.
@@ -759,10 +761,16 @@ impl NearCLP {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
+mod token;
+
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(test)]
 mod tests {
     use super::*;
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
+
+    use token::FungibleToken;
 
     struct Accounts {
         current: AccountId,
@@ -775,6 +783,7 @@ mod tests {
     struct Ctx {
         accounts: Accounts,
         vm: VMContext,
+        token_supply: u128,
     }
 
     impl Ctx {
@@ -811,7 +820,18 @@ mod tests {
             return Self {
                 accounts: accounts,
                 vm: vm,
+                token_supply: 1_000_000_000_000_000u128,
             };
+        }
+
+        pub fn set_vmc_with_token_op_deposit(&mut self) {
+            let storage_price_per_byte: Balance = 100000000000000000000;
+            self.set_vmc_deposit(storage_price_per_byte * 670); // arbitrary number easy to recoginze)
+        }
+
+        pub fn set_vmc_deposit(&mut self, attached_deposit: Balance) {
+            self.vm.attached_deposit = attached_deposit;
+            testing_env!(self.vm.clone());
         }
 
         // pub fn accounts_c(self) -> Accounts {
@@ -825,6 +845,14 @@ mod tests {
         let contract = NearCLP::new(ctx.accounts.owner.clone());
         return (ctx, contract);
     }
+
+    // TODO - fix this test.
+    // #[test]
+    // #[should_panic]
+    // fn test_new_twice_fails() {
+    //     let (ctx, _c) = init();
+    //     NearCLP::new(ctx.accounts.current);
+    // }
 
     #[test]
     fn change_owner() {
@@ -848,10 +876,16 @@ mod tests {
     }
 
     #[test]
-    fn anyone_create_pool() {
+    #[should_panic(expected = "E1")]
+    fn crate_twice_same_pool_fails() {
         let (ctx, mut c) = init();
         c.create_pool(ctx.accounts.token1.clone());
-        match c.pool_info(ctx.accounts.token1) {
+        c.create_pool(ctx.accounts.token1);
+    }
+
+    fn check_and_create_pool(c: &mut NearCLP, token: AccountId) {
+        c.create_pool(token.clone());
+        match c.pool_info(token) {
             None => panic!("Pool for {} token is expected"),
             Some(p) => assert_eq!(
                 p,
@@ -862,5 +896,44 @@ mod tests {
                 }
             ),
         }
+    }
+
+    #[test]
+    fn anyone_create_pool() {
+        let (ctx, mut c) = init();
+        check_and_create_pool(&mut c, ctx.accounts.token1);
+        check_and_create_pool(&mut c, ctx.accounts.token2);
+    }
+
+    #[test]
+    fn add_liquidity_happy_path() {
+        let (mut ctx, mut c) = init();
+        let a = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+        let mut token1 = FungibleToken::new(a.clone(), ctx.token_supply.into());
+        check_and_create_pool(&mut c, t.clone());
+        assert_eq!(
+            token1.total_supply, ctx.token_supply,
+            "Token total supply must be correct"
+        );
+
+        let near_deposit = 3000u128;
+        let token_deposit = 500u128;
+        println!(
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Attached deposit: {}",
+            near_deposit
+        );
+        ctx.set_vmc_with_token_op_deposit();
+        token1.inc_allowance(t.clone(), token_deposit.into());
+
+        ctx.set_vmc_deposit(near_deposit);
+        c.add_liquidity(t.clone(), ctx.token_supply, ctx.token_supply);
+
+        let p = c.pool_info(t.clone()).expect("Pool should exist");
+        assert_eq!(p.near_bal, near_deposit, "Near balance should be correct");
+        assert_eq!(
+            p.token_bal, token_deposit,
+            "Token balance should be correct"
+        );
     }
 }

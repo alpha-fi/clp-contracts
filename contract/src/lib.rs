@@ -26,14 +26,22 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E8" - computed amount of selling tokens is bigger than user required maximum.
 // "E9" - assets (tokens) must be different in token to token swap.
 
-// Pool structure
+/// PoolInfo is a helper structure to extract public data from a Pool
+#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize)]
+pub struct PoolInfo {
+    near_bal: Balance,
+    token_bal: Balance,
+    /// total amount of participation shares. Shares are represented using the same amount of
+    /// tailing decimals as the NEAR token, which is 24
+    total_shares: Balance,
+}
+
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Pool {
     near_bal: Balance,
     token_bal: Balance,
     shares: UnorderedMap<AccountId, Balance>,
-    /// total amount of participation shares. Shares are represented using the same amount of
-    /// tailing decimals as the NEAR token, which is 24
+    /// check `PoolInfo.total_shares`
     total_shares: Balance,
 }
 
@@ -44,6 +52,16 @@ impl Pool {
             token_bal: 0,
             shares: UnorderedMap::new(pool_id),
             total_shares: 0,
+        }
+    }
+}
+
+impl Into<PoolInfo> for Pool {
+    fn into(self) -> PoolInfo {
+        PoolInfo {
+            near_bal: self.near_bal,
+            token_bal: self.token_bal,
+            total_shares: self.total_shares,
         }
     }
 }
@@ -101,6 +119,14 @@ impl NearCLP {
         }
         self.pools
             .insert(&token, &Pool::new(token.as_bytes().to_vec()));
+    }
+
+    /// Extracts public information about a `token` CLP.
+    pub fn pool_info(&self, token: AccountId) -> Option<PoolInfo> {
+        match self.pools.get(&token) {
+            None => None,
+            Some(p) => Some(p.into()),
+        }
     }
 
     // Increases Near and the Reserve token liquidity.
@@ -742,54 +768,72 @@ mod tests {
         current: AccountId,
         owner: AccountId,
         predecessor: AccountId,
+        token1: AccountId,
+        token2: AccountId,
     }
 
-    fn get_accounts() -> Accounts {
-        return Accounts {
-            current: "clp_near".to_string(),
-            owner: "owner_near".to_string(),
-            predecessor: "pre_near".to_string(),
-        };
+    struct Ctx {
+        accounts: Accounts,
+        vm: VMContext,
     }
 
-    fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
-        let accounts = get_accounts();
-        VMContext {
-            current_account_id: accounts.current,
-            signer_account_id: accounts.owner,
-            signer_account_pk: vec![0, 1, 2],
-            predecessor_account_id: accounts.predecessor,
-            input,
-            block_index: 0,
-            block_timestamp: 0,
-            account_balance: 0,
-            account_locked_balance: 0,
-            storage_usage: 0,
-            attached_deposit: 0,
-            prepaid_gas: 10u64.pow(18),
-            random_seed: vec![0, 1, 2],
-            is_view,
-            output_data_receivers: vec![],
-            epoch_height: 19,
+    impl Ctx {
+        fn create_accounts() -> Accounts {
+            return Accounts {
+                current: "clp_near".to_string(),
+                owner: "owner_near".to_string(),
+                predecessor: "pre_near".to_string(),
+                token1: "token1_near".to_string(),
+                token2: "token2_near".to_string(),
+            };
         }
+
+        pub fn new(input: Vec<u8>, is_view: bool) -> Self {
+            let accounts = Ctx::create_accounts();
+            let vm = VMContext {
+                current_account_id: accounts.current.clone(),
+                signer_account_id: accounts.owner.clone(),
+                signer_account_pk: vec![0, 1, 2],
+                predecessor_account_id: accounts.predecessor.clone(),
+                input,
+                block_index: 0,
+                block_timestamp: 0,
+                account_balance: 0,
+                account_locked_balance: 0,
+                storage_usage: 0,
+                attached_deposit: 0,
+                prepaid_gas: 10u64.pow(18),
+                random_seed: vec![0, 1, 2],
+                is_view,
+                output_data_receivers: vec![],
+                epoch_height: 19,
+            };
+            return Self {
+                accounts: accounts,
+                vm: vm,
+            };
+        }
+
+        // pub fn accounts_c(self) -> Accounts {
+        //     return self.accounts;
+        // }
     }
 
-    fn init() -> (Accounts, VMContext, NearCLP) {
-        let accounts = get_accounts();
-        let context = get_context(vec![], false);
-        testing_env!(context.clone());
-        let contract = NearCLP::new(accounts.owner.clone());
-        return (accounts, context, contract);
+    fn init() -> (Ctx, NearCLP) {
+        let ctx = Ctx::new(vec![], false);
+        testing_env!(ctx.vm.clone());
+        let contract = NearCLP::new(ctx.accounts.owner.clone());
+        return (ctx, contract);
     }
 
     #[test]
     fn change_owner() {
-        let (accounts, mut ctx, mut c) = init();
+        let (mut ctx, mut c) = init();
 
-        assert_eq!(&c.owner, &accounts.owner);
+        assert_eq!(&c.owner, &ctx.accounts.owner);
 
-        ctx.predecessor_account_id = accounts.owner;
-        testing_env!(ctx.clone());
+        ctx.vm.predecessor_account_id = ctx.accounts.owner;
+        testing_env!(ctx.vm);
         let owner2 = "new_owner_near".to_string();
         c.change_owner(owner2.clone());
         assert_eq!(c.owner, owner2);
@@ -798,8 +842,25 @@ mod tests {
     #[test]
     #[should_panic(expected = "Only current owner can change owner")]
     fn change_owner_other_account() {
-        let (_, _, mut c) = init();
+        let (_, mut c) = init();
         let owner2 = "new_owner_near".to_string();
         c.change_owner(owner2.clone());
+    }
+
+    #[test]
+    fn anyone_create_pool() {
+        let (ctx, mut c) = init();
+        c.create_pool(ctx.accounts.token1.clone());
+        match c.pool_info(ctx.accounts.token1) {
+            None => panic!("Pool for {} token is expected"),
+            Some(p) => assert_eq!(
+                p,
+                PoolInfo {
+                    near_bal: 0,
+                    token_bal: 0,
+                    total_shares: 0
+                }
+            ),
+        }
     }
 }

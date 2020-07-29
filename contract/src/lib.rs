@@ -1,4 +1,3 @@
-// use borsh::{BorshDeserialize, BorshSerialize};
 // use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
@@ -36,6 +35,18 @@ pub struct PoolInfo {
     total_shares: Balance,
 }
 
+use std::fmt;
+
+impl fmt::Display for PoolInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return write!(
+            f,
+            "({}, {}, {})",
+            self.near_bal, self.token_bal, self.total_shares
+        );
+    }
+}
+
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Pool {
     near_bal: Balance,
@@ -54,10 +65,8 @@ impl Pool {
             total_shares: 0,
         }
     }
-}
 
-impl Into<PoolInfo> for Pool {
-    fn into(self) -> PoolInfo {
+    pub fn pool_info(&self) -> PoolInfo {
         PoolInfo {
             near_bal: self.near_bal,
             token_bal: self.token_bal,
@@ -114,7 +123,6 @@ impl NearCLP {
     **********************/
 
     pub fn create_pool(&mut self, token: AccountId) {
-        println!("Adding pool {}", token);
         assert!(
             self.pools
                 .insert(&token, &Pool::new(token.as_bytes().to_vec()))
@@ -127,7 +135,7 @@ impl NearCLP {
     pub fn pool_info(&self, token: AccountId) -> Option<PoolInfo> {
         match self.pools.get(&token) {
             None => None,
-            Some(p) => Some(p.into()),
+            Some(p) => Some(p.pool_info()),
         }
     }
 
@@ -177,6 +185,12 @@ impl NearCLP {
             )
             .as_bytes(),
         );
+        println!(
+            ">> in contract, attached deposit: {}, PoolInfo: {}",
+            near_amount,
+            p.pool_info()
+        );
+
         self.set_pool(&token, &p);
         nep21::ext_nep21::transfer_from(
             caller,
@@ -919,10 +933,6 @@ mod tests {
 
         let near_deposit = 3000u128;
         let token_deposit = 500u128;
-        println!(
-            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Attached deposit: {}",
-            near_deposit
-        );
         ctx.set_vmc_with_token_op_deposit();
         token1.inc_allowance(t.clone(), token_deposit.into());
 
@@ -936,4 +946,7 @@ mod tests {
             "Token balance should be correct"
         );
     }
+
+    // TODO tests
+    // + add liquidity with max_balance > allowance
 }

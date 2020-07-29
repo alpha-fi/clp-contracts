@@ -1,5 +1,6 @@
 {
-  "name": "myapp",
+  "name": "near-clp",
+  "description": "NEAR Continious Liquidity Pool UI",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "scripts": {
@@ -22,12 +23,10 @@
     "gh-pages": "^3.0.0",
     "jest": "~26.1.0",
     "jest-environment-node": "^26.1.0",
-    "near-shell": "^0.24.6",
     "nodemon": "^2.0.4",
     "parcel-bundler": "^1.12.4",
     "react-test-renderer": "^16.13.1",
-    "env-cmd": "^10.1.0",
-    "shelljs": "^0.8.4"
+    "env-cmd": "^10.1.0"
   },
   "dependencies": {
     "near-api-js": "~0.27.0",

@@ -20,6 +20,7 @@ const { networkId } = getConfig(process.env.NODE_ENV || 'development')
 import NavigationBar from "./components/NavigationBar";
 import SwapTab from "./components/SwapTab";
 import PoolTab from "./components/PoolTab";
+import CurrencySelectionModal from "./components/CurrencySelectionModal";
 
 import styled from "@emotion/styled";
 const Wrapper = styled("div")`
@@ -88,6 +89,7 @@ export default function App() {
           </Col>
         </Row>
       </Container>
+      <CurrencySelectionModal/>
       {showNotification && <Notification />}
     </Wrapper>
   )

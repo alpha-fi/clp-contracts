@@ -62,7 +62,7 @@ const GlobalStateProvider = ( { children } ) => {
           logoUrl: state.pool.input1.logoUrl,
           tokenIndex: state.pool.input1.tokenIndex
         }, input2: state.pool.input2 }};
-      case 'SET_INPUT1_AMOUNT':
+      case 'SET_INPUT2_AMOUNT':
         return { ...state, pool: { input2: { 
           amount: action.payload.amount,
           symbol: state.pool.input2.symbol,

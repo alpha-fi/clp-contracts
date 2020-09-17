@@ -11,6 +11,18 @@ import Button from 'react-bootstrap/Button';
 
 import { BsCaretDownFill } from "react-icons/bs";
 
+import styled from "@emotion/styled";
+const Theme = styled("div")`
+  background: ${props => props.theme.cardBackground};
+  color: ${props => props.theme.body};
+  border: 1px solid ${props => props.theme.cardBorder};
+  border-radius: 20px;
+  box-shadow: 0px 1px 0px 0px ${props => props.theme.cardShadow};
+  .form-control:focus {
+    color: ${props => props.theme.textInput};
+  }
+`;
+
 // props.name must be one of:
 // (Swap): from, to
 // (Pool): input1, input2
@@ -82,14 +94,14 @@ export default function PriceInputCard(props) {
 
   return (
     <>
-      <div className="border py-3 bg-white" style={{ 'borderRadius': '15px', 'boxShadow': '0px 1px 0px 0px rgba(9,30,66,.25)' }}>
+      <Theme className="py-2">
         <label className="ml-4 mb-1 mt-0">
           <small className="text-secondary">{props.label}</small>
         </label>
         <Row className="px-2">
           <Col>
             <div className="input-group-lg mb-1">
-              <input type="text" className="form-control border-0" placeholder="0.0" onChange={handleAmountChange}/>
+              <input type="text" className="form-control border-0 bg-transparent" placeholder="0.0" onChange={handleAmountChange}/>
             </div>
           </Col>
           <Col xl={3} lg={5} sm={6} className="d-flex flex-row-reverse align-items-center mr-2">
@@ -103,7 +115,7 @@ export default function PriceInputCard(props) {
             </Button>
           </Col>
         </Row>
-      </div>
+      </Theme>
     </>
   );
 }

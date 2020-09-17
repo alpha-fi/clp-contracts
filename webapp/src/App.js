@@ -31,6 +31,18 @@ const Wrapper = styled("div")`
   .navbar-brand, .nav-link {
     color: ${props => props.theme.body} !important;
   }
+  .btn-warning {
+    background-color: ${props => props.theme.buttonColor} !important;
+  }
+  .nav-link.active {
+    text-shadow: 1px 1px ${props => props.theme.navTabShadow};
+  }
+  .navbar-toggler {
+    background-color: ${props => props.theme.navbarToggler};
+  }
+  .btn-warning:focus {
+    box-shadow: 0 0 0 .2rem ${props => props.theme.buttonBorder} !important;
+  }
 `;
 
 export default function App() {

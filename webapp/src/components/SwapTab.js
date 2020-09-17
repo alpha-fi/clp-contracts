@@ -14,10 +14,10 @@ export default function SwapTab() {
 
   return (
     <>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>SWAP</small></p>
       <PriceInputCard
         label="From"
         name="from"
-        amount={globalState.state.swap.from.amount}
         logoUrl={globalState.state.swap.from.logoUrl}
         symbol={globalState.state.swap.from.symbol}
         tokenIndex={globalState.state.swap.from.tokenIndex}
@@ -28,7 +28,6 @@ export default function SwapTab() {
       <PriceInputCard
         label="To"
         name="to"
-        amount={globalState.state.swap.to.amount}
         logoUrl={globalState.state.swap.to.logoUrl}
         symbol={globalState.state.swap.to.symbol}
         tokenIndex={globalState.state.swap.to.tokenIndex}

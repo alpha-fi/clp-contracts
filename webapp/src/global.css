@@ -8,10 +8,6 @@ button {
   border-radius: 10px !important;
 }
 
-.navbar-collapse {
-  padding-left: 20px;
-}
-
 .rainbow {
   background: linear-gradient(to right, orange , yellow, green, cyan, blue, violet);
   -webkit-background-clip: text;
@@ -28,7 +24,6 @@ button {
 
 .nav-link.active {
   background: transparent !important;
-  text-shadow: 1px 1px lightgrey;
   font-weight: 700;
 }
 
@@ -38,7 +33,6 @@ button {
 }
 
 .btn-warning {
-  background-color: #F0EC74 !important;
   border: none !important;
 }
 

@@ -8,16 +8,21 @@ import Button from 'react-bootstrap/Button';
 
 import { BsPlus } from "react-icons/bs";
 
+import styled from "@emotion/styled";
+const Hr = styled("hr")`
+  border-top: 1px solid ${props => props.theme.hr}
+`;
+
 export default function PoolTab() {
 
   const globalState = useContext(GlobalContext);
 
   return (
     <>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOL</small></p>
       <PriceInputCard
         label="Input"
         name="input1"
-        amount={globalState.state.pool.input1.amount}
         logoUrl={globalState.state.pool.input1.logoUrl}
         symbol={globalState.state.pool.input1.symbol}
         tokenIndex={globalState.state.pool.input1.tokenIndex}
@@ -28,13 +33,15 @@ export default function PoolTab() {
       <PriceInputCard
         label="Input"
         name="input2"
-        amount={globalState.state.pool.input2.amount}
         logoUrl={globalState.state.pool.input2.logoUrl}
         symbol={globalState.state.pool.input2.symbol}
         tokenIndex={globalState.state.pool.input2.tokenIndex}
       />
       <br/>
       <Button variant="warning" block disabled>Add Liquidity</Button>
+      <Hr/>
+      <p className="text-center text-secondary my-1" style={{ 'letterSpacing': '3px' }}><small>MY LIQUIDITY</small></p>
+      <p className="text-center text-secondary my-5" style={{ 'fontSize': '70%' }}><i>You are not providing any liquidity.</i></p>
     </>
   );
 }

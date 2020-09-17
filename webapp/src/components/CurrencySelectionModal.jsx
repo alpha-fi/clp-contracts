@@ -1,22 +1,21 @@
-import React, { useState, useContext } from "react";
+import React, { useContext } from "react";
+
+import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 
 import Modal from 'react-bootstrap/Modal';
 import Table from 'react-bootstrap/Table';
 import Button from 'react-bootstrap/Button';
 
 import { GlobalContext } from "../contexts/GlobalContext";
-
 import { TokenListContext } from "../contexts/TokenListContext";
 
+import { CurrencyTable } from "./CurrencyTable";
+
 import styled from "@emotion/styled";
-const PointerHover = styled("tr")`
-  &:hover {
-    cursor: pointer;
-  }
-`;
 const LimitedHeightTable = styled("div")`
-  height: 60vh;
-  overflow: scroll;
+  height: 50vh;
+  overflow-y: scroll;
+  overflow-x: none;
 `;
 
 export default function CurrencySelectionModal(props) {
@@ -31,69 +30,6 @@ export default function CurrencySelectionModal(props) {
   const toggleModalVisibility = () => {
     dispatch({ type: 'TOGGLE_CURRENCY_SELECTION_MODAL' });
   };
-
-  function handleCurrencyChange(newTokenIndex) {
-    
-    let infuraPrefix = "https://ipfs.infura.io:5001/api/v0/cat/";
-    let newImageUrl = "";
-    let hasImage = tokenListState.state.tokenList.tokens[newTokenIndex].hasOwnProperty("logoURI");
-    let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol
-
-    // Only display image if it exists
-    if (hasImage) {
-      newImageUrl = tokenListState.state.tokenList.tokens[newTokenIndex].logoURI;
-      // Use Infura prefix if using IPFS
-      if (newImageUrl.startsWith("ipfs://")) {
-        newImageUrl = infuraPrefix + newImageUrl.substring(7);
-      }
-    }
-
-    // Find correct input to update
-    switch (globalState.state.currencySelectionModal.selectedInput) {
-      case 'from':
-        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
-        });
-        break;
-      case 'to':
-        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
-        });
-        break;
-      case 'input1':
-        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
-        });
-        break;
-      case 'input2':
-        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
-        });
-    }
-    
-  }
-
-  // Parses token list to table
-  let tokensTable = "";
-  if (tokenListState.state.tokenList.tokens[0].logoURI.startsWith('ipfs://')) {
-    // Token image is served over IPFS
-    tokensTable = tokenListState.state.tokenList.tokens.map((token, index) =>
-      <PointerHover key={index} onClick={() => handleCurrencyChange(index)}>
-        <td><img src={"https://ipfs.infura.io:5001/api/v0/cat/" + token.logoURI.substring(7)} width="25px" /></td>
-        <td>{token.symbol}</td>
-        <td>{token.name}</td>
-      </PointerHover>
-    );
-  } else {
-    // Token image is served over HTTP/HTTPS
-    tokensTable = tokenListState.state.tokenList.tokens.map((token, index) =>
-      <PointerHover key={index} onClick={() => handleCurrencyChange(index)}>
-        <td><img src={token.logoURI} width="25px" /></td>
-        <td>{token.symbol}</td>
-        <td>{token.name}</td>
-      </PointerHover>
-    );
-  }
 
   return (
     <>
@@ -112,7 +48,7 @@ export default function CurrencySelectionModal(props) {
                 </tr>
               </thead>
               <tbody>
-                {tokensTable}
+                <CurrencyTable/>
               </tbody>
             </Table>
           </LimitedHeightTable>

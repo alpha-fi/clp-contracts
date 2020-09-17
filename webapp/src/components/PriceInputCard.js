@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 
+import findCurrencyLogoUrl from "../services/find-currency-logo-url";
+
 import { GlobalContext } from "../contexts/GlobalContext";
 import { TokenListContext } from "../contexts/TokenListContext";
 
@@ -24,39 +26,30 @@ export default function PriceInputCard(props) {
   // Handles updating button view and global state
   function handleTokenButtonUpdate() {
 
-    let infuraPrefix = "https://ipfs.infura.io:5001/api/v0/cat/";
-    let imageUrl = "";
-    let hasImage = tokenListState.state.tokenList.tokens[props.tokenIndex].hasOwnProperty("logoURI");
-
-    // Only load image URL if it exists
-    if (hasImage) {
-      imageUrl = tokenListState.state.tokenList.tokens[props.tokenIndex].logoURI;
-      // Use Infura prefix if using IPFS
-      if (imageUrl.startsWith("ipfs://")) {
-        imageUrl = infuraPrefix + imageUrl.substring(7);
-      }
-    }
+    // Find URL of token logo
+    let newImageUrl = findCurrencyLogoUrl(props.tokenIndex, tokenListState.state.tokenList);
+    let newSymbol = tokenListState.state.tokenList.tokens[props.tokenIndex].symbol;
 
     // Update image and symbol of selected currency
     switch (props.name) {
       case 'from':
         dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
-          payload: { logoUrl: imageUrl, symbol: tokenListState.state.tokenList.tokens[props.tokenIndex].symbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol }
         });
         break;
       case 'to':
         dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', 
-          payload: { logoUrl: imageUrl, symbol: tokenListState.state.tokenList.tokens[props.tokenIndex].symbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol }
         });
         break;
       case 'input1':
         dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
-          payload: { logoUrl: imageUrl, symbol: tokenListState.state.tokenList.tokens[props.tokenIndex].symbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol }
         });
         break;
       case 'input2':
         dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
-          payload: { logoUrl: imageUrl, symbol: tokenListState.state.tokenList.tokens[props.tokenIndex].symbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol }
         });
     }
   }

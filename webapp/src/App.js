@@ -20,6 +20,7 @@ const { networkId } = getConfig(process.env.NODE_ENV || 'development')
 import NavigationBar from "./components/NavigationBar";
 import SwapTab from "./components/SwapTab";
 import PoolTab from "./components/PoolTab";
+import CurrencySelectionModal from "./components/CurrencySelectionModal";
 
 import styled from "@emotion/styled";
 const Wrapper = styled("div")`
@@ -29,6 +30,18 @@ const Wrapper = styled("div")`
   color: ${props => props.theme.body};
   .navbar-brand, .nav-link {
     color: ${props => props.theme.body} !important;
+  }
+  .btn-warning {
+    background-color: ${props => props.theme.buttonColor} !important;
+  }
+  .nav-link.active {
+    text-shadow: 1px 1px ${props => props.theme.navTabShadow};
+  }
+  .navbar-toggler {
+    background-color: ${props => props.theme.navbarToggler};
+  }
+  .btn-warning:focus {
+    box-shadow: 0 0 0 .2rem ${props => props.theme.buttonBorder} !important;
   }
 `;
 
@@ -88,6 +101,7 @@ export default function App() {
           </Col>
         </Row>
       </Container>
+      <CurrencySelectionModal/>
       {showNotification && <Notification />}
     </Wrapper>
   )

@@ -14,19 +14,16 @@ import { FaGithub } from "react-icons/fa";
 export default function NavigationBar() {
   return (
     <>
-      <Navbar expand="sm" className="py-2">
+      <Navbar className="py-2">
         <Container>
-          <Navbar.Brand href="" className="pr-4 pl-3"><strong>NEARswap</strong></Navbar.Brand>
-          <Navbar.Toggle aria-controls="pages" />
-          <Navbar.Collapse id="pages">
-            <Nav className="mr-auto">
-              <Nav.Link><AboutButton/></Nav.Link>
-              <Nav.Link><ThemeSwitcher/></Nav.Link>
-              <Nav.Link href="https://github.com/robert-zaremba/near-clp"><FaGithub/></Nav.Link>
-            </Nav>
-            <WalletConnectionButtons/>
-            <SettingsButton/>
-          </Navbar.Collapse>
+          <Navbar.Brand href="" className="pl-3"><strong>NEARswap</strong></Navbar.Brand>
+          <Nav className="mr-auto">
+            <Nav.Link><AboutButton/></Nav.Link>
+            <Nav.Link><ThemeSwitcher/></Nav.Link>
+            <Nav.Link href="https://github.com/robert-zaremba/near-clp"><FaGithub/></Nav.Link>
+          </Nav>
+          <WalletConnectionButtons/>
+          <SettingsButton/>
         </Container>
       </Navbar>
     </>

@@ -10,6 +10,7 @@ import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 
 import { BsCaretDownFill } from "react-icons/bs";
+import { FaEthereum } from "react-icons/fa";
 
 import styled from "@emotion/styled";
 const Theme = styled("div")`
@@ -94,7 +95,7 @@ export default function PriceInputCard(props) {
 
   return (
     <>
-      <Theme className="py-2">
+      <Theme className="py-3">
         <label className="ml-4 mb-1 mt-0">
           <small className="text-secondary">{props.label}</small>
         </label>
@@ -105,14 +106,20 @@ export default function PriceInputCard(props) {
             </div>
           </Col>
           <Col xl={3} lg={5} sm={6} className="d-flex flex-row-reverse align-items-center mr-2">
-            <Button size="sm" variant="outline-secondary" onClick={handleCurrencySelectionModal}>
-              <span className="align-middle">
+            <div className="text-right">
+              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModal}>
                 <img src={props.logoUrl} width="15px" className="align-middle pb-1" />
                 {' '}{props.symbol}
                 {' '}
                 <BsCaretDownFill/>
-              </span>
-            </Button>
+              </Button>
+              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap', 'fontSize': '60%'}}>
+                <FaEthereum/>{' '}
+                ERC-20
+                {' '}
+                <BsCaretDownFill/>
+              </Button>
+            </div>
           </Col>
         </Row>
       </Theme>

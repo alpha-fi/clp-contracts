@@ -1,6 +1,7 @@
 // use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
+use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
 //use std::collections::UnorderedMap;
 
@@ -26,7 +27,7 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E9" - assets (tokens) must be different in token to token swap.
 
 /// PoolInfo is a helper structure to extract public data from a Pool
-#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
     near_bal: Balance,
     token_bal: Balance,
@@ -76,12 +77,18 @@ impl Pool {
 }
 
 #[near_bindgen]
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct NearCLP {
     pub fee_dst: AccountId,
     pub owner: AccountId,
     // we are using unordered map because it allows to iterate over the pools
     pools: UnorderedMap<AccountId, Pool>,
+}
+
+impl Default for NearCLP {
+    fn default() -> Self {
+        panic!("Fun token should be initialized before usage")
+    }
 }
 
 #[near_bindgen]

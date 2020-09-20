@@ -24,7 +24,7 @@ const initialState = {
     },
     input2: {
       amount: "",
-      symbol: "",
+      symbol: "NEAR",
       logoUrl: "",
       tokenIndex: 1
     }
@@ -93,7 +93,7 @@ const GlobalStateProvider = ( { children } ) => {
       case 'UPDATE_INPUT2_SELECTED_CURRENCY':
         return { ...state, pool: { input2: {
           amount: state.pool.input2.amount,
-          symbol: action.payload.symbol,
+          symbol: state.pool.input2.symbol,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.pool.input2.tokenIndex
         }, input1: state.pool.input1 }, currencySelectionModal: { isVisible: false }};

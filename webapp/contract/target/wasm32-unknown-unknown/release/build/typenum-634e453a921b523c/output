@@ -1,2 +1,0 @@
-cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/jameson/Documents/nearswap-interface/contract/target/wasm32-unknown-unknown/release/build/typenum-634e453a921b523c/out/consts.rs
-cargo:rustc-env=TYPENUM_BUILD_OP=/home/jameson/Documents/nearswap-interface/contract/target/wasm32-unknown-unknown/release/build/typenum-634e453a921b523c/out/op.rs

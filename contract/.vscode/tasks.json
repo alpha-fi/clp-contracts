@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command":". test.sh",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "test",
+			"label": "cargo +nightly test"
+		}
+	]
+}

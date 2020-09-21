@@ -21,7 +21,7 @@ export default function PoolTab() {
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOL</small></p>
       <PriceInputCard
-        label="Input"
+        label="Token amount"
         name="input1"
         logoUrl={globalState.state.pool.input1.logoUrl}
         symbol={globalState.state.pool.input1.symbol}
@@ -31,7 +31,7 @@ export default function PoolTab() {
         <BsPlus/>
       </div>
       <PriceInputCard
-        label="Input"
+        label="NEAR amount"
         name="input2"
         logoUrl={globalState.state.pool.input2.logoUrl}
         symbol={globalState.state.pool.input2.symbol}

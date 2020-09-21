@@ -26,7 +26,7 @@ pub fn ntoy(near_amount: Balance) -> Balance {
 lazy_static::lazy_static! {
     static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("./res/near_clp.wasm").as_ref();
     static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("./res/nep21_basic.wasm").as_ref();
-    static ref COUNTER_BYTES: &'static [u8] = include_bytes!("res/counter.wasm").as_ref();
+    //static ref COUNTER_BYTES: &'static [u8] = include_bytes!("res/counter.wasm").as_ref();
 }
 
 type TxResult = Result<ExecutionOutcome, ExecutionOutcome>;
@@ -188,13 +188,14 @@ pub fn deploy_and_init_counter(
     let tx = account
         .new_tx(runtime, account.clone().account_id)
         .transfer(ntoy(50))
-        .deploy_contract(COUNTER_BYTES.to_vec())
+        //.deploy_contract(COUNTER_BYTES.to_vec())
         .function_call(init_method.into(), vec!(), gas.into(), 0)
         .sign(&account.signer);
     let res = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();
     outcome_into_result(res)
 }
+
 
 
 pub fn deploy_simulation_example(
@@ -206,7 +207,7 @@ pub fn deploy_simulation_example(
     let tx = account
         .new_tx(runtime, account.clone().account_id)
         .transfer(ntoy(50))
-        .deploy_contract(SIMULATION_EXAMPLE_BYTES.to_vec())
+        .deploy_contract(CLP_WASM_BYTES.to_vec())
         .function_call(init_method.into(), vec!(), gas.into(), 0)
         .sign(&account.signer);
     let res = runtime.resolve_tx(tx).unwrap();

@@ -1,5 +1,5 @@
 mod utils;
-use crate::utils::{ExternalUser, MAX_GAS, FUNGIBLE_TOKEN_ACCOUNT_ID, COUNTER_ACCOUNT_ID, SIMULATION_ACCOUNT_ID, ALICE_ACCOUNT_ID};
+use crate::utils::{ExternalUser, MAX_GAS, FUNGIBLE_TOKEN_ACCOUNT_ID, COUNTER_ACCOUNT_ID, CLP_ACCOUNT_ID, ALICE_ACCOUNT_ID};
 use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
@@ -160,7 +160,7 @@ fn deploy_all_check_allowance_before_increment() {
     // Now increment again
     execution_outcome = near_call(&mut r,
         &alice,
-        &SIMULATION_ACCOUNT_ID,
+        &CLP_ACCOUNT_ID,
         "cross_contract_increment",
         &serde_json::to_vec(&json!({
             "counter_account": COUNTER_ACCOUNT_ID,
@@ -209,12 +209,12 @@ fn deploy_all_check_allowance_before_increment() {
 
     let will_error = near_call(&mut r,
         &simulation_example,
-        &SIMULATION_ACCOUNT_ID,
+        &CLP_ACCOUNT_ID,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
             "token_account": FUNGIBLE_TOKEN_ACCOUNT_ID,
-            "recipient_account": SIMULATION_ACCOUNT_ID,
+            "recipient_account": CLP_ACCOUNT_ID,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -247,7 +247,7 @@ fn deploy_all_check_allowance_before_increment() {
         &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
         "get_balance",
         &json!({
-            "owner_id": SIMULATION_ACCOUNT_ID
+            "owner_id": CLP_ACCOUNT_ID
         })
     );
 
@@ -260,7 +260,7 @@ fn deploy_all_check_allowance_before_increment() {
               &FUNGIBLE_TOKEN_ACCOUNT_ID,
               "transfer",
               &serde_json::to_vec(&json!({
-            "new_owner_id": SIMULATION_ACCOUNT_ID,
+            "new_owner_id": CLP_ACCOUNT_ID,
             "amount": "50",
         }),).unwrap(),
               U64(MAX_GAS),
@@ -271,7 +271,7 @@ fn deploy_all_check_allowance_before_increment() {
 
     let will_succeed = near_call(&mut r,
         &simulation_example,
-        &SIMULATION_ACCOUNT_ID,
+        &CLP_ACCOUNT_ID,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
@@ -302,7 +302,7 @@ fn deploy_all_check_allowance_before_increment() {
         &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
         "get_balance",
         &json!({
-            "owner_id": SIMULATION_ACCOUNT_ID
+            "owner_id": CLP_ACCOUNT_ID
         })
     );
 
@@ -319,7 +319,7 @@ fn basic_setup() -> (RuntimeStandalone, ExternalUser, ExternalUser, ExternalUser
         .create_external(&mut r, COUNTER_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
     let simulation = main
-        .create_external(&mut r, SIMULATION_ACCOUNT_ID.into(), ntoy(1_000_000))
+        .create_external(&mut r, CLP_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
     let alice = main
         .create_external(&mut r, ALICE_ACCOUNT_ID.into(), ntoy(1_000_000))

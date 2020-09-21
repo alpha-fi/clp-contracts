@@ -1,0 +1,28 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"command":"cargo",
+			"args": [
+				"+nightly",
+                "test"
+			], 
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "test",
+			"label": "cargo +nightly test"
+		},
+		{
+			"type": "shell",
+			"command":". build.sh",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "build.sh"
+		}
+
+	]
+}

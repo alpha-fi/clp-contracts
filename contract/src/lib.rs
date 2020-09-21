@@ -2,7 +2,8 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
+use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
+use uint::construct_uint;
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
@@ -14,6 +15,9 @@ mod util;
 
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
+const MAX_GAS: u64         = 300_000_000_000_000;
+const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
+                               
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -26,14 +30,30 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E8" - computed amount of selling tokens is bigger than user required maximum.
 // "E9" - assets (tokens) must be different in token to token swap.
 
+fn yton(near_amount: Balance) -> Balance {
+    return near_amount / 10u128.pow(24)
+}
+
+construct_uint! {
+    /// 256-bit unsigned integer.
+    pub struct U256(4);
+}
+
+/// Interface for the contract itself.
+#[ext_contract(ext_self)]
+pub trait SelfContract {
+    /// A callback to check the result of the nep21-trasnfer
+    fn after_nep21_transfer(&mut self);
+}
+
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
-    near_bal: Balance,
-    token_bal: Balance,
+    pub near_bal: Balance,
+    pub token_bal: Balance,
     /// total amount of participation shares. Shares are represented using the same amount of
     /// tailing decimals as the NEAR token, which is 24
-    total_shares: Balance,
+    pub total_shares: Balance,
 }
 
 use std::fmt;
@@ -148,6 +168,7 @@ impl NearCLP {
 
     // Increases Near and the Reserve token liquidity.
     // The supplied funds must preserver current ratio of the liquidity pool.
+    #[payable]
     pub fn add_liquidity(
         &mut self,
         token: AccountId,
@@ -163,7 +184,7 @@ impl NearCLP {
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
-            env::log(b"Creating a frist deposit");
+            env::log(b"Creating a first deposit");
             p.near_bal = near_amount;
             shares_minted = p.near_bal;
             p.total_shares = shares_minted;
@@ -518,20 +539,30 @@ impl NearCLP {
         self.pools.insert(token, pool);
     }
 
+
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
-    fn calc_out_amount(&self, in_amount: Balance, in_bal: Balance, out_bal: Balance) -> Balance {
+    fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getInputPrice in Uniswap
-        let in_net = in_amount * 997;
-        return in_net * out_bal / (in_bal * 1000 + in_net);
+        env::log(format!(  "in_amount {} out_bal {} in_bal {}",yton(in_amount),yton(out_bal), yton(in_bal) ).as_bytes());
+        let in_with_fee = U256::from(in_amount * 997);
+        let numerator = in_with_fee * U256::from(out_bal);
+        let denominator = U256::from(in_bal) * U256::from(1000) + in_with_fee;
+        let result = (numerator / denominator).as_u128();
+        env::log(format!(  "return {}", result  ).as_bytes());
+        return result;
     }
 
     /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
     /// balance in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens
     /// respectively.
-    fn calc_in_amount(&self, out_amount: Balance, in_bal: Balance, out_bal: Balance) -> Balance {
+    fn calc_in_amount(&self, out_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getOutputPrice in Uniswap
-        return (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
+        let numerator = U256::from(in_bal) * U256::from(out_amount) * U256::from(1000);
+        let denominator = U256::from(out_bal - out_amount) * U256::from(997);
+        let result = (numerator / denominator + 1).as_u128();
+        return result;
+        
     }
 
     fn _swap_near(
@@ -544,15 +575,75 @@ impl NearCLP {
     ) {
         env::log(
             format!(
-                "User purchased {} reserve tokens for {} NEAR",
-                reserve, near
+                "User purchased {} {} for {} YoctoNEAR",
+                reserve, token, near
             )
             .as_bytes(),
         );
         p.token_bal -= reserve;
         p.near_bal += near;
         self.set_pool(token, p);
-        nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS);
+        
+        nep21::ext_nep21::transfer(recipient, reserve.into(), token, TEN_NEAR, SINGLE_CALL_GAS/2)
+            .then(
+                ext_self::after_nep21_transfer(
+                    &env::current_account_id(),
+                    0,
+                    SINGLE_CALL_GAS/2,
+                )
+            );
+        
+            //let transfer_args = 
+
+            /*
+        Promise::new(env::current_account_id())
+        .function_call("transfer".as_bytes(), arguments: Vec<u8>, amount: Balance, gas: Gas)
+        .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS)
+        .then(
+            ext_status_message::after_nep21_transfer(
+                recipient,
+                &account_id,
+                0,
+                CANT_FAIL_GAS,
+            ),
+            */
+    }
+
+    pub fn after_nep21_transfer(&mut self) {
+
+        env::log(format!(
+            "enter after_nep21_transfer"
+            ).as_bytes(),);
+
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            "Can be called only as a callback"
+        );
+
+        assert_eq!(
+            env::promise_results_count(),
+            1,
+            "Contract expected a result on the callback"
+        );
+        let action_succeeded = match env::promise_result(0) {
+            PromiseResult::Successful(_) => true,
+            _ => false,
+        };
+
+        //simulation do not allows for promises inside callbacks 
+        //for now just log result
+
+        env::log(format!(
+            "PromiseResult  trasnfer succeeded {}",action_succeeded
+            ).as_bytes(),);
+
+
+        // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
+        /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
+            Promise::new(env::current_account_id()).stake(0, self.stake_public_key.clone());
+        }
+        */
     }
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
@@ -566,6 +657,9 @@ impl NearCLP {
     ) {
         assert!(near_paid > 0 && min_tokens > 0, "E2");
         let mut p = self.get_pool(&token);
+        // env::log(format!(
+        //         "self.calc_out_amount({},{},{})",near_paid, p.near_bal, p.token_bal
+        //         ).as_bytes(),);
         let tokens_out = self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
         assert!(tokens_out >= min_tokens, "E7");
         self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
@@ -898,7 +992,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "E1")]
-    fn crate_twice_same_pool_fails() {
+    fn create_twice_same_pool_fails() {
         let (ctx, mut c) = init();
         c.create_pool(ctx.accounts.token1.clone());
         c.create_pool(ctx.accounts.token1);
@@ -944,7 +1038,9 @@ mod tests {
         token1.inc_allowance(t.clone(), token_deposit.into());
 
         ctx.set_vmc_deposit(near_deposit);
-        c.add_liquidity(t.clone(), ctx.token_supply, ctx.token_supply);
+        let max_token_deposit = token_deposit;
+        let min_shares_required = near_deposit;
+        c.add_liquidity(t.clone(), max_token_deposit, min_shares_required);
 
         let p = c.pool_info(t.clone()).expect("Pool should exist");
         assert_eq!(p.near_bal, near_deposit, "Near balance should be correct");

@@ -24,7 +24,7 @@ pub fn ntoy(near_amount: Balance) -> Balance {
 }
 
 lazy_static::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("./res/near_clp.wasm").as_ref();
+    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../target/wasm32-unknown-unknown/release/near_clp.wasm").as_ref();
     static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("./res/nep21_basic.wasm").as_ref();
     //static ref COUNTER_BYTES: &'static [u8] = include_bytes!("res/counter.wasm").as_ref();
 }

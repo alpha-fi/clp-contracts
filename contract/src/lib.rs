@@ -148,6 +148,7 @@ impl NearCLP {
 
     // Increases Near and the Reserve token liquidity.
     // The supplied funds must preserver current ratio of the liquidity pool.
+    #[payable]
     pub fn add_liquidity(
         &mut self,
         token: AccountId,

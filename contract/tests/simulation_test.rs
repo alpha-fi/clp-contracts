@@ -82,6 +82,21 @@ fn deploy_fungible_send_alice_tokens() {
     assert_eq!(alice_balance.0, 191_919);
 }
 
+
+// utility, get pool info from CLP
+fn get_pool_info(r: &RuntimeStandalone, funtok: &str ) -> PoolInfo {
+
+    return near_view(
+        r,
+        &CLP_ACCOUNT_ID.into(),
+        "pool_info",
+        &json!({
+            "token": funtok
+        })
+    );
+
+}
+
 #[test]
 fn alice_is_a_lp() {
     let (mut r, _, fungible_token, fun_token2, clp, alice)= basic_setup();
@@ -124,6 +139,7 @@ fn alice_is_a_lp() {
         ).unwrap();
 
     // alice creates a pool
+    println!("about to create alice's pool");
     near_call(&mut r,
         &alice,
         &CLP_ACCOUNT_ID,
@@ -135,25 +151,41 @@ fn alice_is_a_lp() {
         0
     ).unwrap();
 
-    println!("about to create alice's pool");
-
-    let pool_info:PoolInfo = near_view(
-        &r,
-        &CLP_ACCOUNT_ID.into(),
-        "pool_info",
-        &json!({
-            "token": FUNGIBLE_TOKEN_ACCOUNT_ID
-        })
-    );
-
-    assert_eq!(pool_info,                
+    assert_eq!( get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_ID),
         PoolInfo {
         near_bal: 0,
         token_bal: 0,
         total_shares: 0
         },"new pool should be empty");
 
-/*
+
+    println!("alice adds first liquidity");
+    let near_deposit:u64=30;
+    let token_deposit:u64=30000;  // 1/1000 ratio
+
+    let execution_outcome =
+    near_call(&mut r,
+        &alice,
+        &CLP_ACCOUNT_ID,
+        "add_liquidity",
+        &serde_json::to_vec(&json!({
+            "token": FUNGIBLE_TOKEN_ACCOUNT_ID,
+            "max_token_amount": token_deposit,
+            "min_shares_amont": near_deposit,
+            }),).unwrap(),
+        U64(MAX_GAS),
+        near_deposit.into()
+    ).unwrap();
+    println!("Log(s) {:?}", execution_outcome.logs);
+
+    assert_eq!( get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_ID),
+        PoolInfo {
+        near_bal: near_deposit.into(),
+        token_bal: token_deposit.into(),
+        total_shares: near_deposit.into()
+        },"new pool balance should be from first deposit");
+
+        /*
     let mut alice_counter: u8 = near_view(
         &r,
         &FUN_TOKEN2_ACCOUNT_ID.into(),

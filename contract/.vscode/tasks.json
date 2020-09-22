@@ -3,12 +3,34 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"command":". test.sh",
+			"command":"cargo",
+			"args": [
+				"+nightly",
+                "test",
+                // "--",
+				// "arg1"
+			], 
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "test",
 			"label": "cargo +nightly test"
+		},
+		{
+			"type": "shell",
+			"command":"cargo",
+			"args": [
+				"build",
+                //"--release",
+                // "--",
+				// "arg1"
+			], 
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "cargo build"
 		}
+
 	]
 }

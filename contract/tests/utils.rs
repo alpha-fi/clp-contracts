@@ -16,7 +16,7 @@ pub const MAX_GAS: u64 = 300_000_000_000_000;
 pub const CLP_ACCOUNT_ID: &str = "nearclp";
 pub const FUNGIBLE_TOKEN_ACCOUNT_ID: &str = "fungible_token";
 pub const ALICE_ACCOUNT_ID: &str = "alice";
-pub const COUNTER_ACCOUNT_ID: &str = "counter";
+pub const FUN_TOKEN2_ACCOUNT_ID: &str = "counter";
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
@@ -46,6 +46,12 @@ pub struct NewFungibleTokenArgs {
     pub owner_id: AccountId,
     pub total_supply: U128,
 }
+
+#[derive(Serialize)]
+pub struct NewClpArgs {
+    pub owner: AccountId,
+}
+
 
 #[derive(Clone)]
 pub struct ExternalUser {
@@ -179,36 +185,18 @@ pub fn deploy_and_init_fungible_token(
     outcome_into_result(res)
 }
 
-pub fn deploy_and_init_counter(
+pub fn deploy_clp(
     runtime: &mut RuntimeStandalone,
     account: &ExternalUser,
     init_method: &str,
     gas: U64,
-) -> TxResult {
-    let tx = account
-        .new_tx(runtime, account.clone().account_id)
-        .transfer(ntoy(50))
-        //.deploy_contract(COUNTER_BYTES.to_vec())
-        .function_call(init_method.into(), vec!(), gas.into(), 0)
-        .sign(&account.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
-    runtime.process_all().unwrap();
-    outcome_into_result(res)
-}
-
-
-
-pub fn deploy_simulation_example(
-    runtime: &mut RuntimeStandalone,
-    account: &ExternalUser,
-    init_method: &str,
-    gas: U64,
+    args: &NewClpArgs
 ) -> TxResult {
     let tx = account
         .new_tx(runtime, account.clone().account_id)
         .transfer(ntoy(50))
         .deploy_contract(CLP_WASM_BYTES.to_vec())
-        .function_call(init_method.into(), vec!(), gas.into(), 0)
+        .function_call(init_method.into(), serde_json::to_vec(args).unwrap(), gas.into(), 0)
         .sign(&account.signer);
     let res = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();

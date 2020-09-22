@@ -1,12 +1,13 @@
 mod utils;
-use crate::utils::{ExternalUser, MAX_GAS, FUNGIBLE_TOKEN_ACCOUNT_ID, COUNTER_ACCOUNT_ID, CLP_ACCOUNT_ID, ALICE_ACCOUNT_ID};
+use crate::utils::{ExternalUser, MAX_GAS, FUNGIBLE_TOKEN_ACCOUNT_ID, FUN_TOKEN2_ACCOUNT_ID, CLP_ACCOUNT_ID, ALICE_ACCOUNT_ID};
 use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
-use utils::{near_view, near_call, new_root, ntoy, NewFungibleTokenArgs, deploy_and_init_fungible_token, deploy_and_init_counter, deploy_simulation_example};
+use utils::{near_view, near_call, new_root, ntoy, NewFungibleTokenArgs, deploy_and_init_fungible_token, deploy_clp, NewClpArgs};
 use near_primitives::errors::{ActionErrorKind};
 use near_primitives::errors::TxExecutionError;
+use near_clp::PoolInfo;
 
 #[test]
 fn deploy_fungible_check_total_supply() {
@@ -82,33 +83,80 @@ fn deploy_fungible_send_alice_tokens() {
 }
 
 #[test]
-fn deploy_all_check_allowance_before_increment() {
-    let (mut r, _, fungible_token, counter, simulation_example, alice)= basic_setup();
+fn alice_is_a_lp() {
+    let (mut r, _, fungible_token, fun_token2, clp, alice)= basic_setup();
 
     let args = NewFungibleTokenArgs {
         owner_id: FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
         total_supply: U128(1_000_000)
     };
 
+    println!("deploy_and_init_fungible_token");
     deploy_and_init_fungible_token(&mut r,
         &fungible_token,
         "new",
         U64(MAX_GAS),
-        &args).unwrap();
+        &args
+    ).unwrap();
 
-    deploy_and_init_counter(&mut r,
-        &counter,
+    let args2 = NewFungibleTokenArgs {
+        owner_id: FUN_TOKEN2_ACCOUNT_ID.into(),
+        total_supply: U128(10_000_000)
+    };
+
+    println!("deploy_and_init_fungible_token 2");
+    deploy_and_init_fungible_token(&mut r,
+        &fun_token2,
         "new",
-        U64(MAX_GAS)).unwrap();
+        U64(MAX_GAS),
+        &args2
+    ).unwrap();
 
-    deploy_simulation_example(&mut r,
-        &simulation_example,
+    let args_clp = NewClpArgs {
+        owner: ALICE_ACCOUNT_ID.into(),
+    };
+    println!("deploy_and_init_clp");
+    deploy_clp(&mut r,
+        &clp,
         "new",
-        U64(MAX_GAS)).unwrap();
+        U64(MAX_GAS),
+        &args_clp
+        ).unwrap();
 
+    // alice creates a pool
+    near_call(&mut r,
+        &alice,
+        &CLP_ACCOUNT_ID,
+        "create_pool",
+        &serde_json::to_vec(&json!({
+            "token": FUNGIBLE_TOKEN_ACCOUNT_ID
+        }),).unwrap(),
+        U64(MAX_GAS),
+        0
+    ).unwrap();
+
+    println!("about to create alice's pool");
+
+    let pool_info:PoolInfo = near_view(
+        &r,
+        &CLP_ACCOUNT_ID.into(),
+        "pool_info",
+        &json!({
+            "token": FUNGIBLE_TOKEN_ACCOUNT_ID
+        })
+    );
+
+    assert_eq!(pool_info,                
+        PoolInfo {
+        near_bal: 0,
+        token_bal: 0,
+        total_shares: 0
+        },"new pool should be empty");
+
+/*
     let mut alice_counter: u8 = near_view(
         &r,
-        &COUNTER_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_ID.into(),
         "get_num",
         &json!({
             "account": ALICE_ACCOUNT_ID
@@ -119,7 +167,7 @@ fn deploy_all_check_allowance_before_increment() {
 
     let mut execution_outcome = near_call(&mut r,
         &alice,
-        &COUNTER_ACCOUNT_ID,
+        &FUN_TOKEN2_ACCOUNT_ID,
         "increment",
         &[],
         U64(MAX_GAS),
@@ -133,7 +181,7 @@ fn deploy_all_check_allowance_before_increment() {
 
     alice_counter = near_view(
         &r,
-        &COUNTER_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_ID.into(),
         "get_num",
         &json!({
             "account": ALICE_ACCOUNT_ID
@@ -163,7 +211,7 @@ fn deploy_all_check_allowance_before_increment() {
         &CLP_ACCOUNT_ID,
         "cross_contract_increment",
         &serde_json::to_vec(&json!({
-            "counter_account": COUNTER_ACCOUNT_ID,
+            "counter_account": FUN_TOKEN2_ACCOUNT_ID,
             "token_account": FUNGIBLE_TOKEN_ACCOUNT_ID,
         }),).unwrap(),
         U64(MAX_GAS),
@@ -177,7 +225,7 @@ fn deploy_all_check_allowance_before_increment() {
     // Check that the number has increased to 2
     alice_counter = near_view(
         &r,
-        &COUNTER_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_ID.into(),
         "get_num",
         &json!({
             "account": ALICE_ACCOUNT_ID
@@ -307,22 +355,28 @@ fn deploy_all_check_allowance_before_increment() {
     );
 
     assert_eq!(fungible_tokens.clone().0, 49);
+    */
 }
 
 fn basic_setup() -> (RuntimeStandalone, ExternalUser, ExternalUser, ExternalUser, ExternalUser, ExternalUser) {
+
     let (mut r, main) = new_root("main.testnet".into());
 
     let fungible_token = main
         .create_external(&mut r, FUNGIBLE_TOKEN_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
-    let counter = main
-        .create_external(&mut r, COUNTER_ACCOUNT_ID.into(), ntoy(1_000_000))
+
+    let funt2 = main
+        .create_external(&mut r, FUN_TOKEN2_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
-    let simulation = main
+
+    let clp = main
         .create_external(&mut r, CLP_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
+
     let alice = main
         .create_external(&mut r, ALICE_ACCOUNT_ID.into(), ntoy(1_000_000))
         .unwrap();
-    (r, main, fungible_token, counter, simulation, alice)
+
+    return (r, main, fungible_token, funt2, clp, alice)
 }

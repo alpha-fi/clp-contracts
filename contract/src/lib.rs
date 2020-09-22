@@ -29,11 +29,11 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
-    near_bal: Balance,
-    token_bal: Balance,
+    pub near_bal: Balance,
+    pub token_bal: Balance,
     /// total amount of participation shares. Shares are represented using the same amount of
     /// tailing decimals as the NEAR token, which is 24
-    total_shares: Balance,
+    pub total_shares: Balance,
 }
 
 use std::fmt;
@@ -163,7 +163,7 @@ impl NearCLP {
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
-            env::log(b"Creating a frist deposit");
+            env::log(b"Creating a first deposit");
             p.near_bal = near_amount;
             shares_minted = p.near_bal;
             p.total_shares = shares_minted;
@@ -944,7 +944,9 @@ mod tests {
         token1.inc_allowance(t.clone(), token_deposit.into());
 
         ctx.set_vmc_deposit(near_deposit);
-        c.add_liquidity(t.clone(), ctx.token_supply, ctx.token_supply);
+        let max_token_deposit = token_deposit;
+        let min_shares_required = near_deposit;
+        c.add_liquidity(t.clone(), max_token_deposit, min_shares_required);
 
         let p = c.pool_info(t.clone()).expect("Pool should exist");
         assert_eq!(p.near_bal, near_deposit, "Near balance should be correct");

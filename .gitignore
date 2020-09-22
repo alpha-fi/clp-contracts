@@ -20,6 +20,8 @@ private.*
 
 # production
 /build
+*.wasm
+
 
 # misc
 .DS_Store
@@ -31,3 +33,7 @@ private.*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# editor files
+.dir-locals.el

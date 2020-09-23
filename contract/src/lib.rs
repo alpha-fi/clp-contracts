@@ -14,8 +14,8 @@ mod nep21;
 mod util;
 
 // Prepaid gas costs. TODO: we need to adjust this value properly.
-const SINGLE_CALL_GAS: u64 = 200_000_000_000_000; // for making a single simple call.
-const TX_NEP21_GAS: u64 = 1_000_000_000_000_000_000; // 0.000_001 NEAR
+const MAX_GAS: u64 = 200_000_000_000_000; // 100T gas
+const TX_NEP21_GAS: u64 = 20_000_000_000_000; // 20T gas
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -589,7 +589,7 @@ impl NearCLP {
         self.set_pool(token, p);
 
         nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, TX_NEP21_GAS).then(
-            ext_self::nep21_transfer_callback(&env::current_account_id(), 0, SINGLE_CALL_GAS),
+            ext_self::nep21_transfer_callback(&env::current_account_id(), 0, MAX_GAS),
         );
 
         //let transfer_args =
@@ -597,7 +597,7 @@ impl NearCLP {
         /*
         Promise::new(env::current_account_id())
         .function_call("transfer".as_bytes(), arguments: Vec<u8>, amount: Balance, gas: Gas)
-        .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS)
+        .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, MAX_GAS)
         .then(
             ext_status_message::nep21_transfer_callback(
                 recipient,

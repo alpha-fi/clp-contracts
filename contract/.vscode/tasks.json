@@ -18,18 +18,12 @@
 		},
 		{
 			"type": "shell",
-			"command":"cargo",
-			"args": [
-				"build",
-                //"--release",
-                // "--",
-				// "arg1"
-			], 
+			"command":". build.sh",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "build",
-			"label": "cargo build"
+			"label": "build.sh"
 		}
 
 	]

@@ -18,9 +18,10 @@ private.*
 # testing
 /coverage
 
-# production
+# build
 /build
 target
+*.wasm
 
 # misc
 .DS_Store
@@ -32,3 +33,7 @@ target
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# editor files
+.dir-locals.el

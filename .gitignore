@@ -18,10 +18,9 @@ private.*
 # testing
 /coverage
 
-# production
+# build
 /build
-*.wasm
-target
+
 
 # misc
 .DS_Store

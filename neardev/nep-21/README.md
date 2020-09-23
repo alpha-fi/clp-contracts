@@ -1,8 +1,13 @@
 # Fungible token
 
-This is an example Fungible Token implementation in rust for [NEP#21 - Fungible Token](https://github.com/nearprotocol/NEPs/blob/master/specs/Standards/Tokens/FungibleToken.md)
+This is an example Fungible Token implementation in Rust for [NEP-21 - Fungible Token](https://github.com/nearprotocol/NEPs/blob/master/specs/Standards/Tokens/FungibleToken.md)
 
-# Reference-level explanation
+## Build
+
+    make build
+
+
+## Reference-level explanation
 
 The full implementation in Rust can be found there: https://github.com/nearprotocol/near-sdk-rs/blob/master/examples/fungible-token/src/lib.rs
 

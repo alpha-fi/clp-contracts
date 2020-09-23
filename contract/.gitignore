@@ -11,3 +11,8 @@ Cargo.lock
 
 
 .log
+
+
+# build
+*.wasm
+target

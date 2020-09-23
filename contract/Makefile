@@ -2,8 +2,8 @@ test:
 	cargo +nightly test  --
 
 build:
-#	@env 'RUSTFLAGS=-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release
-	@cargo +stable build --target wasm32-unknown-unknown --release
+# more about flags: https://github.com/near-examples/simulation-testing#gotchas
+	@env 'RUSTFLAGS=-C link-arg=-s' cargo +stable build --target wasm32-unknown-unknown --release
 	@cp target/wasm32-unknown-unknown/release/near_clp.wasm res/
 
 link-to-web:

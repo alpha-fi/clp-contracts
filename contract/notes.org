@@ -1,0 +1,5 @@
+* Promise calls
+
+Last 3 parameters of each promise calls are:
++ `amount`: amount of NEAR tokens we are sending with this transactions
++ `gas`: amount of gas we are allocating to this transaction

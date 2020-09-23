@@ -15,9 +15,8 @@ mod util;
 
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
-const MAX_GAS: u64         = 300_000_000_000_000;
+const MAX_GAS: u64 = 300_000_000_000_000;
 const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
-                               
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -31,7 +30,7 @@ const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
 // "E9" - assets (tokens) must be different in token to token swap.
 
 fn yton(near_amount: Balance) -> Balance {
-    return near_amount / 10u128.pow(24)
+    return near_amount / 10u128.pow(24);
 }
 
 construct_uint! {
@@ -539,17 +538,24 @@ impl NearCLP {
         self.pools.insert(token, pool);
     }
 
-
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getInputPrice in Uniswap
-        env::log(format!(  "in_amount {} out_bal {} in_bal {}",yton(in_amount),yton(out_bal), yton(in_bal) ).as_bytes());
+        env::log(
+            format!(
+                "in_amount {} out_bal {} in_bal {}",
+                yton(in_amount),
+                yton(out_bal),
+                yton(in_bal)
+            )
+            .as_bytes(),
+        );
         let in_with_fee = U256::from(in_amount * 997);
         let numerator = in_with_fee * U256::from(out_bal);
         let denominator = U256::from(in_bal) * U256::from(1000) + in_with_fee;
         let result = (numerator / denominator).as_u128();
-        env::log(format!(  "return {}", result  ).as_bytes());
+        env::log(format!("return {}", result).as_bytes());
         return result;
     }
 
@@ -562,7 +568,6 @@ impl NearCLP {
         let denominator = U256::from(out_bal - out_amount) * U256::from(997);
         let result = (numerator / denominator + 1).as_u128();
         return result;
-        
     }
 
     fn _swap_near(
@@ -583,19 +588,23 @@ impl NearCLP {
         p.token_bal -= reserve;
         p.near_bal += near;
         self.set_pool(token, p);
-        
-        nep21::ext_nep21::transfer(recipient, reserve.into(), token, TEN_NEAR, SINGLE_CALL_GAS/2)
-            .then(
-                ext_self::after_nep21_transfer(
-                    &env::current_account_id(),
-                    0,
-                    SINGLE_CALL_GAS/2,
-                )
-            );
-        
-            //let transfer_args = 
 
-            /*
+        nep21::ext_nep21::transfer(
+            recipient,
+            reserve.into(),
+            token,
+            TEN_NEAR,
+            SINGLE_CALL_GAS / 2,
+        )
+        .then(ext_self::after_nep21_transfer(
+            &env::current_account_id(),
+            0,
+            SINGLE_CALL_GAS / 2,
+        ));
+
+        //let transfer_args =
+
+        /*
         Promise::new(env::current_account_id())
         .function_call("transfer".as_bytes(), arguments: Vec<u8>, amount: Balance, gas: Gas)
         .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS)
@@ -610,10 +619,7 @@ impl NearCLP {
     }
 
     pub fn after_nep21_transfer(&mut self) {
-
-        env::log(format!(
-            "enter after_nep21_transfer"
-            ).as_bytes(),);
+        env::log(format!("enter after_nep21_transfer").as_bytes());
 
         assert_eq!(
             env::current_account_id(),
@@ -631,13 +637,10 @@ impl NearCLP {
             _ => false,
         };
 
-        //simulation do not allows for promises inside callbacks 
+        //simulation do not allows for promises inside callbacks
         //for now just log result
 
-        env::log(format!(
-            "PromiseResult  trasnfer succeeded {}",action_succeeded
-            ).as_bytes(),);
-
+        env::log(format!("PromiseResult  trasnfer succeeded {}", action_succeeded).as_bytes());
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
         /*if !stake_action_succeeded && env::account_locked_balance() > 0 {

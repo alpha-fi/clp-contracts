@@ -6,9 +6,7 @@
 			"command":"cargo",
 			"args": [
 				"+nightly",
-                "test",
-                // "--",
-				// "arg1"
+                "test"
 			], 
 			"problemMatcher": [
 				"$rustc"

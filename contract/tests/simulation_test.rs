@@ -1,12 +1,16 @@
 mod utils;
 use crate::utils::{
-    ExternalUser, ALICE_ACCOUNT_ID, CLP_ACCOUNT_ID, FUNGIBLE_TOKEN_ACCOUNT_ID,
-    FUN_TOKEN2_ACCOUNT_ID, MAX_GAS,
+    ExternalUser,
+    MAX_GAS,
+    TEN_NEAR,
 };
 use near_clp::PoolInfo;
-use near_primitives::errors::ActionErrorKind;
-use near_primitives::errors::TxExecutionError;
-use near_primitives::transaction::ExecutionStatus;
+//use near_primitives::errors::ActionErrorKind;
+//use near_primitives::errors::TxExecutionError;
+use near_primitives::{
+    transaction::ExecutionStatus,
+    types::{AccountId},
+};
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
@@ -15,27 +19,13 @@ use utils::{
     NewClpArgs, NewFungibleTokenArgs,
 };
 
-const CANT_FAIL_GAS: u64   = 300_000_000_000_000;
-
-//util fn
-fn get_funtok_balance(    
-    r: &mut RuntimeStandalone,
-    account: &ExternalUser
-) -> U128 {
-
-    let result: U128 = near_view(
-        &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
-        "get_balance",
-        &json!({
-            "owner_id": &account.account_id()
-        })
-    );
-
-    return result;
-
-}
-
+pub const CLP_ACCOUNT_NAME: &str = "nearclp";
+pub const FUNGIBLE_TOKEN_ACCOUNT_NAME: &str = "fungible_token";
+pub const ALICE_ACCOUNT_NAME: &str = "alice";
+pub const BOB_ACCOUNT_NAME: &str = "bob";
+pub const CAROL_ACCOUNT_NAME: &str = "carol";
+pub const DAVE_ACCOUNT_NAME: &str = "dave";
+pub const FUN_TOKEN2_ACCOUNT_NAME: &str = "fun_token_2";
 
 #[test]
 fn deploy_fungible_mint_for_alice() {
@@ -43,7 +33,7 @@ fn deploy_fungible_mint_for_alice() {
     let total_supply = 1_000_000;
 
     let args = NewFungibleTokenArgs {
-        owner_id: FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        owner_id: FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         total_supply: U128(total_supply.clone()),
     };
 
@@ -51,7 +41,7 @@ fn deploy_fungible_mint_for_alice() {
 
     let returned_supply: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_total_supply",
         "",
     );
@@ -65,22 +55,22 @@ fn deploy_fungible_mint_for_alice() {
 
     let alice_balance: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_ID,
+            "owner_id": ALICE_ACCOUNT_NAME,
         }),
     );
     // Confirm Alice's initial balance is 0
     assert_eq!(alice_balance.0, 0);
     // send some to Alice
-    near_call(
+    let _execution_result = near_call(
         &mut r,
         &fungible_token,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID,
+        &fungible_token.account_id(),
         "transfer",
         &serde_json::to_vec(&json!({
-            "new_owner_id": ALICE_ACCOUNT_ID,
+            "new_owner_id": ALICE_ACCOUNT_NAME,
             "amount": "191919",
         }))
         .unwrap(),
@@ -91,10 +81,10 @@ fn deploy_fungible_mint_for_alice() {
 
     let alice_balance: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_ID,
+            "owner_id": ALICE_ACCOUNT_NAME,
         }),
     );
     // Confirm Alice's initial balance has increased to set amount
@@ -105,18 +95,20 @@ fn deploy_fungible_mint_for_alice() {
 fn get_pool_info(r: &RuntimeStandalone, funtok: &str) -> PoolInfo {
     return near_view(
         r,
-        &CLP_ACCOUNT_ID.into(),
+        &CLP_ACCOUNT_NAME.into(),
         "pool_info",
         &json!({ "token": funtok }),
     );
 }
+
+
 
 #[test]
 fn alice_is_a_lp() {
     let (mut r, _, fungible_token, fun_token2, clp, alice, _bob, carol, _dave) = basic_setup();
 
     let args = NewFungibleTokenArgs {
-        owner_id: FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        owner_id: FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         total_supply: U128(1_000_000),
     };
 
@@ -124,7 +116,7 @@ fn alice_is_a_lp() {
     deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
 
     let args2 = NewFungibleTokenArgs {
-        owner_id: FUN_TOKEN2_ACCOUNT_ID.into(),
+        owner_id: FUN_TOKEN2_ACCOUNT_NAME.into(),
         total_supply: U128(10_000_000),
     };
 
@@ -132,26 +124,24 @@ fn alice_is_a_lp() {
     deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(MAX_GAS), &args2).unwrap();
 
     let args_clp = NewClpArgs {
-        owner: ALICE_ACCOUNT_ID.into(),
+        owner: ALICE_ACCOUNT_NAME.into(),
     };
     println!("deploy_and_init_clp");
     deploy_clp(&mut r, &clp, "new", U64(MAX_GAS), &args_clp).unwrap();
 
     // alice creates a pool
     println!("about to create alice's pool");
-    near_call(
+    call(
         &mut r,
         &alice,
-        &CLP_ACCOUNT_ID,
+        &clp.account_id(),
         "create_pool",
-        &serde_json::to_vec(&json!({ "token": FUNGIBLE_TOKEN_ACCOUNT_ID })).unwrap(),
-        U64(MAX_GAS),
+        format!(r#"{{ "token":"{}" }}"#,FUNGIBLE_TOKEN_ACCOUNT_NAME),
         0,
-    )
-    .unwrap();
+    );
 
     assert_eq!(
-        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_ID),
+        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
         PoolInfo {
             near_bal: 0,
             token_bal: 0,
@@ -165,10 +155,10 @@ fn alice_is_a_lp() {
     let near_deposit: u128 = ntoy(3_000);
     let token_deposit: u128 = ntoy(3_000_000); // 1/1000 ratio
 
-    let execution_outcome = near_call(
+    call(
         &mut r,
         &alice,
-        &CLP_ACCOUNT_ID,
+        &clp.account_id(),
         "add_liquidity",
         format!(
             r#"{{
@@ -176,19 +166,14 @@ fn alice_is_a_lp() {
                     "max_token_amount": {mta},
                     "min_shares_amont": {msa}
                 }}"#,
-            tok = FUNGIBLE_TOKEN_ACCOUNT_ID,
+            tok = FUNGIBLE_TOKEN_ACCOUNT_NAME,
             mta = token_deposit,
             msa = near_deposit
-        )
-        .as_bytes(),
-        U64(MAX_GAS),
+        ),
         near_deposit.into(),
-    )
-    .unwrap();
+    );
 
-    println!("Log(s) {:?}", execution_outcome.logs);
-
-    let pool_info = get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_ID);
+    let pool_info = get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME);
     assert_eq!(
         pool_info,
         PoolInfo {
@@ -204,51 +189,41 @@ fn alice_is_a_lp() {
 
     // Check Carols's fungible token balance before
     println!("send some funtok to carol");
-    near_call(
+    call(
         &mut r,
         &fungible_token,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID,
+        &fungible_token.account_id(),
         "transfer",
-        &serde_json::to_vec(&json!({
-            "new_owner_id": "carol",
+        format!(r#"{{
+            "new_owner_id": {},
             "amount": "191919",
-        }))
-        .unwrap(),
-        U64(MAX_GAS),
-        36_500_000_000_000_000_000_000,
-    )
-    .unwrap();
+        }}"#,"carol"),
+        TEN_NEAR, //refundable, required if the fun-contract needs more storage
+    );
 
     println!("let's see how many tokens carol has now");
     let carol_funt_balance_pre:u128 = get_funtok_balance(&mut r, &carol).into();
     println!("Carol fun tokens {}", carol_funt_balance_pre);
 
-    
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = ntoy(10);
     let min_token_expected: u128 = ntoy(9900); 
 
-    let execution_outcome = near_call(
+    call(
         &mut r,
         &carol,
-        &CLP_ACCOUNT_ID,
+        &clp.account_id(),
         "swap_near_to_reserve_exact_in",
         format!(
             r#"{{
                 "token": "{tok}",
                 "min_tokens": {min_tok}
                 }}"#,
-            tok = FUNGIBLE_TOKEN_ACCOUNT_ID,
+            tok = FUNGIBLE_TOKEN_ACCOUNT_NAME,
             min_tok = min_token_expected
-        )
-        .as_bytes(),
-        U64(MAX_GAS),
+        ),
         carol_deposit_yoctos.into(),
-    )
-    .unwrap();
-    println!("Log(s) {:?}", execution_outcome.logs);
-    println!("receipts(s) {:?}", execution_outcome.receipt_ids);
-    println!("Status(s) {:?}", execution_outcome.status);
+    );
 
     println!("let's see how many token carol has after the swap");
     let carol_funt_balance_post:u128 = get_funtok_balance(&mut r, &carol).into();
@@ -259,7 +234,7 @@ fn alice_is_a_lp() {
     assert!(carol_received >= min_token_expected, "carol should have received at least min_token_expected");
 
     assert_eq!(
-        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_ID),
+        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
         PoolInfo {
             near_bal: (prev_pool_near_blance + carol_deposit_yoctos).into(),
             token_bal: (token_deposit - carol_received).into(),
@@ -271,10 +246,10 @@ fn alice_is_a_lp() {
     /*
     let mut alice_counter: u8 = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_NAME.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_ID
+            "account": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -282,7 +257,7 @@ fn alice_is_a_lp() {
 
     let mut execution_outcome = near_call(&mut r,
         &alice,
-        &FUN_TOKEN2_ACCOUNT_ID,
+        &FUN_TOKEN2_ACCOUNT_NAME,
         "increment",
         &[],
         U64(MAX_GAS),
@@ -296,10 +271,10 @@ fn alice_is_a_lp() {
 
     alice_counter = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_NAME.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_ID
+            "account": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -311,10 +286,10 @@ fn alice_is_a_lp() {
     // Check Alice's fungible token balance before, which should be zero.
     let mut alice_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_ID
+            "owner_id": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -323,11 +298,11 @@ fn alice_is_a_lp() {
     // Now increment again
     execution_outcome = near_call(&mut r,
         &alice,
-        &CLP_ACCOUNT_ID,
+        &CLP_ACCOUNT_NAME,
         "cross_contract_increment",
         &serde_json::to_vec(&json!({
-            "counter_account": FUN_TOKEN2_ACCOUNT_ID,
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_ID,
+            "counter_account": FUN_TOKEN2_ACCOUNT_NAME,
+            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -340,10 +315,10 @@ fn alice_is_a_lp() {
     // Check that the number has increased to 2
     alice_counter = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_ID.into(),
+        &FUN_TOKEN2_ACCOUNT_NAME.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_ID
+            "account": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -357,10 +332,10 @@ fn alice_is_a_lp() {
     /*
     let alice_new_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_ID
+            "owner_id": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -372,12 +347,12 @@ fn alice_is_a_lp() {
 
     let will_error = near_call(&mut r,
         &simulation_example,
-        &CLP_ACCOUNT_ID,
+        &CLP_ACCOUNT_NAME,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_ID,
-            "recipient_account": CLP_ACCOUNT_ID,
+            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
+            "recipient_account": CLP_ACCOUNT_NAME,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -407,10 +382,10 @@ fn alice_is_a_lp() {
     // Confirm that the simulation account has zero fungible tokens
     let fungible_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": CLP_ACCOUNT_ID
+            "owner_id": CLP_ACCOUNT_NAME
         })
     );
 
@@ -420,10 +395,10 @@ fn alice_is_a_lp() {
 
     near_call(&mut r,
               &fungible_token,
-              &FUNGIBLE_TOKEN_ACCOUNT_ID,
+              &FUNGIBLE_TOKEN_ACCOUNT_NAME,
               "transfer",
               &serde_json::to_vec(&json!({
-            "new_owner_id": CLP_ACCOUNT_ID,
+            "new_owner_id": CLP_ACCOUNT_NAME,
             "amount": "50",
         }),).unwrap(),
               U64(MAX_GAS),
@@ -434,12 +409,12 @@ fn alice_is_a_lp() {
 
     let will_succeed = near_call(&mut r,
         &simulation_example,
-        &CLP_ACCOUNT_ID,
+        &CLP_ACCOUNT_NAME,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_ID,
-            "recipient_account": ALICE_ACCOUNT_ID,
+            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
+            "recipient_account": ALICE_ACCOUNT_NAME,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -451,10 +426,10 @@ fn alice_is_a_lp() {
 
     alice_tokens = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_ID
+            "owner_id": ALICE_ACCOUNT_NAME
         })
     );
 
@@ -462,10 +437,10 @@ fn alice_is_a_lp() {
 
     let fungible_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_ID.into(),
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
-            "owner_id": CLP_ACCOUNT_ID
+            "owner_id": CLP_ACCOUNT_NAME
         })
     );
 
@@ -487,32 +462,119 @@ fn basic_setup() -> (
     let (mut r, main) = new_root("main.testnet".into());
 
     let fungible_token = main
-        .create_external(&mut r, FUNGIBLE_TOKEN_ACCOUNT_ID.into(), ntoy(1_000_000))
+        .create_external(&mut r, &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(), ntoy(1_000_000))
         .unwrap();
 
     let funt2 = main
-        .create_external(&mut r, FUN_TOKEN2_ACCOUNT_ID.into(), ntoy(1_000_000))
+        .create_external(&mut r, &FUN_TOKEN2_ACCOUNT_NAME.into(), ntoy(1_000_000))
         .unwrap();
 
     let clp = main
-        .create_external(&mut r, CLP_ACCOUNT_ID.into(), ntoy(1_000_000))
+        .create_external(&mut r, &CLP_ACCOUNT_NAME.into(), ntoy(1_000_000))
         .unwrap();
 
     let alice = main
-        .create_external(&mut r, ALICE_ACCOUNT_ID.into(), ntoy(1_000_000))
+        .create_external(&mut r, &ALICE_ACCOUNT_NAME.into(), ntoy(1_000_000))
         .unwrap();
 
     let bob = main
-        .create_external(&mut r, "bob".into(), ntoy(2_000_000))
+        .create_external(&mut r, &BOB_ACCOUNT_NAME.into(), ntoy(2_000_000))
         .unwrap();
 
     let carol = main
-        .create_external(&mut r, "carol".into(), ntoy(5_000))
+        .create_external(&mut r, &CAROL_ACCOUNT_NAME.into(), ntoy(5_000))
         .unwrap();
 
     let dave = main
-        .create_external(&mut r, "dave".into(), ntoy(3_000))
+        .create_external(&mut r, &DAVE_ACCOUNT_NAME.into(), ntoy(3_000))
         .unwrap();
 
     return (r, main, fungible_token, funt2, clp, alice, bob, carol, dave);
 }
+
+//util fn
+fn get_funtok_balance(    
+    r: &mut RuntimeStandalone,
+    account: &ExternalUser
+) -> U128 {
+
+    let result: U128 = near_view(
+        &r,
+        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        "get_balance",
+        &json!({
+            "owner_id": &account.account_id()
+        })
+    );
+
+    return result;
+
+}
+
+pub fn call(    
+    runtime: &mut RuntimeStandalone,
+    sending_account: &ExternalUser,
+    contract: &AccountId,
+    method: &str,
+    args: String,
+    attached_amount: u128
+) {
+
+    let gas = MAX_GAS;
+
+    let tx = sending_account
+        .new_tx(runtime, contract)
+        .function_call(method.into(), args.as_bytes().to_vec(), gas.into(), attached_amount)
+        .sign(&sending_account.signer);
+    
+    let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
+    runtime.process_all().unwrap(); //proces until there's no more generated receipts
+
+    /* THE ABOVE CODE REPLACED THIS: near_call(runtime, //runtime
+        sending_account, //sending account
+        contract, //contract
+        method,
+        args.as_bytes(),
+        U64(MAX_GAS),
+        attached_amount
+    )
+    .unwrap();
+    */
+
+    println!("--------------------------------");
+    println!("-- {}.{}() --", contract,method);
+    println!("execution_outcome.status {:?}", execution_outcome.status);
+    println!("execution_outcome {:?}", execution_outcome);
+    match execution_outcome.status {
+        ExecutionStatus::Failure(msg) => panic!(msg),
+        ExecutionStatus::SuccessValue(value) => println!("execution_outcome.status => success {:?}",value),
+        ExecutionStatus::SuccessReceiptId(_) => panic!("thre are pending receipts! call runtime.process_all() to complete all txns"),
+        ExecutionStatus::Unknown => unreachable!(),
+    }
+    println!("-- RECEIPTS ({}) --", execution_outcome.receipt_ids.len());
+    let mut count_failed=0;
+    for elem in execution_outcome.receipt_ids {
+        let outcome2 = runtime.outcome(&elem);
+        println!("receipt outcome: {:?}", outcome2); 
+        match outcome2 { 
+            Some(outcome2) =>{
+                println!("receipt logs: {:?}", outcome2.logs);
+                match outcome2.status {
+                    ExecutionStatus::Failure(txresult) => {
+                        println!("receipt failure: {:?}", txresult);
+                        count_failed+=1;
+                    },
+                    ExecutionStatus::SuccessValue(value) => println!("receipt success {:?}",value),
+                    ExecutionStatus::SuccessReceiptId(_) => panic!("there are pending receipts! call runtime.process_all() to complete all txns"),
+                    ExecutionStatus::Unknown => unreachable!(),
+                }
+            },
+            None =>println!("None")
+        }
+    }
+    if count_failed>0 {
+        panic!(format!("{} RECEIPT(S) FAILED",count_failed));
+    }
+    println!("--------------------------------");
+}
+

@@ -3,25 +3,24 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"command":"cargo",
+			"command":"make",
 			"args": [
-				"+nightly",
                 "test"
 			], 
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "test",
-			"label": "cargo +nightly test"
+			"label": "make test"
 		},
 		{
 			"type": "shell",
-			"command":". build.sh",
+			"command":"make build",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "build",
-			"label": "build.sh"
+			"label": "make build"
 		}
 
 	]

@@ -12,11 +12,8 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 pub const MAX_GAS: u64 = 300_000_000_000_000;
+pub const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
 
-pub const CLP_ACCOUNT_ID: &str = "nearclp";
-pub const FUNGIBLE_TOKEN_ACCOUNT_ID: &str = "fungible_token";
-pub const ALICE_ACCOUNT_ID: &str = "alice";
-pub const FUN_TOKEN2_ACCOUNT_ID: &str = "counter";
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
@@ -85,13 +82,13 @@ impl ExternalUser {
     pub fn create_external(
         &self,
         runtime: &mut RuntimeStandalone,
-        new_account_id: AccountId,
+        new_account_id: &AccountId,
         amount: Balance,
     ) -> Result<ExternalUser, ExecutionOutcome> {
         let new_signer =
             InMemorySigner::from_seed(&new_account_id, KeyType::ED25519, &new_account_id);
         let tx = self
-            .new_tx(runtime, new_account_id.clone())
+            .new_tx(runtime, new_account_id)
             .create_account()
             .add_key(new_signer.public_key(), AccessKey::full_access())
             .transfer(amount)
@@ -111,13 +108,13 @@ impl ExternalUser {
             outcome_into_result(res.unwrap())?;
             runtime.process_all().unwrap();
             Ok(ExternalUser {
-                account_id: new_account_id,
+                account_id: new_account_id.clone(),
                 signer: new_signer,
             })
         }
     }
 
-    fn new_tx(&self, runtime: &RuntimeStandalone, receiver_id: AccountId) -> Transaction {
+    pub fn new_tx(&self, runtime: &RuntimeStandalone, receiver_id: &AccountId) -> Transaction {
         let nonce = runtime
             .view_access_key(&self.account_id, &self.signer.public_key())
             .unwrap()
@@ -126,7 +123,7 @@ impl ExternalUser {
         Transaction::new(
             self.account_id.clone(),
             self.signer.public_key(),
-            receiver_id,
+            receiver_id.clone(),
             nonce,
             CryptoHash::default(),
         )
@@ -151,19 +148,19 @@ pub fn near_view<I: ToString, O: DeserializeOwned>(
 pub fn near_call(
     runtime: &mut RuntimeStandalone,
     sending_account: &ExternalUser,
-    contract_id: &str,
+    contract_id: &AccountId,
     method: &str,
     args: &[u8],
     gas: U64,
     deposit: Balance
 ) -> TxResult {
     let tx = sending_account
-        .new_tx(runtime, contract_id.to_string())
+        .new_tx(runtime, contract_id)
         .function_call(method.into(), args.to_vec(), gas.into(), deposit)
         .sign(&sending_account.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
+    let ex_outcome = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();
-    outcome_into_result(res)
+    outcome_into_result(ex_outcome)
 }
 
 pub fn deploy_and_init_fungible_token(
@@ -174,7 +171,7 @@ pub fn deploy_and_init_fungible_token(
     args: &NewFungibleTokenArgs,
 ) -> TxResult {
     let tx = account
-        .new_tx(runtime, account.clone().account_id)
+        .new_tx(runtime, &account.account_id)
         // transfer tokens otherwise "wouldn't have enough balance to cover storage"
         .transfer(ntoy(50))
         .deploy_contract(FUNGIBLE_TOKEN_BYTES.to_vec())
@@ -193,7 +190,7 @@ pub fn deploy_clp(
     args: &NewClpArgs
 ) -> TxResult {
     let tx = account
-        .new_tx(runtime, account.clone().account_id)
+        .new_tx(runtime, &account.account_id)
         .transfer(ntoy(50))
         .deploy_contract(CLP_WASM_BYTES.to_vec())
         .function_call(init_method.into(), serde_json::to_vec(args).unwrap(), gas.into(), 0)

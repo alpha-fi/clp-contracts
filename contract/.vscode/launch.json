@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug simulation_test",
+            "cargo": {
+                "args": [
+                    "+nightly",
+                    "test",
+                    "--no-run",
+                    "--test=simulation_test",
+                    "--package=near-clp"
+                ],
+                "filter": {
+                    "name": "simulation_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

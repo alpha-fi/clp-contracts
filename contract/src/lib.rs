@@ -568,10 +568,12 @@ impl NearCLP {
 
         env::log(format!(
             "PromiseResult  transfer succeeded:{}",action_succeeded
-            ).as_bytes(),);
-
+            ).as_bytes());
+    
         if !action_succeeded {
-            panic!(format!("from add_liquidity_transfer_callback, token:{} transfer FAILED!", token));
+            env::log(format!("from add_liquidity_transfer_callback, token:{} transfer FAILED!", token).as_bytes());
+            panic!("callback");
+            //TO-DO ROLLBACK add_liquidity
         }
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.

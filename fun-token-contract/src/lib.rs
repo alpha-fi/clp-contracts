@@ -159,15 +159,18 @@ impl FungibleToken {
     ///   fixed storage price defined in the contract.
     #[payable]
     pub fn transfer_from(&mut self, owner_id: AccountId, new_owner_id: AccountId, amount: U128) {
+        
+        let amount = amount.into();
+        env::log(format!("transfer_from {} to {}, {} tokens", owner_id, new_owner_id, amount).as_bytes());
+        if amount == 0 {
+            env::panic(b"Can't transfer 0 tokens");
+        }
+
         let initial_storage = env::storage_usage();
         assert!(
             env::is_valid_account_id(new_owner_id.as_bytes()),
             "New owner's account ID is invalid"
         );
-        let amount = amount.into();
-        if amount == 0 {
-            env::panic(b"Can't transfer 0 tokens");
-        }
         assert_ne!(
             owner_id, new_owner_id,
             "The new owner should be different from the current owner"

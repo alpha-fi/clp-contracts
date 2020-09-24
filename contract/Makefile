@@ -1,5 +1,8 @@
 test:
 	cargo +nightly test  --
+# Test output can be recovered (e.g., for debugging) by passing `--nocapture`
+# cargo test  -- --nocapture
+
 
 build:
 # more about flags: https://github.com/near-examples/simulation-testing#gotchas
@@ -11,7 +14,6 @@ link-to-web:
 	@cd ../out && ln -s ../contract/target/wasm32-unknown-unknown/release/near_clp.wasm main.wasm
 
 build-quick:
-#	@env 'RUSTFLAGS=-C link-arg=-s' cargo build
 	@cargo build
 
 deploy:

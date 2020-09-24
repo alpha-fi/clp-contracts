@@ -10,13 +10,21 @@ Requirements and related discussion is available in [GitHub](https://github.com/
 
 To build run:
 ```bash
-env 'RUSTFLAGS=-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release
+make build
 ```
+
+### Testing
+
+To run simulation tests, we need extra dependencies:
+`libclang-dev`, `llvm`
+
 
 To test run:
 ```bash
-cargo test  -- --nocapture
+make test
 ```
+
+
 
 
 ## Changes to Uniswap v1

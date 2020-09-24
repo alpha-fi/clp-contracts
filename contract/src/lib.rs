@@ -38,11 +38,7 @@ construct_uint! {
 /// Interface for the contract itself.
 #[ext_contract(ext_self)]
 pub trait SelfContract {
-    /// A callback to check the result of the staking action.
-    /// In case the stake amount is less than the minimum staking threshold, the staking action
-    /// fails, and the stake amount is not changed. This might lead to inconsistent state and the
-    /// follow withdraw calls might fail. To mitigate this, the contract will issue a new unstaking
-    /// action in case of the failure of the first staking action.
+    /// callback to check the result of the add_liquidity action
     fn add_liquidity_transfer_callback(&mut self, token:AccountId);
 }
 

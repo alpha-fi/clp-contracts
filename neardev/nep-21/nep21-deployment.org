@@ -1,16 +1,18 @@
 
 ** Gold
 
-Account id: gold.nearswap.testnet, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
+Account id: =gold.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
 Transaction Id ESxwoV6yfXSSUunsTGLLD4BY1gnKWyujKTWeX2sYp3Qm
+
 To see the transaction in the transaction explorer, please open this url in your browser
 https://explorer.testnet.near.org/transactions/ESxwoV6yfXSSUunsTGLLD4BY1gnKWyujKTWeX2sYp3Qm
 
 
 ** USD
 
-Account id: usd.nearswap.testnet, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
+Account id: =usd.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
 Transaction Id CquDAhdythUWr3WvwYe3zBqLPvp64ny9WWvoD8rhGQWi
+
 To see the transaction in the transaction explorer, please open this url in your browser
 https://explorer.testnet.near.org/transactions/CquDAhdythUWr3WvwYe3zBqLPvp64ny9WWvoD8rhGQWi
 
@@ -24,7 +26,7 @@ export NEP21_BASE_ACCOUNT=nearswap.testnet
 export MY_ACCOUNT=example.testnet
 #+END_SRC
 
-Now we can do few additional operations. In examples below
+Now we can do few additional operations Update the variables above to correctly use the examples below.
 
 #+BEGIN_SRC sh
 near call gold.$NEP21_BASE_ACCOUNT mint '{}' --accountId $MY_ACCOUNT

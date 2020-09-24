@@ -1,12 +1,14 @@
 *** beta-1
 
-Starting deployment. Account id: beta-1.nearswap.testnet, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/near_clp.wasm
+Starting deployment. Account id: =beta-1.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/near_clp.wasm
 Transaction Id CRoWYK78NZMFmwQ1XETzxrqpLre56TZSkzGnQnSCZP9s
+
 To see the transaction in the transaction explorer, please open this url in your browser
 https://explorer.testnet.near.org/transactions/CRoWYK78NZMFmwQ1XETzxrqpLre56TZSkzGnQnSCZP9s
 
+
 Init:
-beta-1.nearswap.testnet.new({"owner": "nearswap.testnet"})
+=beta-1.nearswap.testnet.new({"owner": "nearswap.testnet"})=
 Transaction Id Hrtf1pxERt5iG1eetruGtvdsUtBehhTZrDSXJzQAJLdA
 To see the transaction in the transaction explorer, please open this url in your browser
 https://explorer.testnet.near.org/transactions/Hrtf1pxERt5iG1eetruGtvdsUtBehhTZrDSXJzQAJLdA

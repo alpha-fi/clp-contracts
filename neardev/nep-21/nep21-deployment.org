@@ -33,6 +33,6 @@ near call gold.$NEP21_BASE_ACCOUNT mint '{}' --accountId $MY_ACCOUNT
 near call gold.$NEP21_BASE_ACCOUNT get_balance "{\"owner_id\": \"$MY_ACCOUNT\"}" --accountId $MY_ACCOUNT
 # inc_allowance will create a new record, hence we need to deposit some near tokens using --amount parameter
 near call gold.$NEP21_BASE_ACCOUNT inc_allowance '{"escrow_account_id": "someone_else.testnet", "amount": "10"}' --accountId $MY_ACCOUNT --amount 0.01
-near call gold.$NEP21_BASE_ACCOUNT transfer_from "{\"owner_id\": \"$MY_ACCOUNT\", \"new_owner_id\": \"someone_else.testnet\", \"amount\": \"10\"}" --accountId $MY_ACCOUNT
+near call gold.$NEP21_BASE_ACCOUNT transfer_from "{\"owner_id\": \"$MY_ACCOUNT\", \"new_owner_id\": \"someone_else.testnet\", \"amount\": \"10\"}" --accountId someone_else.testnet
 near call gold.$NEP21_BASE_ACCOUNT get_balance "{\"owner_id\": \"someone_else.testnet\"}" --accountId $MY_ACCOUNT
 #+END_SRC

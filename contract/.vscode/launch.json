@@ -1,0 +1,85 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'staking-pool'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=staking-pool"
+                ],
+                "filter": {
+                    "name": "staking-pool",
+                    "kind": "cdylib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug simulation_test",
+            "cargo": {
+                "args": [
+                    "+nightly",
+                    "test",
+                    "--no-run",
+                    "--test=simulation_test",
+                    "--package=near-clp"
+                ],
+                "filter": {
+                    "name": "simulation_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'utils'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=utils",
+                    "--package=near-clp"
+                ],
+                "filter": {
+                    "name": "utils",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'quickcheck'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=quickcheck",
+                    "--package=staking-pool"
+                ],
+                "filter": {
+                    "name": "quickcheck",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -92,6 +92,8 @@ impl Pool {
     }
 }
 
+/// NearCLP is the main contract for managing the swap pools and liquidity.
+/// It implements the NEARswap functionality.
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct NearCLP {
@@ -135,6 +137,8 @@ impl NearCLP {
         self.fee_dst = fee_dst;
     }
 
+    /// Owner is an account (can be a multisig) who has management rights to update
+    /// fee size.
     pub fn change_owner(&mut self, new_owner: AccountId) {
         self.assert_owner();
         assert!(
@@ -148,6 +152,9 @@ impl NearCLP {
        POOL MANAGEMENT
     **********************/
 
+    /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
+    /// account - which we call the Pool Reserve Token.
+    /// If a pool for give token exists then "E1" assert exception is thrown.
     pub fn create_pool(&mut self, token: AccountId) {
         assert!(
             self.pools
@@ -157,7 +164,7 @@ impl NearCLP {
         );
     }
 
-    /// Extracts public information about a `token` CLP.
+    /// Extracts public information of the `token` pool.
     pub fn pool_info(&self, token: AccountId) -> Option<PoolInfo> {
         match self.pools.get(&token) {
             None => None,
@@ -165,8 +172,8 @@ impl NearCLP {
         }
     }
 
-    // Increases Near and the Reserve token liquidity.
-    // The supplied funds must preserver current ratio of the liquidity pool.
+    /// Increases Near and the Reserve token liquidity.
+    /// The supplied funds must preserver current ratio of the liquidity pool.
     #[payable]
     pub fn add_liquidity(
         &mut self,
@@ -256,10 +263,10 @@ impl NearCLP {
         // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
     }
 
-    // Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    // `min_near` tokens and `min_tokens` of reserve. Shares are note exchengable between
-    // different pools
-    pub fn remove_liquidity(
+    /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
+    /// `min_near` of Near and `min_tokens` of reserve. Shares are note exchengable between
+    /// different pools.
+    pub fn withdraw_liquidity(
         &mut self,
         token: AccountId,
         shares: Balance,
@@ -299,6 +306,7 @@ impl NearCLP {
             ));
     }
 
+    /// Returns the owner balance of shares of a pool identified by token.
     pub fn shares_balance_of(&self, token: AccountId, owner: AccountId) -> Balance {
         return self.get_pool(&token).shares.get(&owner).unwrap_or(0);
     }

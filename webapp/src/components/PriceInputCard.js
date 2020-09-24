@@ -106,7 +106,7 @@ export default function PriceInputCard(props) {
               <input type="text" className="form-control border-0 bg-transparent" placeholder="0.0" onChange={handleAmountChange}/>
             </div>
           </Col>
-          <Col xl={3} lg={5} sm={6} className="d-flex flex-row-reverse align-items-center mr-2">
+          <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">
             <div className="text-right">
               <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModal} disabled={props.currencySelectionDisabled}>
                 <img src={props.logoUrl} width="15px" className="align-middle pb-1" />

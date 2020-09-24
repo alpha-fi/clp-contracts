@@ -3,6 +3,7 @@ import React, { useContext } from "react";
 import { InputsContext } from "../contexts/InputsContext";
 
 import PriceInputCard from "./PriceInputCard"
+import PoolInfoCard from "./PoolInfoCard"
 
 import Button from 'react-bootstrap/Button';
 
@@ -19,7 +20,12 @@ export default function PoolTab() {
 
   return (
     <>
-      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOL</small></p>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>
+      <PoolInfoCard tokenIndex="2" />
+      <PoolInfoCard tokenIndex="3" hasProvidedLiquidity/>
+      <p className="mt-4 text-center text-secondary"><small><i>Don't see a pair you're looking for? Create a new pool below.</i></small></p>
+      <Hr className="mt-4"/>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>PROVIDE LIQUIDITY</small></p>
       <PriceInputCard
         label="Input"
         name="input1"
@@ -42,9 +48,6 @@ export default function PoolTab() {
       />
       <br/>
       <Button variant="warning" block disabled>Add Liquidity</Button>
-      <Hr/>
-      <p className="text-center text-secondary my-1" style={{ 'letterSpacing': '3px' }}><small>MY LIQUIDITY</small></p>
-      <p className="text-center text-secondary my-5" style={{ 'fontSize': '70%' }}><i>You are not providing any liquidity.</i></p>
     </>
   );
 }

@@ -60,7 +60,7 @@ export default function App() {
       <NavigationBar/>
       <Container className="pb-2">
         <Row className="d-flex justify-content-center">
-          <Col md={7} lg={6}>
+          <Col md={8} lg={6}>
             <Card className="border-0 bg-transparent">
               <Card.Body>
                 <Tab.Container defaultActiveKey="swap">

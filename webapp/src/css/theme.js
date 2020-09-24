@@ -8,6 +8,7 @@ const offWhite = '#dee2e6';
 const lightShadow = 'rgba(9,30,66,.25)';
 const yellow = '#F0EC74';
 const darkerYellow = 'rgba(222,170,12,.5)';
+const lightYellow = '#faf9d1';
 const seaGreen = '#8FD6BD';
 const darkerSeaGreen = '#2f8164';
 
@@ -22,7 +23,9 @@ const themeLight = {
   navTabShadow: yellow,
   navbarToggler: "transparent",
   buttonBorder: darkerYellow,
-  hr: "rgba(0,0,0,.1)"
+  hr: "rgba(0,0,0,.1)",
+  coloredText: darkerYellow,
+  coloredTextShadow: lightYellow,
 };
 
 const themeDark = {
@@ -36,7 +39,9 @@ const themeDark = {
   navTabShadow: darkGray,
   navbarToggler: lightGray,
   buttonBorder: darkerSeaGreen,
-  hr: darkGray
+  hr: darkGray,
+  coloredText: seaGreen,
+  coloredTextShadow: black,
 };
 
 const theme = mode => (mode === "dark" ? themeDark : themeLight);

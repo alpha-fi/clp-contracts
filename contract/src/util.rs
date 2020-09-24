@@ -8,3 +8,8 @@ pub fn assert_account(a: &AccountId, name: &str) {
         format!("{} account ID is invalid", name)
     );
 }
+
+pub fn yton(near_amount: u128) -> u128 {
+    return near_amount / 10u128.pow(24)
+}
+

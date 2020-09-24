@@ -1,5 +1,5 @@
 use crate::*;
-use util::yton;
+use util::*;
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {
@@ -75,7 +75,7 @@ impl NearCLP {
             recipient,
             reserve.into(),
             token,
-            TEN_NEAR,
+            NEP21_STORAGE_DEPOSIT,
             SINGLE_CALL_GAS / 2,
         )
         .then(ext_self::add_liquidity_transfer_callback(

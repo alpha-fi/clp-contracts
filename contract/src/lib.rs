@@ -12,11 +12,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 mod internal;
 mod nep21;
-mod util;
-
-// Prepaid gas for making a single simple call.
-const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
-const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
+pub mod util;
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -239,7 +235,7 @@ impl NearCLP {
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            SINGLE_CALL_GAS / 2,
+            util::SINGLE_CALL_GAS / 2,
         );
         //let callback=ext_self::add_liquidity_transfer_callback(env::current_account_id(),&token,0,SINGLE_CALL_GAS/2);
         //let callback_args="{}".into();
@@ -254,7 +250,7 @@ impl NearCLP {
         .into();
 
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), args, 0, SINGLE_CALL_GAS / 2)
+            .function_call("transfer_from".into(), args, 0, util::SINGLE_CALL_GAS / 2)
             .then(callback);
 
         /*
@@ -265,7 +261,7 @@ impl NearCLP {
             token_amount.into(),
             &token,
             0,
-            SINGLE_CALL_GAS,
+            util::SINGLE_CALL_GAS,
         );
         */
         // TODO:
@@ -313,7 +309,7 @@ impl NearCLP {
                 token_amount.into(),
                 &token,
                 0,
-                SINGLE_CALL_GAS,
+                util::SINGLE_CALL_GAS,
             ));
     }
 
@@ -579,9 +575,8 @@ impl NearCLP {
             _ => false,
         };
 
-        //simulation do not allows for promises inside callbacks
-        //for now just log result
-
+        // TODO: simulation doesn't allow using a promise inside callbacks.
+        // For now we just log result
         env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
 
         if !action_succeeded {
@@ -593,7 +588,7 @@ impl NearCLP {
                 .as_bytes(),
             );
             panic!("callback");
-            //TO-DO ROLLBACK add_liquidity
+            // TODO ROLLBACK add_liquidity
         }
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.

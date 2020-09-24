@@ -7,13 +7,9 @@ use near_primitives::{
     types::{AccountId, Balance},
 };
 use near_runtime_standalone::{init_runtime_and_signer, RuntimeStandalone};
-use near_sdk::json_types::{U64, U128};
+use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
-pub const MAX_GAS: u64 = 300_000_000_000_000;
-pub const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
-
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
@@ -48,7 +44,6 @@ pub struct NewFungibleTokenArgs {
 pub struct NewClpArgs {
     pub owner: AccountId,
 }
-
 
 #[derive(Clone)]
 pub struct ExternalUser {
@@ -152,7 +147,7 @@ pub fn near_call(
     method: &str,
     args: &[u8],
     gas: U64,
-    deposit: Balance
+    deposit: Balance,
 ) -> TxResult {
     let tx = sending_account
         .new_tx(runtime, contract_id)
@@ -175,7 +170,12 @@ pub fn deploy_and_init_fungible_token(
         // transfer tokens otherwise "wouldn't have enough balance to cover storage"
         .transfer(ntoy(50))
         .deploy_contract(FUNGIBLE_TOKEN_BYTES.to_vec())
-        .function_call(init_method.into(), serde_json::to_vec(args).unwrap(), gas.into(), 0)
+        .function_call(
+            init_method.into(),
+            serde_json::to_vec(args).unwrap(),
+            gas.into(),
+            0,
+        )
         .sign(&account.signer);
     let res = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();
@@ -187,13 +187,18 @@ pub fn deploy_clp(
     account: &ExternalUser,
     init_method: &str,
     gas: U64,
-    args: &NewClpArgs
+    args: &NewClpArgs,
 ) -> TxResult {
     let tx = account
         .new_tx(runtime, &account.account_id)
         .transfer(ntoy(50))
         .deploy_contract(CLP_WASM_BYTES.to_vec())
-        .function_call(init_method.into(), serde_json::to_vec(args).unwrap(), gas.into(), 0)
+        .function_call(
+            init_method.into(),
+            serde_json::to_vec(args).unwrap(),
+            gas.into(),
+            0,
+        )
         .sign(&account.signer);
     let res = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();

@@ -1,16 +1,15 @@
 mod utils;
-use crate::utils::{ExternalUser, MAX_GAS, TEN_NEAR};
+use crate::utils::*;
+use near_clp::util::{NEP21_STORAGE_DEPOSIT, SINGLE_CALL_GAS};
 use near_clp::PoolInfo;
+
 //use near_primitives::errors::ActionErrorKind;
 //use near_primitives::errors::TxExecutionError;
-use near_primitives::{transaction::ExecutionStatus, types::AccountId};
+use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
+use near_sdk::AccountId;
 use serde_json::json;
-use utils::{
-    deploy_and_init_fungible_token, deploy_clp, near_call, near_view, new_root, ntoy, NewClpArgs,
-    NewFungibleTokenArgs,
-};
 
 pub const CLP_ACCOUNT_NAME: &str = "nearclp";
 pub const FUNGIBLE_TOKEN_ACCOUNT_NAME: &str = "fungible_token";
@@ -30,7 +29,8 @@ fn deploy_fungible_mint_for_alice() {
         total_supply: U128(total_supply.clone()),
     };
 
-    deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
+    deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(SINGLE_CALL_GAS), &args)
+        .unwrap();
 
     let returned_supply: U128 = near_view(
         &r,
@@ -67,7 +67,7 @@ fn deploy_fungible_mint_for_alice() {
             "amount": "191919",
         }))
         .unwrap(),
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         36_500_000_000_000_000_000_000,
     )
     .unwrap();
@@ -104,7 +104,8 @@ fn alice_is_a_lp() {
     };
 
     println!("deploy_and_init_fungible_token");
-    deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
+    deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(SINGLE_CALL_GAS), &args)
+        .unwrap();
 
     let args2 = NewFungibleTokenArgs {
         owner_id: FUN_TOKEN2_ACCOUNT_NAME.into(),
@@ -112,13 +113,14 @@ fn alice_is_a_lp() {
     };
 
     println!("deploy_and_init_fungible_token 2");
-    deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(MAX_GAS), &args2).unwrap();
+    deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(SINGLE_CALL_GAS), &args2)
+        .unwrap();
 
     let args_clp = NewClpArgs {
         owner: ALICE_ACCOUNT_NAME.into(),
     };
     println!("deploy_and_init_clp");
-    deploy_clp(&mut r, &clp, "new", U64(MAX_GAS), &args_clp).unwrap();
+    deploy_clp(&mut r, &clp, "new", U64(SINGLE_CALL_GAS), &args_clp).unwrap();
 
     // alice creates a pool
     println!("about to create alice's pool");
@@ -192,7 +194,7 @@ fn alice_is_a_lp() {
         }}"#,
             "carol"
         ),
-        TEN_NEAR, //refundable, required if the fun-contract needs more storage
+        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
     println!("let's see how many tokens carol has now");
@@ -257,7 +259,7 @@ fn alice_is_a_lp() {
         &FUN_TOKEN2_ACCOUNT_NAME,
         "increment",
         &[],
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         0
     ).unwrap();
 
@@ -301,7 +303,7 @@ fn alice_is_a_lp() {
             "counter_account": FUN_TOKEN2_ACCOUNT_NAME,
             "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
         }),).unwrap(),
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         0
     ).unwrap();
 
@@ -351,7 +353,7 @@ fn alice_is_a_lp() {
             "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
             "recipient_account": CLP_ACCOUNT_NAME,
         }),).unwrap(),
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         0
     );
     if will_error.is_err() {
@@ -398,7 +400,7 @@ fn alice_is_a_lp() {
             "new_owner_id": CLP_ACCOUNT_NAME,
             "amount": "50",
         }),).unwrap(),
-              U64(MAX_GAS),
+              U64(SINGLE_CALL_GAS),
               36_500_000_000_000_000_000_000
     ).unwrap();
 
@@ -413,7 +415,7 @@ fn alice_is_a_lp() {
             "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
             "recipient_account": ALICE_ACCOUNT_NAME,
         }),).unwrap(),
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         0
     ).unwrap();
 
@@ -511,7 +513,7 @@ pub fn call(
     args: String,
     attached_amount: u128,
 ) {
-    let gas = MAX_GAS;
+    let gas = SINGLE_CALL_GAS;
 
     let tx = sending_account
         .new_tx(runtime, contract)
@@ -531,7 +533,7 @@ pub fn call(
         contract, //contract
         method,
         args.as_bytes(),
-        U64(MAX_GAS),
+        U64(SINGLE_CALL_GAS),
         attached_amount
     )
     .unwrap();

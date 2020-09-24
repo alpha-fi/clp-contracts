@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 
-import { GlobalContext } from "../contexts/GlobalContext";
+import { InputsContext } from "../contexts/InputsContext";
 
 import PriceInputCard from "./PriceInputCard"
 
@@ -15,7 +15,7 @@ const Hr = styled("hr")`
 
 export default function PoolTab() {
 
-  const globalState = useContext(GlobalContext);
+  const inputs = useContext(InputsContext);
 
   return (
     <>
@@ -23,9 +23,10 @@ export default function PoolTab() {
       <PriceInputCard
         label="Input"
         name="input1"
-        logoUrl={globalState.state.pool.input1.logoUrl}
-        symbol={globalState.state.pool.input1.symbol}
-        tokenIndex={globalState.state.pool.input1.tokenIndex}
+        logoUrl={inputs.state.pool.input1.logoUrl}
+        symbol={inputs.state.pool.input1.symbol}
+        type={inputs.state.pool.input1.type}
+        tokenIndex={inputs.state.pool.input1.tokenIndex}
       />
       <div className="text-center my-2">
         <BsPlus/>
@@ -33,9 +34,11 @@ export default function PoolTab() {
       <PriceInputCard
         label="Input"
         name="input2"
-        logoUrl={globalState.state.pool.input2.logoUrl}
-        symbol={globalState.state.pool.input2.symbol}
-        tokenIndex={globalState.state.pool.input2.tokenIndex}
+        logoUrl={inputs.state.pool.input2.logoUrl}
+        symbol={inputs.state.pool.input2.symbol}
+        type={inputs.state.pool.input2.type}
+        tokenIndex={inputs.state.pool.input2.tokenIndex}
+        currencySelectionDisabled
       />
       <br/>
       <Button variant="warning" block disabled>Add Liquidity</Button>

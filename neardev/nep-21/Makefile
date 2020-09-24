@@ -1,2 +1,2 @@
 build:
-	cargo +stable build --target wasm32-unknown-unknown --release
+	@env 'RUSTFLAGS=-C link-arg=-s' cargo +stable build --target wasm32-unknown-unknown --release

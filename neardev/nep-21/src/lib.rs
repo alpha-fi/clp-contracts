@@ -239,6 +239,16 @@ impl FungibleToken {
             .get_allowance(&escrow_account_id)
             .into()
     }
+
+    // Mints 1000 tokens to the caller.
+    pub fn mint(&mut self) {
+        let amount: Balance = 1000;
+        self.total_supply += amount;
+        let dest = env::predecessor_account_id();
+        let mut a = self.get_account(&dest);
+        a.balance += amount;
+        self.set_account(&dest, &a);
+    }
 }
 
 impl FungibleToken {

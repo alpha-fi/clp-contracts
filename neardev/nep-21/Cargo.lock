@@ -268,7 +268,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nep21-basic"
+name = "nep21-mintable"
 version = "0.1.0"
 dependencies = [
  "near-sdk",

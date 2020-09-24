@@ -1,19 +1,24 @@
 // use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
+use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
+use uint::construct_uint;
+use util::yton;
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+mod internal;
 mod nep21;
 mod util;
 
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
-
+const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
+                               
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -25,14 +30,30 @@ const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 // "E8" - computed amount of selling tokens is bigger than user required maximum.
 // "E9" - assets (tokens) must be different in token to token swap.
 
+construct_uint! {
+    /// 256-bit unsigned integer.
+    pub struct U256(4);
+}
+
+/// Interface for the contract itself.
+#[ext_contract(ext_self)]
+pub trait SelfContract {
+    /// A callback to check the result of the staking action.
+    /// In case the stake amount is less than the minimum staking threshold, the staking action
+    /// fails, and the stake amount is not changed. This might lead to inconsistent state and the
+    /// follow withdraw calls might fail. To mitigate this, the contract will issue a new unstaking
+    /// action in case of the failure of the first staking action.
+    fn add_liquidity_transfer_callback(&mut self, token:AccountId);
+}
+
 /// PoolInfo is a helper structure to extract public data from a Pool
-#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize)]
+#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
-    near_bal: Balance,
-    token_bal: Balance,
+    pub near_bal: Balance,
+    pub token_bal: Balance,
     /// total amount of participation shares. Shares are represented using the same amount of
     /// tailing decimals as the NEAR token, which is 24
-    total_shares: Balance,
+    pub total_shares: Balance,
 }
 
 use std::fmt;
@@ -76,7 +97,7 @@ impl Pool {
 }
 
 #[near_bindgen]
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct NearCLP {
     pub fee_dst: AccountId,
     pub owner: AccountId,
@@ -84,6 +105,15 @@ pub struct NearCLP {
     pools: UnorderedMap<AccountId, Pool>,
 }
 
+impl Default for NearCLP {
+    fn default() -> Self {
+        panic!("Fun token should be initialized before usage")
+    }
+}
+
+//-------------------------
+// CONTRACT PUBLIC API
+//-------------------------
 #[near_bindgen]
 impl NearCLP {
     #[init]
@@ -141,6 +171,7 @@ impl NearCLP {
 
     // Increases Near and the Reserve token liquidity.
     // The supplied funds must preserver current ratio of the liquidity pool.
+    #[payable]
     pub fn add_liquidity(
         &mut self,
         token: AccountId,
@@ -151,29 +182,29 @@ impl NearCLP {
         let caller = env::predecessor_account_id();
         let shares_minted;
         let near_amount = env::attached_deposit();
-        let token_amount = max_token_amount;
+        let computed_token_amount;
         assert!(near_amount > 0 && max_token_amount > 0, "E2");
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
-            env::log(b"Creating a frist deposit");
+            env::log(b"Creating a first deposit");
             p.near_bal = near_amount;
             shares_minted = p.near_bal;
             p.total_shares = shares_minted;
-
-            p.token_bal = token_amount;
+            computed_token_amount = max_token_amount;
+            p.token_bal = computed_token_amount;
             p.shares.insert(&caller, &p.near_bal);
         } else {
-            let token_amount = near_amount * p.token_bal / p.near_bal + 1;
+            computed_token_amount = near_amount * p.token_bal / p.near_bal + 1;
             shares_minted = near_amount * p.total_shares / near_amount;
-            assert!(max_token_amount >= token_amount, "E3");
+            assert!(max_token_amount >= computed_token_amount, "E3");
             assert!(min_shares_amont <= shares_minted, "E4");
 
             p.shares.insert(
                 &caller,
                 &(p.shares.get(&caller).unwrap_or(0) + shares_minted),
             );
-            p.token_bal += token_amount;
+            p.token_bal += computed_token_amount;
             p.near_bal += near_amount;
             p.total_shares += shares_minted;
         }
@@ -181,7 +212,7 @@ impl NearCLP {
         env::log(
             format!(
                 "Minting {} of shares for {} NEAR and {} reserve tokens",
-                shares_minted, near_amount, token_amount
+                shares_minted, near_amount, computed_token_amount
             )
             .as_bytes(),
         );
@@ -192,6 +223,28 @@ impl NearCLP {
         );
 
         self.set_pool(&token, &p);
+
+        //schedule a call to transfer the fun tokens
+        let args:Vec<u8>=format!(r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#, oid=caller,noid=env::current_account_id(), amount=computed_token_amount).as_bytes().to_vec();
+        
+        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
+        let callback_args=format!(r#"{{ "token":"{tok}" }}"#, tok=token).as_bytes().to_vec();
+        let callback=Promise::new(env::current_account_id()).function_call("add_liquidity_transfer_callback".into(), callback_args, 0, SINGLE_CALL_GAS/2);
+        //let callback=ext_self::add_liquidity_transfer_callback(env::current_account_id(),&token,0,SINGLE_CALL_GAS/2);
+        //let callback_args=format!(r#"{{}}"#).as_bytes().to_vec();
+        //let callback=Promise::new(token.clone()).function_call("get_total_supply".into(), callback_args, 0, SINGLE_CALL_GAS/2);
+        
+        //now we can schedule the call
+        Promise::new(token) //call the token contract
+            .function_call("transfer_from".into(), 
+                args,
+                0,
+                SINGLE_CALL_GAS/2)
+            .then(callback)
+            ;
+            
+        /*
+        REPLACED BY CODE ABOVE 
         nep21::ext_nep21::transfer_from(
             caller,
             env::current_account_id(),
@@ -200,6 +253,7 @@ impl NearCLP {
             0,
             SINGLE_CALL_GAS,
         );
+        */
         // TODO:
         // Handling exception is work-in-progress in NEAR runtime
         // 1. rollback `p` on changes or move the pool update to a promise
@@ -490,301 +544,65 @@ impl NearCLP {
         let (_, tokens_in) = self._price_swap_tokens_out(&p1, &p2, tokens_out);
         return tokens_in;
     }
-}
 
-impl NearCLP {
-    fn assert_owner(&self) {
-        assert!(
-            env::predecessor_account_id() == self.owner,
-            "Only current owner can change owner"
-        );
-    }
+    pub fn add_liquidity_transfer_callback(&mut self, token:AccountId) {
 
-    fn get_pool(&self, ref token: &AccountId) -> Pool {
-        match self.pools.get(token) {
-            None => env::panic(b"Pool for this token doesn't exist"),
-            Some(p) => return p,
-        }
-    }
+        env::log(format!(
+            "enter add_liquidity_transfer_callback"
+            ).as_bytes(),);
 
-    fn set_pool(&mut self, ref token: &AccountId, pool: &Pool) {
-        self.pools.insert(token, pool);
-    }
-
-    /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
-    /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
-    fn calc_out_amount(&self, in_amount: Balance, in_bal: Balance, out_bal: Balance) -> Balance {
-        // this is getInputPrice in Uniswap
-        let in_net = in_amount * 997;
-        return in_net * out_bal / (in_bal * 1000 + in_net);
-    }
-
-    /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
-    /// balance in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens
-    /// respectively.
-    fn calc_in_amount(&self, out_amount: Balance, in_bal: Balance, out_bal: Balance) -> Balance {
-        // this is getOutputPrice in Uniswap
-        return (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
-    }
-
-    fn _swap_near(
-        &mut self,
-        p: &mut Pool,
-        token: &AccountId,
-        near: Balance,
-        reserve: Balance,
-        recipient: AccountId,
-    ) {
-        env::log(
-            format!(
-                "User purchased {} reserve tokens for {} NEAR",
-                reserve, near
-            )
-            .as_bytes(),
-        );
-        p.token_bal -= reserve;
-        p.near_bal += near;
-        self.set_pool(token, p);
-        nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS);
-    }
-
-    /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
-    /// `min_tokens` of reserve tokens.
-    fn _swap_near_exact_in(
-        &mut self,
-        token: &AccountId,
-        near_paid: Balance,
-        min_tokens: Balance,
-        recipient: AccountId,
-    ) {
-        assert!(near_paid > 0 && min_tokens > 0, "E2");
-        let mut p = self.get_pool(&token);
-        let tokens_out = self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
-        assert!(tokens_out >= min_tokens, "E7");
-        self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
-    }
-
-    /// Pool sells `tokens_out` reserve token for NEAR tokens. Asserts that a user pays no more
-    /// than `max_near_paid`.
-    fn _swap_near_exact_out(
-        &mut self,
-        token: &AccountId,
-        tokens_out: Balance,
-        max_near_paid: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        assert!(tokens_out > 0 && max_near_paid > 0, "E2");
-        let mut p = self.get_pool(&token);
-        let near_to_pay = self.calc_in_amount(tokens_out, p.near_bal, p.token_bal);
-        // panics if near_to_pay > max_near_paid
-        let near_refund = max_near_paid - near_to_pay;
-        if near_refund > 0 {
-            Promise::new(buyer).transfer(near_refund as u128);
-        }
-        self._swap_near(&mut p, token, near_to_pay, tokens_out, recipient);
-    }
-
-    fn _swap_reserve(
-        &mut self,
-        p: &mut Pool,
-        token: &AccountId,
-        near: Balance,
-        reserve: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        env::log(
-            format!(
-                "User purchased {} NEAR tokens for {} reserve tokens",
-                near, reserve
-            )
-            .as_bytes(),
-        );
-        p.token_bal += reserve;
-        p.near_bal -= near;
-        self.set_pool(&token, p);
-        Promise::new(recipient)
-            .transfer(near as u128)
-            .and(nep21::ext_nep21::transfer_from(
-                buyer,
-                env::current_account_id(),
-                reserve.into(),
-                token,
-                0,
-                SINGLE_CALL_GAS,
-            ));
-    }
-
-    /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
-    /// `min_near`.
-    fn _swap_reserve_exact_in(
-        &mut self,
-        token: &AccountId,
-        tokens_paid: Balance,
-        min_near: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        assert!(tokens_paid > 0 && min_near > 0, "E2");
-        let mut p = self.get_pool(&token);
-        let near_out = self.calc_out_amount(tokens_paid, p.token_bal, p.near_bal);
-        assert!(near_out >= min_near, "E7");
-        self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
-    }
-
-    /// Pool sells `tokens_out` reserve tokens for NEAR tokens. Asserts that a user pays
-    /// no more than `max_near_paid`.
-    fn _swap_reserve_exact_out(
-        &mut self,
-        token: &AccountId,
-        near_out: Balance,
-        max_tokens_paid: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        assert!(near_out > 0 && max_tokens_paid > 0, "E2");
-        let mut p = self.get_pool(&token);
-        let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
-        assert!(tokens_to_pay <= max_tokens_paid, "E8");
-        self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
-    }
-
-    fn _swap_tokens(
-        &mut self,
-        p1: &mut Pool,
-        p2: &mut Pool,
-        token1: &AccountId,
-        token2: &AccountId,
-        token1_in: Balance,
-        token2_out: Balance,
-        near_swap: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        env::log(
-            format!(
-                "User purchased {} {} tokens for {} {} tokens",
-                token2_out, token2, token1_in, token1
-            )
-            .as_bytes(),
-        );
-        p1.token_bal += token1_in;
-        p1.near_bal -= near_swap;
-        p2.token_bal -= token2_out;
-        p2.near_bal += near_swap;
-        self.set_pool(&token1, p1);
-        self.set_pool(&token2, p1);
-        nep21::ext_nep21::transfer_from(
-            buyer,
+        assert_eq!(
             env::current_account_id(),
-            token1_in.into(),
-            token1,
-            0,
-            SINGLE_CALL_GAS,
-        )
-        .and(nep21::ext_nep21::transfer(
-            recipient,
-            token2_out.into(),
-            token2,
-            0,
-            SINGLE_CALL_GAS,
-        ));
+            env::predecessor_account_id(),
+            "Can be called only as a callback"
+        );
+
+        assert_eq!(
+            env::promise_results_count(),
+            1,
+            "Contract expected a result on the callback"
+        );
+        let action_succeeded = match env::promise_result(0) {
+            PromiseResult::Successful(_) => true,
+            _ => false,
+        };
+        
+        //simulation do not allows for promises inside callbacks 
+        //for now just log result
+
+        env::log(format!(
+            "PromiseResult  transfer succeeded:{}",action_succeeded
+            ).as_bytes(),);
+
+        if !action_succeeded {
+            panic!(format!("from add_liquidity_transfer_callback, token:{} transfer FAILED!", token));
+        }
+
+        // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
+        /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
+            Promise::new(env::current_account_id()).stake(0, self.stake_public_key.clone());
+        }
+        */
     }
 
-    fn _price_swap_tokens_in(
-        &self,
-        p_in: &Pool,
-        p_out: &Pool,
-        tokens_in: Balance,
-    ) -> (Balance, Balance) {
-        let near_swap = self.calc_out_amount(tokens_in, p_in.token_bal, p_in.near_bal);
-        let tokens2_out = self.calc_out_amount(near_swap, p_out.near_bal, p_out.token_bal);
-        return (near_swap, tokens2_out);
-    }
-
-    fn _price_swap_tokens_out(
-        &self,
-        p_in: &Pool,
-        p_out: &Pool,
-        tokens_out: Balance,
-    ) -> (Balance, Balance) {
-        let near_swap = self.calc_in_amount(tokens_out, p_out.token_bal, p_out.near_bal);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.near_bal, p_in.token_bal);
-        return (near_swap, tokens1_to_pay);
-    }
-
-    fn _swap_tokens_exact_in(
-        &mut self,
-        token1: &AccountId,
-        token2: &AccountId,
-        tokens1_paid: Balance,
-        min_tokens2: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        assert!(tokens1_paid > 0 && min_tokens2 > 0, "E2");
-        assert_ne!(token1, token2, "E9");
-        let mut p1 = self.get_pool(&token1);
-        let mut p2 = self.get_pool(&token2);
-        let (near_swap, tokens2_out) = self._price_swap_tokens_in(&p1, &p2, tokens1_paid);
-        assert!(tokens2_out >= min_tokens2, "E7");
-
-        self._swap_tokens(
-            &mut p1,
-            &mut p2,
-            token1,
-            token2,
-            tokens1_paid,
-            tokens2_out,
-            near_swap,
-            buyer,
-            recipient,
-        )
-    }
-
-    fn _swap_tokens_exact_out(
-        &mut self,
-        token1: &AccountId,
-        token2: &AccountId,
-        tokens2_out: Balance,
-        max_tokens1_paid: Balance,
-        buyer: AccountId,
-        recipient: AccountId,
-    ) {
-        assert!(tokens2_out > 0 && max_tokens1_paid > 0, "E2");
-        assert_ne!(token1, token2, "E9");
-        let mut p1 = self.get_pool(&token1);
-        let mut p2 = self.get_pool(&token2);
-        let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
-        assert!(tokens1_to_pay >= max_tokens1_paid, "E8");
-
-        self._swap_tokens(
-            &mut p1,
-            &mut p2,
-            token1,
-            token2,
-            tokens1_to_pay,
-            tokens2_out,
-            near_swap,
-            buyer,
-            recipient,
-        )
-    }
 }
+//-------------------------
+// END CONTRACT PUBLIC API
+//-------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
+
+//#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
-mod token;
+mod unit_tests_fun_token;
 
-#[cfg(not(target_arch = "wasm32"))]
+//#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     use super::*;
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
-    use token::FungibleToken;
+    use unit_tests_fun_token::FungibleToken;
 
     struct Accounts {
         current: AccountId,
@@ -882,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only current owner can change owner")]
+    #[should_panic(expected = "Only the owner can call this function")]
     fn change_owner_other_account() {
         let (_, mut c) = init();
         let owner2 = "new_owner_near".to_string();
@@ -891,7 +709,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "E1")]
-    fn crate_twice_same_pool_fails() {
+    fn create_twice_same_pool_fails() {
         let (ctx, mut c) = init();
         c.create_pool(ctx.accounts.token1.clone());
         c.create_pool(ctx.accounts.token1);
@@ -937,7 +755,9 @@ mod tests {
         token1.inc_allowance(t.clone(), token_deposit.into());
 
         ctx.set_vmc_deposit(near_deposit);
-        c.add_liquidity(t.clone(), ctx.token_supply, ctx.token_supply);
+        let max_token_deposit = token_deposit;
+        let min_shares_required = near_deposit;
+        c.add_liquidity(t.clone(), max_token_deposit, min_shares_required);
 
         let p = c.pool_info(t.clone()).expect("Pool should exist");
         assert_eq!(p.near_bal, near_deposit, "Near balance should be correct");

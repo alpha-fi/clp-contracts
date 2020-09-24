@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 
-import { GlobalContext } from "../contexts/GlobalContext";
+import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
 
 import Row from 'react-bootstrap/Row';
@@ -10,7 +10,7 @@ import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 
 import { BsCaretDownFill } from "react-icons/bs";
-import { FaEthereum } from "react-icons/fa"; 
+import { FaEthereum } from "react-icons/fa";
 
 import styled from "@emotion/styled";
 const Theme = styled("div")`
@@ -30,8 +30,8 @@ const Theme = styled("div")`
 export default function PriceInputCard(props) {
 
   // Global state
-  const globalState = useContext(GlobalContext);
-  const { dispatch } = globalState;
+  const inputs = useContext(InputsContext);
+  const { dispatch } = inputs;
 
   // Token list state (used to populate button with token logo and symbol)
   const tokenListState = useContext(TokenListContext);
@@ -42,30 +42,29 @@ export default function PriceInputCard(props) {
     // Find URL of token logo
     let newImageUrl = findCurrencyLogoUrl(props.tokenIndex, tokenListState.state.tokenList);
     let newSymbol = tokenListState.state.tokenList.tokens[props.tokenIndex].symbol;
+    let newType = tokenListState.state.tokenList.tokens[props.tokenIndex].type;
 
-    // Update image and symbol of selected currency
+    // Update image, symbol, and type of selected currency
     switch (props.name) {
       case 'from':
         dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'to':
         dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'input1':
         dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'input2':
-        // Defaults to NEAR; no need to set new currency
         dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
-        break;
     }
   }
 
@@ -97,7 +96,7 @@ export default function PriceInputCard(props) {
 
   return (
     <>
-      <Theme className="py-3">
+      <Theme className="py-2">
         <label className="ml-4 mb-1 mt-0">
           <small className="text-secondary">{props.label}</small>
         </label>
@@ -107,20 +106,21 @@ export default function PriceInputCard(props) {
               <input type="text" className="form-control border-0 bg-transparent" placeholder="0.0" onChange={handleAmountChange}/>
             </div>
           </Col>
-          <Col xl={3} lg={5} sm={6} className="d-flex flex-row-reverse align-items-center mr-2">
+          <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">
             <div className="text-right">
-              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModal}>
+              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModal} disabled={props.currencySelectionDisabled}>
                 <img src={props.logoUrl} width="15px" className="align-middle pb-1" />
                 {' '}{props.symbol}
                 {' '}
                 <BsCaretDownFill/>
               </Button>
-              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap', 'fontSize': '60%'}}>
-                <FaEthereum/>{' '}
-                ERC-20
-                {' '}
-                <BsCaretDownFill/>
-              </Button>
+              <br/>
+              <small className="mr-3 text-secondary" style={{'whiteSpace': 'nowrap', 'fontSize': '60%'}}>
+                {props.type === "ERC-20"
+                  ? <><FaEthereum/> ERC-20</>
+                  : props.type
+                }
+              </small>
             </div>
           </Col>
         </Row>

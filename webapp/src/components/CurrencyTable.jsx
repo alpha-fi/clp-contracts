@@ -1,9 +1,13 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 
-import { GlobalContext } from "../contexts/GlobalContext";
+import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
+
+import Badge from 'react-bootstrap/Badge';
+
+import { FaEthereum } from "react-icons/fa"; 
 
 import styled from "@emotion/styled";
 const Tr = styled("tr")`
@@ -15,9 +19,9 @@ const Tr = styled("tr")`
 // Parses token list to table
 export const CurrencyTable = () => {
   
-  // Global state
-  const globalState = useContext(GlobalContext);
-  const { dispatch } = globalState;
+  // Inputs state
+  const inputs = useContext(InputsContext);
+  const { dispatch } = inputs;
 
   // Token list state
   const tokenListState = useContext(TokenListContext);
@@ -25,52 +29,65 @@ export const CurrencyTable = () => {
   // Updates selected currency in global state and closes modal
   function handleCurrencyChange(newTokenIndex) {
 
-    // Find URL of token logo
+    // Find URL of token logo, symbol, and type
     let newImageUrl = findCurrencyLogoUrl(newTokenIndex, tokenListState.state.tokenList);
     let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
+    let newType = tokenListState.state.tokenList.tokens[newTokenIndex].type;
 
     // Find correct input to update
-    switch (globalState.state.currencySelectionModal.selectedInput) {
+    switch (inputs.state.currencySelectionModal.selectedInput) {
       case 'from':
         dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'to':
         dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'input1':
         dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
         break;
       case 'input2':
         dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol }
+          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
         });
-    } 
-  }
+    }
+  }    
 
   return (
     <>
       {tokenListState.state.tokenList.tokens.map((token, index) => (
         <Tr key={index} onClick={() => handleCurrencyChange(index)}>
           <td>
-            {(() => {
-              // Determine whether each token logo is served over HTTP/HTTPS or IPFS
-              if (tokenListState.state.tokenList.tokens[index].logoURI.startsWith('ipfs://')) {
+            {/* Determine whether each token logo is served over HTTP/HTTPS or IPFS */}
+            {tokenListState.state.tokenList.tokens[index].logoURI.startsWith('ipfs://')
+              ?
                 // Token image is served over IPFS
-                return <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
-              } else {
+                <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
+              :
                 // Token image is served over HTTP/HTTPS
-                return <img src={token.logoURI} width="25px" />
-              }
-            })()}
+                <img src={token.logoURI} width="25px" />
+            }
           </td>
-          <td>{token.symbol}</td>
-          <td>{token.name}</td>
+          <td>
+            {token.name} ({token.symbol})
+            {' '}
+            <Badge variant="secondary" className="ml-1">{
+              token.type === "ERC-20"
+                ? <><FaEthereum/>{' '}ERC-20</>
+                : token.type
+            }</Badge>
+          </td>
+          <td className="text-right">
+            {token.balance
+              ? <code className="text-secondary">{token.balance}</code>
+              : <code className="text-secondary">-</code>
+            }
+          </td>
         </Tr>
       ))}
     </>

@@ -1,6 +1,8 @@
 import 'regenerator-runtime/runtime'
-import React from 'react'
+import React, { useContext, useEffect } from 'react'
 import './global.css'
+
+import { Web3Context } from './contexts/Web3Context';
 
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
@@ -47,30 +49,6 @@ const Wrapper = styled("div")`
 
 export default function App() {
 
-  // after submitting the form, we want to show Notification
-  const [showNotification, setShowNotification] = React.useState(false)
-
-  // The useEffect hook can be used to fire side-effects during render
-  // Learn more: https://reactjs.org/docs/hooks-intro.html
-  React.useEffect(
-    () => {
-      // in this case, we only care to query the contract when signed in
-      if (window.walletConnection.isSignedIn()) {
-
-        // window.contract is set by initContract in index.js
-        window.contract.get_greeting({ account_id: window.accountId })
-          .then(greetingFromContract => {
-            set_greeting(greetingFromContract)
-          })
-      }
-    },
-
-    // The second argument to useEffect tells React when to re-run the effect
-    // Use an empty array to specify "only run on first render"
-    // This works because signing into NEAR Wallet reloads the page
-    []
-  )
-
   return (
     <Wrapper>
       <link
@@ -82,7 +60,7 @@ export default function App() {
       <NavigationBar/>
       <Container className="pb-2">
         <Row className="d-flex justify-content-center">
-          <Col md={7} lg={6}>
+          <Col md={8} lg={6}>
             <Card className="border-0 bg-transparent">
               <Card.Body>
                 <Tab.Container defaultActiveKey="swap">
@@ -102,29 +80,6 @@ export default function App() {
         </Row>
       </Container>
       <CurrencySelectionModal/>
-      {showNotification && <Notification />}
     </Wrapper>
-  )
-}
-
-// this component gets rendered by App after the form is submitted
-function Notification() {
-  const urlPrefix = `https://explorer.${networkId}.near.org/accounts`
-  return (
-    <aside>
-      <a target="_blank" rel="noreferrer" href={`${urlPrefix}/${window.accountId}`}>
-        {window.accountId}
-      </a>
-      {' '}
-      called method: 'set_greeting' in contract:
-      {' '}
-      <a target="_blank" rel="noreferrer" href={`${urlPrefix}/${window.contract.contractId}`}>
-        {window.contract.contractId}
-      </a>
-      <footer>
-        <div>✔ Succeeded</div>
-        <div>Just now</div>
-      </footer>
-    </aside>
   )
 }

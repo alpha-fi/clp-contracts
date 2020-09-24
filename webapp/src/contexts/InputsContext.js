@@ -5,28 +5,32 @@ const initialState = {
     from: {
       amount: "",     // Amount of tokens
       symbol: "",     // Symbol of token
+      type: "",       // Native token (NEAR or ETH), ERC-20, NEP-21, ...
       logoUrl: "",    // Address of token logo image
-      tokenIndex: 0   // Index of token within token list
+      tokenIndex: 1   // Index of token within token list
     },
     to: {
       amount: "",
       symbol: "",
+      type: "",
       logoUrl: "",
-      tokenIndex: 1
+      tokenIndex: 0
     }
   },
   pool: {
     input1: {
       amount: "",
       symbol: "",
+      type: "",
       logoUrl: "",
-      tokenIndex: 0
+      tokenIndex: 2
     },
     input2: {
       amount: "",
-      symbol: "NEAR",
+      symbol: "",
+      type: "",
       logoUrl: "",
-      tokenIndex: 1
+      tokenIndex: 0
     }
   },
   currencySelectionModal: {
@@ -35,16 +39,17 @@ const initialState = {
   }
 };
 
-const GlobalContext = createContext(initialState);
-const { Provider } = GlobalContext;
+const InputsContext = createContext(initialState);
+const { Provider } = InputsContext;
 
-const GlobalStateProvider = ( { children } ) => {
+const InputsProvider = ( { children } ) => {
   const [state, dispatch] = useReducer((state, action) => {
     switch(action.type) {
       case 'SET_FROM_AMOUNT':
         return { ...state, swap: { from: { 
           amount: action.payload.amount,
           symbol: state.swap.from.symbol,
+          type: state.swap.from.type,
           logoUrl: state.swap.from.logoUrl,
           tokenIndex: state.swap.from.tokenIndex
         }, to: state.swap.to }};
@@ -52,6 +57,7 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, swap: { to: { 
           amount: action.payload.amount,
           symbol: state.swap.to.symbol,
+          type: state.swap.to.type,
           logoUrl: state.swap.to.logoUrl,
           tokenIndex: state.swap.to.tokenIndex
         }, from: state.swap.from }};
@@ -59,6 +65,7 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, pool: { input1: { 
           amount: action.payload.amount,
           symbol: state.pool.input1.symbol,
+          type: state.pool.input1.type,
           logoUrl: state.pool.input1.logoUrl,
           tokenIndex: state.pool.input1.tokenIndex
         }, input2: state.pool.input2 }};
@@ -66,6 +73,7 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, pool: { input2: { 
           amount: action.payload.amount,
           symbol: state.pool.input2.symbol,
+          type: state.pool.input2.type,
           logoUrl: state.pool.input2.logoUrl,
           tokenIndex: state.pool.input2.tokenIndex
         }, input1: state.pool.input1 }};
@@ -73,6 +81,7 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, swap: { from: {
           amount: state.swap.from.amount,
           symbol: action.payload.symbol,
+          type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.swap.from.tokenIndex
         }, to: state.swap.to }, currencySelectionModal: { isVisible: false }};
@@ -80,6 +89,7 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, swap: { to: {
           amount: state.swap.to.amount,
           symbol: action.payload.symbol,
+          type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.swap.to.tokenIndex
         }, from: state.swap.from }, currencySelectionModal: { isVisible: false }};
@@ -87,13 +97,15 @@ const GlobalStateProvider = ( { children } ) => {
         return { ...state, pool: { input1: {
           amount: state.pool.input1.amount,
           symbol: action.payload.symbol,
+          type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.pool.input1.tokenIndex
         }, input2: state.pool.input2 }, currencySelectionModal: { isVisible: false }};
       case 'UPDATE_INPUT2_SELECTED_CURRENCY':
         return { ...state, pool: { input2: {
           amount: state.pool.input2.amount,
-          symbol: state.pool.input2.symbol,
+          symbol: action.payload.symbol,
+          type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.pool.input2.tokenIndex
         }, input1: state.pool.input1 }, currencySelectionModal: { isVisible: false }};
@@ -109,4 +121,4 @@ const GlobalStateProvider = ( { children } ) => {
   return <Provider value={{ state, dispatch }}>{children}</Provider>;
 }
 
-export { GlobalContext, GlobalStateProvider };
+export { InputsContext, InputsProvider };

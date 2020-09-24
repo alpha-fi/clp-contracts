@@ -4,22 +4,22 @@ import App from './App'
 import { initContract } from './utils'
 
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { GlobalStateProvider } from './contexts/GlobalContext';
-import { TokenListProvider } from './contexts/TokenListContext';
+import { InputsProvider } from './contexts/InputsContext';
 import { Web3Provider } from './contexts/Web3Context';
+import { TokenListProvider } from './contexts/TokenListContext';
 
 window.nearInitPromise = initContract()
   .then(() => {
     ReactDOM.render(
-      <GlobalStateProvider>
-        <TokenListProvider>
-          <Web3Provider>
+      <InputsProvider>
+        <Web3Provider>
+          <TokenListProvider>
             <ThemeProvider>
               <App />
             </ThemeProvider>
-          </Web3Provider>
-        </TokenListProvider>
-      </GlobalStateProvider>,
+          </TokenListProvider>
+        </Web3Provider>
+      </InputsProvider>,
       document.querySelector('#root')
     )
   })

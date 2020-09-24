@@ -1,29 +1,28 @@
 import React, {useContext} from "react";
 
-import { Web3Context, signInWithWeb3 } from '../contexts/Web3Context';
+import { Web3Context } from '../contexts/Web3Context';
 
-import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 
 import { FaCog } from "react-icons/fa";
 
 export default function SettingsButton() {
-
+  
   // Web3 state
   const web3State = useContext(Web3Context);
-  const { currentUser } = web3State;
+  const { currentUser, web3Modal } = web3State;
 
   // Return disabled settings button if no wallets connected
   if (!window.walletConnection.isSignedIn() && !currentUser) {
     return (
       <>
-      	<Dropdown alignRight>
-  	      <Dropdown.Toggle disabled variant="warning"className="py-2 mr-1 mb-1">
-  	        <FaCog/>
-  	      </Dropdown.Toggle>
-  	    </Dropdown>
+        <Dropdown alignRight>
+          <Dropdown.Toggle disabled variant="warning"className="py-2 mr-1 mb-1">
+            <FaCog/>
+          </Dropdown.Toggle>
+        </Dropdown>
       </>
-  	)
+    )
   }
 
   // Initialize connection information
@@ -44,7 +43,7 @@ export default function SettingsButton() {
         <Dropdown.Menu className="mt-2">
           {nearConnected}
           {ethConnected}
-          <Dropdown.Divider />
+          {/*<Dropdown.Divider />*/}
         </Dropdown.Menu>
       </Dropdown>
     </>

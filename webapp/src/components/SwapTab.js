@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 
-import { GlobalContext } from "../contexts/GlobalContext";
+import { InputsContext } from "../contexts/InputsContext";
 
 import PriceInputCard from "./PriceInputCard";
 
@@ -10,7 +10,7 @@ import { BsArrowUpDown } from "react-icons/bs";
 
 export default function SwapTab() {
 
-  const globalState = useContext(GlobalContext);
+  const inputs = useContext(InputsContext);
 
   return (
     <>
@@ -18,9 +18,10 @@ export default function SwapTab() {
       <PriceInputCard
         label="From"
         name="from"
-        logoUrl={globalState.state.swap.from.logoUrl}
-        symbol={globalState.state.swap.from.symbol}
-        tokenIndex={globalState.state.swap.from.tokenIndex}
+        logoUrl={inputs.state.swap.from.logoUrl}
+        symbol={inputs.state.swap.from.symbol}
+        type={inputs.state.swap.from.type}
+        tokenIndex={inputs.state.swap.from.tokenIndex}
       />
       <div className="text-center my-2">
         <BsArrowUpDown/>
@@ -28,9 +29,10 @@ export default function SwapTab() {
       <PriceInputCard
         label="To"
         name="to"
-        logoUrl={globalState.state.swap.to.logoUrl}
-        symbol={globalState.state.swap.to.symbol}
-        tokenIndex={globalState.state.swap.to.tokenIndex}
+        logoUrl={inputs.state.swap.to.logoUrl}
+        symbol={inputs.state.swap.to.symbol}
+        type={inputs.state.swap.to.type}
+        tokenIndex={inputs.state.swap.to.tokenIndex}
       />
       <br/>
       <Button variant="warning" block disabled>Swap</Button>

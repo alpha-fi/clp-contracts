@@ -1,8 +1,9 @@
 import React, { useContext } from "react";
 
-import { GlobalContext } from "../contexts/GlobalContext";
+import { InputsContext } from "../contexts/InputsContext";
 
 import PriceInputCard from "./PriceInputCard"
+import PoolInfoCard from "./PoolInfoCard"
 
 import Button from 'react-bootstrap/Button';
 
@@ -15,33 +16,38 @@ const Hr = styled("hr")`
 
 export default function PoolTab() {
 
-  const globalState = useContext(GlobalContext);
+  const inputs = useContext(InputsContext);
 
   return (
     <>
-      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOL</small></p>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>
+      <PoolInfoCard tokenIndex="2" />
+      <PoolInfoCard tokenIndex="3" hasProvidedLiquidity/>
+      <p className="mt-4 text-center text-secondary"><small><i>Don't see a pair you're looking for? Create a new pool below.</i></small></p>
+      <Hr className="mt-4"/>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>PROVIDE LIQUIDITY</small></p>
       <PriceInputCard
-        label="Token amount"
+        label="Input"
         name="input1"
-        logoUrl={globalState.state.pool.input1.logoUrl}
-        symbol={globalState.state.pool.input1.symbol}
-        tokenIndex={globalState.state.pool.input1.tokenIndex}
+        logoUrl={inputs.state.pool.input1.logoUrl}
+        symbol={inputs.state.pool.input1.symbol}
+        type={inputs.state.pool.input1.type}
+        tokenIndex={inputs.state.pool.input1.tokenIndex}
       />
       <div className="text-center my-2">
         <BsPlus/>
       </div>
       <PriceInputCard
-        label="NEAR amount"
+        label="Input"
         name="input2"
-        logoUrl={globalState.state.pool.input2.logoUrl}
-        symbol={globalState.state.pool.input2.symbol}
-        tokenIndex={globalState.state.pool.input2.tokenIndex}
+        logoUrl={inputs.state.pool.input2.logoUrl}
+        symbol={inputs.state.pool.input2.symbol}
+        type={inputs.state.pool.input2.type}
+        tokenIndex={inputs.state.pool.input2.tokenIndex}
+        currencySelectionDisabled
       />
       <br/>
       <Button variant="warning" block disabled>Add Liquidity</Button>
-      <Hr/>
-      <p className="text-center text-secondary my-1" style={{ 'letterSpacing': '3px' }}><small>MY LIQUIDITY</small></p>
-      <p className="text-center text-secondary my-5" style={{ 'fontSize': '70%' }}><i>You are not providing any liquidity.</i></p>
     </>
   );
 }

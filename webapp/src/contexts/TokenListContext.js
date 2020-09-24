@@ -15,7 +15,7 @@ const updateBalances = (tokenList, w3, ethAccount) => {
   let tl = tokenList;
   tl.tokens.map(async (token, index) => {
     if (token.type === "ERC-20" && w3 && ethAccount && token.address !== "") {
-      // token.balance = await getERC20Balance(w3, ethAccount, token.address); // FIX
+      token.balance = await getERC20Balance(w3, ethAccount, token.address);
     }
     if (token.type === "Native token") {
       token.balance = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000 ;

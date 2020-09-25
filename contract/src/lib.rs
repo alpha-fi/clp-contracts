@@ -4,7 +4,6 @@ use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
 use uint::construct_uint;
-use util::yton;
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
@@ -18,7 +17,7 @@ mod util;
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
-                               
+
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -39,7 +38,7 @@ construct_uint! {
 #[ext_contract(ext_self)]
 pub trait SelfContract {
     /// callback to check the result of the add_liquidity action
-    fn add_liquidity_transfer_callback(&mut self, token:AccountId);
+    fn add_liquidity_transfer_callback(&mut self, token: AccountId);
 }
 
 /// PoolInfo is a helper structure to extract public data from a Pool
@@ -165,11 +164,16 @@ impl NearCLP {
     }
 
     /// Extracts public information of the `token` pool.
-    pub fn pool_info(&self, token: AccountId) -> Option<PoolInfo> {
+    pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
         match self.pools.get(&token) {
             None => None,
             Some(p) => Some(p.pool_info()),
         }
+    }
+
+    /// Returns list of pools identified as their reserve token AccountId.
+    pub fn list_pools(&self) -> Vec<AccountId> {
+        return self.pools.keys().collect();
     }
 
     /// Increases Near and the Reserve token liquidity.
@@ -227,27 +231,32 @@ impl NearCLP {
 
         self.set_pool(&token, &p);
 
-        //schedule a call to transfer the fun tokens
-        let args:Vec<u8>=format!(r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#, oid=caller,noid=env::current_account_id(), amount=computed_token_amount).as_bytes().to_vec();
-        
-        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
-        let callback_args=format!(r#"{{ "token":"{tok}" }}"#, tok=token).as_bytes().to_vec();
-        let callback=Promise::new(env::current_account_id()).function_call("add_liquidity_transfer_callback".into(), callback_args, 0, SINGLE_CALL_GAS/2);
+        // Prepare a callback for liquidity transfer which we will attach later on.
+        let callback_args = format!(r#"{{ "token":"{tok}" }}"#, tok = token).into();
+        let callback = Promise::new(env::current_account_id()).function_call(
+            "add_liquidity_transfer_callback".into(),
+            callback_args,
+            0,
+            SINGLE_CALL_GAS / 2,
+        );
         //let callback=ext_self::add_liquidity_transfer_callback(env::current_account_id(),&token,0,SINGLE_CALL_GAS/2);
-        //let callback_args=format!(r#"{{}}"#).as_bytes().to_vec();
+        //let callback_args="{}".into();
         //let callback=Promise::new(token.clone()).function_call("get_total_supply".into(), callback_args, 0, SINGLE_CALL_GAS/2);
-        
-        //now we can schedule the call
+
+        let args: Vec<u8> = format!(
+            r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
+            oid = caller,
+            noid = env::current_account_id(),
+            amount = computed_token_amount
+        )
+        .into();
+
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), 
-                args,
-                0,
-                SINGLE_CALL_GAS/2)
-            .then(callback)
-            ;
-            
+            .function_call("transfer_from".into(), args, 0, SINGLE_CALL_GAS / 2)
+            .then(callback);
+
         /*
-        REPLACED BY CODE ABOVE 
+        REPLACED BY CODE ABOVE
         nep21::ext_nep21::transfer_from(
             caller,
             env::current_account_id(),
@@ -549,11 +558,8 @@ impl NearCLP {
         return tokens_in;
     }
 
-    pub fn add_liquidity_transfer_callback(&mut self, token:AccountId) {
-
-        env::log(format!(
-            "enter add_liquidity_transfer_callback"
-            ).as_bytes(),);
+    pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
+        env::log(format!("enter add_liquidity_transfer_callback").as_bytes());
 
         assert_eq!(
             env::current_account_id(),
@@ -570,16 +576,20 @@ impl NearCLP {
             PromiseResult::Successful(_) => true,
             _ => false,
         };
-        
-        //simulation do not allows for promises inside callbacks 
+
+        //simulation do not allows for promises inside callbacks
         //for now just log result
 
-        env::log(format!(
-            "PromiseResult  transfer succeeded:{}",action_succeeded
-            ).as_bytes());
-    
+        env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
+
         if !action_succeeded {
-            env::log(format!("from add_liquidity_transfer_callback, token:{} transfer FAILED!", token).as_bytes());
+            env::log(
+                format!(
+                    "from add_liquidity_transfer_callback, token:{} transfer FAILED!",
+                    token
+                )
+                .as_bytes(),
+            );
             panic!("callback");
             //TO-DO ROLLBACK add_liquidity
         }
@@ -590,12 +600,10 @@ impl NearCLP {
         }
         */
     }
-
 }
 //-------------------------
 // END CONTRACT PUBLIC API
 //-------------------------
-
 
 //#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
@@ -718,11 +726,18 @@ mod tests {
     fn create_twice_same_pool_fails() {
         let (ctx, mut c) = init();
         c.create_pool(ctx.accounts.token1.clone());
+
+        // let's check firstly the pool is there
+        let pools = c.list_pools();
+        let expected = [ctx.accounts.token1.clone()];
+        assert_eq!(pools, expected);
+
+        //
         c.create_pool(ctx.accounts.token1);
     }
 
-    fn check_and_create_pool(c: &mut NearCLP, token: AccountId) {
-        c.create_pool(token.clone());
+    fn check_and_create_pool(c: &mut NearCLP, token: &AccountId) {
+        c.create_pool(token.to_string());
         match c.pool_info(token) {
             None => panic!("Pool for {} token is expected"),
             Some(p) => assert_eq!(
@@ -739,8 +754,14 @@ mod tests {
     #[test]
     fn anyone_create_pool() {
         let (ctx, mut c) = init();
-        check_and_create_pool(&mut c, ctx.accounts.token1);
-        check_and_create_pool(&mut c, ctx.accounts.token2);
+        check_and_create_pool(&mut c, &ctx.accounts.token1);
+        check_and_create_pool(&mut c, &ctx.accounts.token2);
+
+        let mut pools = c.list_pools();
+        let mut expected = [ctx.accounts.token1, ctx.accounts.token2];
+        pools.sort();
+        expected.sort();
+        assert_eq!(pools, expected);
     }
 
     #[test]
@@ -749,7 +770,7 @@ mod tests {
         let a = ctx.accounts.predecessor.clone();
         let t = ctx.accounts.token1.clone();
         let mut token1 = FungibleToken::new(a.clone(), ctx.token_supply.into());
-        check_and_create_pool(&mut c, t.clone());
+        check_and_create_pool(&mut c, &t);
         assert_eq!(
             token1.total_supply, ctx.token_supply,
             "Token total supply must be correct"
@@ -765,7 +786,7 @@ mod tests {
         let min_shares_required = near_deposit;
         c.add_liquidity(t.clone(), max_token_deposit, min_shares_required);
 
-        let p = c.pool_info(t.clone()).expect("Pool should exist");
+        let p = c.pool_info(&t).expect("Pool should exist");
         assert_eq!(p.near_bal, near_deposit, "Near balance should be correct");
         assert_eq!(
             p.token_bal, token_deposit,

@@ -1,7 +1,7 @@
 use crate::*;
+use util::yton;
 
 impl NearCLP {
-
     pub(crate) fn assert_owner(&self) {
         assert!(
             env::predecessor_account_id() == self.owner,
@@ -20,17 +20,24 @@ impl NearCLP {
         self.pools.insert(token, pool);
     }
 
-
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getInputPrice in Uniswap
-        env::log(format!(  "in_amount {} out_bal {} in_bal {}",yton(in_amount),yton(out_bal), yton(in_bal) ).as_bytes());
+        env::log(
+            format!(
+                "in_amount {} out_bal {} in_bal {}",
+                yton(in_amount),
+                yton(out_bal),
+                yton(in_bal)
+            )
+            .as_bytes(),
+        );
         let in_with_fee = U256::from(in_amount * 997);
         let numerator = in_with_fee * U256::from(out_bal);
         let denominator = U256::from(in_bal) * U256::from(1000) + in_with_fee;
         let result = (numerator / denominator).as_u128();
-        env::log(format!(  "return {}", result  ).as_bytes());
+        env::log(format!("return {}", result).as_bytes());
         return result;
     }
 
@@ -43,9 +50,7 @@ impl NearCLP {
         let denominator = U256::from(out_bal - out_amount) * U256::from(997);
         let result = (numerator / denominator + 1).as_u128();
         return result;
-        
     }
-
 
     pub(crate) fn _swap_near(
         &mut self,
@@ -65,20 +70,24 @@ impl NearCLP {
         p.token_bal -= reserve;
         p.near_bal += near;
         self.set_pool(token, p);
-        
-        nep21::ext_nep21::transfer(recipient, reserve.into(), token, TEN_NEAR, SINGLE_CALL_GAS/2)
-            .then(
-                ext_self::add_liquidity_transfer_callback(
-                    env::current_account_id(),
-                    token,
-                    0,
-                    SINGLE_CALL_GAS/2,
-                )
-            );
-        
-            //let transfer_args = 
 
-            /*
+        nep21::ext_nep21::transfer(
+            recipient,
+            reserve.into(),
+            token,
+            TEN_NEAR,
+            SINGLE_CALL_GAS / 2,
+        )
+        .then(ext_self::add_liquidity_transfer_callback(
+            env::current_account_id(),
+            token,
+            0,
+            SINGLE_CALL_GAS / 2,
+        ));
+
+        //let transfer_args =
+
+        /*
         Promise::new(env::current_account_id())
         .function_call("transfer".as_bytes(), arguments: Vec<u8>, amount: Balance, gas: Gas)
         .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS)
@@ -91,7 +100,6 @@ impl NearCLP {
             ),
             */
     }
-
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
     /// `min_tokens` of reserve tokens.

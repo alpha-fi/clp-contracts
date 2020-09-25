@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 
 import { InputsContext } from "../contexts/InputsContext";
 
-import PriceInputCard from "./PriceInputCard";
+import SwapInputCards from "./SwapInputCards";
 
 import Button from 'react-bootstrap/Button';
 
@@ -15,25 +15,7 @@ export default function SwapTab() {
   return (
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>SWAP</small></p>
-      <PriceInputCard
-        label="From"
-        name="from"
-        logoUrl={inputs.state.swap.from.logoUrl}
-        symbol={inputs.state.swap.from.symbol}
-        type={inputs.state.swap.from.type}
-        tokenIndex={inputs.state.swap.from.tokenIndex}
-      />
-      <div className="text-center my-2">
-        <BsArrowUpDown/>
-      </div>
-      <PriceInputCard
-        label="To"
-        name="to"
-        logoUrl={inputs.state.swap.to.logoUrl}
-        symbol={inputs.state.swap.to.symbol}
-        type={inputs.state.swap.to.type}
-        tokenIndex={inputs.state.swap.to.tokenIndex}
-      />
+      <SwapInputCards/>
       <br/>
       {/* Enable submission only if inputs are valid */}
       {(inputs.state.swap.from.isValid && inputs.state.swap.to.isValid)

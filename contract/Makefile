@@ -3,6 +3,8 @@ test:
 # Test output can be recovered (e.g., for debugging) by passing `--nocapture`
 # cargo test  -- --nocapture
 
+test-unit:
+	@cargo +nightly test --lib
 
 build:
 # more about flags: https://github.com/near-examples/simulation-testing#gotchas

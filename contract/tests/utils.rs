@@ -11,6 +11,8 @@ use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+pub const MAX_GAS: u64 = 300_000_000_000_000;
+
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
     near_amount * 10u128.pow(24)
@@ -18,7 +20,7 @@ pub fn ntoy(near_amount: Balance) -> Balance {
 
 lazy_static::lazy_static! {
     static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../target/wasm32-unknown-unknown/release/near_clp.wasm").as_ref();
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("./res/nep21_basic.wasm").as_ref();
+    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../neardev/nep-21/target/wasm32-unknown-unknown/release/nep21_basic.wasm").as_ref();
     //static ref COUNTER_BYTES: &'static [u8] = include_bytes!("res/counter.wasm").as_ref();
 }
 

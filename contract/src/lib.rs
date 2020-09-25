@@ -18,7 +18,6 @@ mod util;
 // Prepaid gas -- TO-DO we need to adjust this properly
 const MAX_GAS: u64 = 300_000_000_000_000;
 const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
-                               
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -164,22 +163,22 @@ impl NearCLP {
         );
     }
 
-/// Extracts public information of the `token` pool.
-pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
-    match self.pools.get(&token) {
-        None => None,
-        Some(p) => Some(p.pool_info()),
+    /// Extracts public information of the `token` pool.
+    pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
+        match self.pools.get(&token) {
+            None => None,
+            Some(p) => Some(p.pool_info()),
+        }
     }
-}
 
-/// Returns list of pools identified as their reserve token AccountId.
-pub fn list_pools(&self) -> Vec<AccountId> {
-    return self.pools.keys().collect();
-}
+    /// Returns list of pools identified as their reserve token AccountId.
+    pub fn list_pools(&self) -> Vec<AccountId> {
+        return self.pools.keys().collect();
+    }
 
-/// Increases Near and the Reserve token liquidity.
-/// The supplied funds must preserver current ratio of the liquidity pool.
-#[payable]
+    /// Increases Near and the Reserve token liquidity.
+    /// The supplied funds must preserver current ratio of the liquidity pool.
+    #[payable]
     pub fn add_liquidity(
         &mut self,
         token: AccountId,
@@ -240,7 +239,7 @@ pub fn list_pools(&self) -> Vec<AccountId> {
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            MAX_GAS/3,
+            MAX_GAS / 3,
         );
 
         //schedule a call to transfer the fun tokens
@@ -249,9 +248,10 @@ pub fn list_pools(&self) -> Vec<AccountId> {
             oid = caller,
             noid = env::current_account_id(),
             amount = computed_token_amount
-        ).into();
+        )
+        .into();
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), args, 0, MAX_GAS/3)
+            .function_call("transfer_from".into(), args, 0, MAX_GAS / 3)
             .then(callback); //after that, the callback will check success/failure
 
         // TODO:
@@ -299,7 +299,7 @@ pub fn list_pools(&self) -> Vec<AccountId> {
                 token_amount.into(),
                 &token,
                 0,
-                MAX_GAS/3,
+                MAX_GAS / 3,
             ));
     }
 
@@ -547,10 +547,7 @@ pub fn list_pools(&self) -> Vec<AccountId> {
     }
 
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
-
-        env::log(format!(
-            "enter add_liquidity_transfer_callback"
-            ).as_bytes(),);
+        env::log(format!("enter add_liquidity_transfer_callback").as_bytes());
 
         assert_eq!(
             env::current_account_id(),
@@ -567,14 +564,11 @@ pub fn list_pools(&self) -> Vec<AccountId> {
             PromiseResult::Successful(_) => true,
             _ => false,
         };
-        
-        //simulation do not allows for promises inside callbacks 
+
+        //simulation do not allows for promises inside callbacks
         //for now just log result
 
-        env::log(format!(
-            "PromiseResult  transfer succeeded:{}",action_succeeded
-            ).as_bytes());
-    
+        env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
         if !action_succeeded {
             env::log(
                 format!(
@@ -593,12 +587,10 @@ pub fn list_pools(&self) -> Vec<AccountId> {
         }
         */
     }
-
 }
 //-------------------------
 // END CONTRACT PUBLIC API
 //-------------------------
-
 
 //#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]

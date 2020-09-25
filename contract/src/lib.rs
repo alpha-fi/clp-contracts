@@ -18,6 +18,7 @@ mod util;
 // Prepaid gas -- TO-DO we need to adjust this properly
 const MAX_GAS: u64 = 300_000_000_000_000;
 const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
+
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -567,9 +568,8 @@ impl NearCLP {
             _ => false,
         };
 
-        //simulation do not allows for promises inside callbacks
-        //for now just log result
-
+        // TODO: simulation doesn't allow using a promise inside callbacks.
+        // For now we just log result
         env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
         if !action_succeeded {
             env::log(
@@ -580,7 +580,7 @@ impl NearCLP {
                 .as_bytes(),
             );
             panic!("callback");
-            //TO-DO ROLLBACK add_liquidity
+            // TODO ROLLBACK add_liquidity
         }
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.

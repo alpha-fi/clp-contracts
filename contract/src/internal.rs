@@ -1,5 +1,5 @@
 use crate::*;
-use util::yton;
+use util::*;
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {

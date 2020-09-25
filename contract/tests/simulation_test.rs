@@ -19,8 +19,6 @@ pub const CAROL_ACCOUNT_NAME: &str = "carol";
 pub const DAVE_ACCOUNT_NAME: &str = "dave";
 pub const FUN_TOKEN2_ACCOUNT_NAME: &str = "fun_token_2";
 
-const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
-
 #[test]
 fn deploy_fungible_mint_for_alice() {
     let (mut r, _, fungible_token, _, _, _, _, _, _) = basic_setup();
@@ -96,9 +94,9 @@ fn get_pool_info(r: &RuntimeStandalone, funtok: &str) -> PoolInfo {
     );
 }
 
-fn show_funtok_bal(r:&mut RuntimeStandalone, acc:&ExternalUser) -> u128 {
-    println!("let's see how many tokens {} has now",acc.account_id());
-    let funt_balance:u128 = get_funtok_balance(r, &acc).into();
+fn show_funtok_bal(r: &mut RuntimeStandalone, acc: &ExternalUser) -> u128 {
+    println!("let's see how many tokens {} has now", acc.account_id());
+    let funt_balance: u128 = get_funtok_balance(r, &acc).into();
     println!("{} fun tokens {}", acc.account_id(), funt_balance);
     return funt_balance;
 }
@@ -151,7 +149,6 @@ fn alice_is_a_lp() {
         "new pool should be empty"
     );
 
-
     // send som token to alice
     println!("send some funtok to alice");
     call(
@@ -159,14 +156,17 @@ fn alice_is_a_lp() {
         &fungible_token,
         &fungible_token.account_id(),
         "transfer",
-        format!(r#"{{
+        format!(
+            r#"{{
             "new_owner_id": "{}",
             "amount": "202020"
-        }}"#, ALICE_ACCOUNT_NAME),
-        NEP21_STORAGE_DEPOSIT //refundable, required if the fun-contract needs more storage
+        }}"#,
+            ALICE_ACCOUNT_NAME
+        ),
+        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    show_funtok_bal(&mut r,&alice);
+    show_funtok_bal(&mut r, &alice);
 
     println!("alice adds first liquidity");
     let near_deposit: u128 = ntoy(3_000);
@@ -242,7 +242,6 @@ fn alice_is_a_lp() {
         ),
         carol_deposit_yoctos.into(),
     );
-
 
     println!("let's see how many token carol has after the swap");
     let carol_funt_balance_post = show_funtok_bal(&mut r, &carol);

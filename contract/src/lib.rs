@@ -13,11 +13,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 mod internal;
 mod nep21;
-mod util;
-
-// Prepaid gas -- TO-DO we need to adjust this properly
-const MAX_GAS: u64 = 300_000_000_000_000;
-const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
+pub mod util;
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -242,7 +238,7 @@ impl NearCLP {
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            MAX_GAS / 3,
+            util::SINGLE_CALL_GAS / 3,
         );
 
         //schedule a call to transfer the fun tokens
@@ -254,7 +250,7 @@ impl NearCLP {
         )
         .into();
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), args, 0, MAX_GAS / 3)
+            .function_call("transfer_from".into(), args, 0, util::SINGLE_CALL_GAS / 3)
             .then(callback); //after that, the callback will check success/failure
 
         // TODO:
@@ -302,7 +298,7 @@ impl NearCLP {
                 token_amount.into(),
                 &token,
                 0,
-                MAX_GAS / 3,
+                util::SINGLE_CALL_GAS / 3,
             ));
     }
 

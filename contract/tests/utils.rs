@@ -11,8 +11,6 @@ use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-pub const MAX_GAS: u64 = 300_000_000_000_000;
-
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
     near_amount * 10u128.pow(24)

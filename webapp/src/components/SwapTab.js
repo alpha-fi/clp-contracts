@@ -35,7 +35,11 @@ export default function SwapTab() {
         tokenIndex={inputs.state.swap.to.tokenIndex}
       />
       <br/>
-      <Button variant="warning" block disabled>Swap</Button>
+      {/* Enable submission only if inputs are valid */}
+      {(inputs.state.swap.from.isValid && inputs.state.swap.to.isValid)
+        ? <Button variant="warning" block>Swap</Button>
+        : <Button variant="warning" block disabled>Swap</Button>
+      }
     </>
   );
 }

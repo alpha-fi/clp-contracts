@@ -1,5 +1,10 @@
 use crate::*;
+use uint::construct_uint;
 
+construct_uint! {
+    /// 256-bit unsigned integer.
+    pub struct u256(4);
+}
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {
@@ -33,9 +38,9 @@ impl NearCLP {
             )
             .as_bytes(),
         );
-        let in_with_fee = U256::from(in_amount * 997);
-        let numerator = in_with_fee * U256::from(out_bal);
-        let denominator = U256::from(in_bal) * U256::from(1000) + in_with_fee;
+        let in_with_fee = u256::from(in_amount * 997);
+        let numerator = in_with_fee * u256::from(out_bal);
+        let denominator = u256::from(in_bal) * u256::from(1000) + in_with_fee;
         let result = (numerator / denominator).as_u128();
         env::log(format!("return {}", yton(result)).as_bytes());
         return result;
@@ -46,8 +51,8 @@ impl NearCLP {
     /// respectively.
     pub(crate) fn calc_in_amount(&self, out_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getOutputPrice in Uniswap
-        let numerator = U256::from(in_bal) * U256::from(out_amount) * U256::from(1000);
-        let denominator = U256::from(out_bal - out_amount) * U256::from(997);
+        let numerator = u256::from(in_bal) * u256::from(out_amount) * u256::from(1000);
+        let denominator = u256::from(out_bal - out_amount) * u256::from(997);
         let result = (numerator / denominator + 1).as_u128();
         return result;
     }

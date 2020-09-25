@@ -30,14 +30,7 @@ mod internal;
 
 construct_uint! {
     /// 256-bit unsigned integer.
-    pub struct U256(4);
-}
-
-/// Interface for the contract itself.
-#[ext_contract(ext_self)]
-pub trait SelfContract {
-    /// callback to check the result of the add_liquidity action
-    fn add_liquidity_transfer_callback(&mut self, token: AccountId);
+    pub struct u256(4);
 }
 
 /// PoolInfo is a helper structure to extract public data from a Pool
@@ -281,8 +274,8 @@ impl NearCLP {
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(current_shares >= shares, "E5");
 
-        let near_amount = shares * p.near_bal / p.total_shares;
-        let token_amount = shares * p.token_bal / p.total_shares;
+        let near_amount = (u256::from(shares) * u256::from(p.near_bal) / u256::from(p.total_shares)).as_u128();
+        let token_amount = (u256::from(shares) * u256::from(p.token_bal) / u256::from(p.total_shares)).as_u128();
         assert!(near_amount >= min_near && token_amount >= min_tokens, "E6");
 
         env::log(
@@ -550,6 +543,7 @@ impl NearCLP {
         return tokens_in;
     }
 
+    //TODO callbacks
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
         env::log(format!("enter add_liquidity_transfer_callback").as_bytes());
 

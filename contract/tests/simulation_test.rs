@@ -105,7 +105,7 @@ fn show_funtok_bal(r: &mut RuntimeStandalone, acc: &ExternalUser) -> u128 {
 }
 
 #[test]
-fn alice_is_a_lp() {
+fn alice_adds_liquidity_carol_swaps() {
     let (mut r, _, fungible_token, _fun_token2, clp, alice, _bob, carol, _dave) = basic_setup();
 
     let args = NewFungibleTokenArgs {
@@ -185,6 +185,7 @@ fn alice_is_a_lp() {
 
     show_funtok_bal(&mut r,&alice);
 
+    //add_liquidity
     call(
         &mut r,
         &alice,
@@ -203,9 +204,10 @@ fn alice_is_a_lp() {
         near_deposit.into(),
     );
 
-    let pool_info = get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME);
+    //get pool state before swap
+    let pool_info_pre_swap = get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME);
     assert_eq!(
-        pool_info,
+        pool_info_pre_swap,
         PoolInfo {
             near_bal: near_deposit.into(),
             token_bal: token_deposit.into(),
@@ -214,8 +216,7 @@ fn alice_is_a_lp() {
         "new pool balance should be from first deposit"
     );
 
-    println!("pool_info:{}", pool_info);
-    let prev_pool_near_blance = pool_info.near_bal;
+    println!("pool_info:{}", pool_info_pre_swap);
 
     // Check Carols's fungible token balance before
     println!("send some funtok to carol");
@@ -268,9 +269,9 @@ fn alice_is_a_lp() {
     assert_eq!(
         get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
         PoolInfo {
-            near_bal: (prev_pool_near_blance + carol_deposit_yoctos).into(),
-            token_bal: (token_deposit - carol_received).into(),
-            total_shares: (prev_pool_near_blance + carol_deposit_yoctos).into()
+            near_bal:  (pool_info_pre_swap.near_bal + carol_deposit_yoctos).into(),
+            token_bal: (pool_info_pre_swap.token_bal - carol_received).into(),
+            total_shares: pool_info_pre_swap.total_shares,
         },
         "new pool balance after swap"
     );

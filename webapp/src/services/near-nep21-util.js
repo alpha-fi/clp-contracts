@@ -44,5 +44,73 @@ export async function incAllowance( allowAmount ) {
 }
 
 export async function gasCheck() {
-  // TO-DO
+  // Set default
+  const near_limit = 0.6;
+  const bal = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000;
+  if ( bal > near_limit ) {
+    return true;
+  }
+  return false;
+}
+
+export async function calcPriceFromIn( token1, token2) {
+  if(token1.name === token2.name) {
+    return token1.balance;
+  }
+  if(token1.type === "Native token") {
+    // Native to NEP-21
+    const price = await window.contract.price_near_to_token_in( {
+      token: token2.address, 
+      near_in: token1.amount});
+    return price;
+  }
+  else {
+    if(token2.type === "NEP-21") {
+      // NEP-21 to NEP-21
+      const price = await window.contract.price_token_to_token_in( {
+        from: token1.address,
+        to: token2.address,
+        tokens_in: token1.amount});
+      return price;
+    }
+    else {
+      // NEP-21 to Native
+      const price = await window.contract.price_token_to_near_in( {
+        token: token1.address, 
+        tokens_in: token1.amount});
+      return price;
+    }
+  } 
+}
+
+export async function swapFromIn( token1, token2 ) {
+  if(token1.name === token2.name) {
+    return false;
+  }
+  if(token1.type === "Native token") {
+    // Native to NEP-21
+    const price = await window.contract.swap_near_to_reserve_exact_in( {
+      token: token2.address, 
+      min_tokens: 2 }); // ?? value
+    return price;
+  }
+  else {
+    if(token2.type === "NEP-21") {
+      // NEP-21 to NEP-21
+      const price = await window.contract.swap_tokens_exact_in( {
+        from: token1.address,
+        to: token2.address,
+        tokens_from: 2, // ??
+        min_tokens_to: 2 }); // ??
+      return price;
+    }
+    else {
+      // NEP-21 to Native
+      const price = await window.contract.swap_reserve_to_near_exact_in( {
+        token: token1.address,
+        tokens_paid: 2, // ??
+        min_near: 2 }); // ??
+      return price;
+    }
+  } 
 }

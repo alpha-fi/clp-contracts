@@ -8,6 +8,7 @@ const initialState = {
       type: "",       // Native token (NEAR or ETH), ERC-20, NEP-21, ...
       logoUrl: "",    // Address of token logo image
       tokenIndex: 1,  // Index of token within token list
+      address: "",
       isValid: false
     },
     to: {
@@ -15,7 +16,8 @@ const initialState = {
       symbol: "",
       type: "",
       logoUrl: "",
-      tokenIndex: 0,
+      tokenIndex: 2,
+      address: "",
       isValid: false
     }
   },
@@ -26,6 +28,7 @@ const initialState = {
       type: "",
       logoUrl: "",
       tokenIndex: 2,
+      address: "",
       isValid: false
     },
     input2: {
@@ -34,6 +37,7 @@ const initialState = {
       type: "",
       logoUrl: "",
       tokenIndex: 0,
+      address: "",
       isValid: false
     }
   },
@@ -56,7 +60,8 @@ const InputsProvider = ( { children } ) => {
           type: state.swap.from.type,
           logoUrl: state.swap.from.logoUrl,
           tokenIndex: state.swap.from.tokenIndex,
-          isValid: state.swap.from.isValid,
+          address: state.swap.from.address,
+          isValid: action.payload.isValid,
         }, to: state.swap.to }};
       case 'SET_TO_AMOUNT':
         return { ...state, swap: { to: { 
@@ -65,7 +70,8 @@ const InputsProvider = ( { children } ) => {
           type: state.swap.to.type,
           logoUrl: state.swap.to.logoUrl,
           tokenIndex: state.swap.to.tokenIndex,
-          isValid: state.swap.to.isValid,
+          address: state.swap.to.address,
+          isValid: action.payload.isValid,
         }, from: state.swap.from }};
       case 'SET_INPUT1_AMOUNT':
         return { ...state, pool: { input1: { 
@@ -74,7 +80,8 @@ const InputsProvider = ( { children } ) => {
           type: state.pool.input1.type,
           logoUrl: state.pool.input1.logoUrl,
           tokenIndex: state.pool.input1.tokenIndex,
-          isValid: state.pool.input1.isValid,
+          address: state.pool.input1.address,
+          isValid: action.payload.isValid,
         }, input2: state.pool.input2 }};
       case 'SET_INPUT2_AMOUNT':
         return { ...state, pool: { input2: { 
@@ -83,7 +90,8 @@ const InputsProvider = ( { children } ) => {
           type: state.pool.input2.type,
           logoUrl: state.pool.input2.logoUrl,
           tokenIndex: state.pool.input2.tokenIndex,
-          isValid: state.pool.input2.isValid,
+          address: state.pool.input2.address,
+          isValid: action.payload.isValid,
         }, input1: state.pool.input1 }};
       case 'UPDATE_FROM_SELECTED_CURRENCY':
         return { ...state, swap: { from: {
@@ -92,6 +100,7 @@ const InputsProvider = ( { children } ) => {
           type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.swap.from.tokenIndex,
+          address: action.payload.address,
           isValid: action.payload.isValid,
         }, to: state.swap.to }, currencySelectionModal: { isVisible: false }};
       case 'UPDATE_TO_SELECTED_CURRENCY':
@@ -101,6 +110,7 @@ const InputsProvider = ( { children } ) => {
           type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.swap.to.tokenIndex,
+          address: action.payload.address,
           isValid: action.payload.isValid,
         }, from: state.swap.from }, currencySelectionModal: { isVisible: false }};
       case 'UPDATE_INPUT1_SELECTED_CURRENCY':
@@ -110,6 +120,7 @@ const InputsProvider = ( { children } ) => {
           type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.pool.input1.tokenIndex,
+          address: action.payload.address,
           isValid: action.payload.isValid,
         }, input2: state.pool.input2 }, currencySelectionModal: { isVisible: false }};
       case 'UPDATE_INPUT2_SELECTED_CURRENCY':
@@ -119,6 +130,7 @@ const InputsProvider = ( { children } ) => {
           type: action.payload.type,
           logoUrl: action.payload.logoUrl,
           tokenIndex: state.pool.input2.tokenIndex,
+          address: action.payload.address,
           isValid: action.payload.isValid,
         }, input1: state.pool.input1 }, currencySelectionModal: { isVisible: false }};
       case 'TOGGLE_CURRENCY_SELECTION_MODAL':

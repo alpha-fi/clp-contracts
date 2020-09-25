@@ -39,31 +39,32 @@ export default function PriceInputCard(props) {
   // Handles updating button view and global state
   function handleTokenButtonUpdate() {
 
-    // Find URL of token logo
+    // Find URL of token logo, symbol, type, and address
     let newImageUrl = findCurrencyLogoUrl(props.tokenIndex, tokenListState.state.tokenList);
     let newSymbol = tokenListState.state.tokenList.tokens[props.tokenIndex].symbol;
     let newType = tokenListState.state.tokenList.tokens[props.tokenIndex].type;
+    let newAddress = tokenListState.state.tokenList.tokens[props.tokenIndex].address;
 
     // Update image, symbol, and type of selected currency
     switch (props.name) {
       case 'from':
         dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType, isValid: false, address: newAddress }
         });
         break;
       case 'to':
         dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType, isValid: false, address: newAddress }
         });
         break;
       case 'input1':
         dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType, isValid: false, address: newAddress }
         });
         break;
       case 'input2':
         dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
-          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType }
+          payload: { logoUrl: newImageUrl, symbol: newSymbol, type: newType, isValid: false, address: newAddress }
         });
     }
   }
@@ -81,16 +82,16 @@ export default function PriceInputCard(props) {
   function handleAmountChange(event) {
     switch (props.name) {
       case 'from':
-        dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: event.target.value } });
+        dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: event.target.value, isValid: true } });
         break;
       case 'to':
-        dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: event.target.value } });
+        dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: event.target.value, isValid: true } });
         break;
       case 'input1':
-        dispatch({ type: 'SET_INPUT1_AMOUNT', payload: { amount: event.target.value } });
+        dispatch({ type: 'SET_INPUT1_AMOUNT', payload: { amount: event.target.value, isValid: true } });
         break;
       case 'input2':
-        dispatch({ type: 'SET_INPUT2_AMOUNT', payload: { amount: event.target.value } });
+        dispatch({ type: 'SET_INPUT2_AMOUNT', payload: { amount: event.target.value, isValid: true } });
     }
   }
 

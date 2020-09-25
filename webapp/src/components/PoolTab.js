@@ -47,7 +47,11 @@ export default function PoolTab() {
         currencySelectionDisabled
       />
       <br/>
-      <Button variant="warning" block disabled>Add Liquidity</Button>
+      {/* Enable submission only if inputs are valid */}
+      {(inputs.state.pool.input1.isValid && inputs.state.pool.input2.isValid)
+        ? <Button variant="warning" block disabled>Add Liquidity</Button>
+        : <Button variant="warning" block disabled>Add Liquidity</Button>
+      }
     </>
   );
 }

@@ -48,7 +48,7 @@ export default function PoolTab() {
       />
       <br/>
       {/* Enable submission only if inputs are valid */}
-      {(inputs.state.swap.from.isValid && inputs.state.swap.to.isValid)
+      {(inputs.state.pool.input1.isValid && inputs.state.pool.input2.isValid)
         ? <Button variant="warning" block disabled>Add Liquidity</Button>
         : <Button variant="warning" block disabled>Add Liquidity</Button>
       }

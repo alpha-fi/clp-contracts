@@ -77,13 +77,13 @@ impl NearCLP {
             reserve.into(),
             token,
             NEP21_STORAGE_DEPOSIT,
-            SINGLE_CALL_GAS / 2,
+            MAX_GAS/3,
         )
         .then(ext_self::add_liquidity_transfer_callback(
             env::current_account_id(),
             token,
             0,
-            SINGLE_CALL_GAS / 2,
+            MAX_GAS/3,
         ));
 
         //let transfer_args =
@@ -169,7 +169,7 @@ impl NearCLP {
                 reserve.into(),
                 token,
                 0,
-                SINGLE_CALL_GAS,
+                MAX_GAS/3,
             ));
     }
 
@@ -238,14 +238,14 @@ impl NearCLP {
             token1_in.into(),
             token1,
             0,
-            SINGLE_CALL_GAS,
+            MAX_GAS/3,
         )
         .and(nep21::ext_nep21::transfer(
             recipient,
             token2_out.into(),
             token2,
             0,
-            SINGLE_CALL_GAS,
+            MAX_GAS/3,
         ));
     }
 

@@ -4,6 +4,7 @@ use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
 use uint::construct_uint;
+//use util::yton;
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
@@ -14,17 +15,10 @@ mod internal;
 mod nep21;
 mod util;
 
-<<<<<<< Updated upstream
-// Prepaid gas for making a single simple call.
-const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
-const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
-
-=======
 // Prepaid gas -- TO-DO we need to adjust this properly
-const SINGLE_CALL_GAS: u64 = 300_000_000_000_000;
+const MAX_GAS: u64 = 300_000_000_000_000;
 const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
                                
->>>>>>> Stashed changes
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -170,22 +164,22 @@ impl NearCLP {
         );
     }
 
-    /// Extracts public information of the `token` pool.
-    pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
-        match self.pools.get(&token) {
-            None => None,
-            Some(p) => Some(p.pool_info()),
-        }
+/// Extracts public information of the `token` pool.
+pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
+    match self.pools.get(&token) {
+        None => None,
+        Some(p) => Some(p.pool_info()),
     }
+}
 
-    /// Returns list of pools identified as their reserve token AccountId.
-    pub fn list_pools(&self) -> Vec<AccountId> {
-        return self.pools.keys().collect();
-    }
+/// Returns list of pools identified as their reserve token AccountId.
+pub fn list_pools(&self) -> Vec<AccountId> {
+    return self.pools.keys().collect();
+}
 
-    /// Increases Near and the Reserve token liquidity.
-    /// The supplied funds must preserver current ratio of the liquidity pool.
-    #[payable]
+/// Increases Near and the Reserve token liquidity.
+/// The supplied funds must preserver current ratio of the liquidity pool.
+#[payable]
     pub fn add_liquidity(
         &mut self,
         token: AccountId,
@@ -238,63 +232,29 @@ impl NearCLP {
 
         self.set_pool(&token, &p);
 
-<<<<<<< Updated upstream
-        // Prepare a callback for liquidity transfer which we will attach later on.
+        // TODO: do proper rollback
+        // Prepare a callback for liquidity transfer rollback which we will attach later on.
+        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
         let callback_args = format!(r#"{{ "token":"{tok}" }}"#, tok = token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            SINGLE_CALL_GAS / 2,
+            MAX_GAS/3,
         );
-        //let callback=ext_self::add_liquidity_transfer_callback(env::current_account_id(),&token,0,SINGLE_CALL_GAS/2);
-        //let callback_args="{}".into();
-        //let callback=Promise::new(token.clone()).function_call("get_total_supply".into(), callback_args, 0, SINGLE_CALL_GAS/2);
 
+        //schedule a call to transfer the fun tokens
         let args: Vec<u8> = format!(
             r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
             oid = caller,
             noid = env::current_account_id(),
             amount = computed_token_amount
-        )
-        .into();
-
+        ).into();
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), args, 0, SINGLE_CALL_GAS / 2)
-            .then(callback);
+            .function_call("transfer_from".into(), args, 0, MAX_GAS/3)
+            .then(callback); //after that, the callback will check success/failure
 
-        /*
-        REPLACED BY CODE ABOVE
-        nep21::ext_nep21::transfer_from(
-            caller,
-            env::current_account_id(),
-            token_amount.into(),
-            &token,
-            0,
-            SINGLE_CALL_GAS,
-        );
-        */
         // TODO:
-=======
-        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
-        let callback_args=format!(r#"{{ "token":"{tok}" }}"#, tok=token).as_bytes().to_vec();
-        let callback=Promise::new(env::current_account_id())
-            .function_call("add_liquidity_transfer_callback".into(), callback_args, 
-                0, 10_000_000_000_000);
-        
-        //schedule a call to transfer the fun tokens
-        let args:Vec<u8>=format!(r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#, oid=caller,noid=env::current_account_id(), amount=computed_token_amount).as_bytes().to_vec();
-        Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), 
-                args,
-                0,
-                10_000_000_000_000)
-            .then(callback)
-            ;
-            
-
-            // TODO:
->>>>>>> Stashed changes
         // Handling exception is work-in-progress in NEAR runtime
         // 1. rollback `p` on changes or move the pool update to a promise
         // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
@@ -339,7 +299,7 @@ impl NearCLP {
                 token_amount.into(),
                 &token,
                 0,
-                SINGLE_CALL_GAS,
+                MAX_GAS/3,
             ));
     }
 
@@ -587,7 +547,10 @@ impl NearCLP {
     }
 
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
-        env::log(format!("enter add_liquidity_transfer_callback").as_bytes());
+
+        env::log(format!(
+            "enter add_liquidity_transfer_callback"
+            ).as_bytes(),);
 
         assert_eq!(
             env::current_account_id(),
@@ -604,12 +567,14 @@ impl NearCLP {
             PromiseResult::Successful(_) => true,
             _ => false,
         };
-
-        //simulation do not allows for promises inside callbacks
+        
+        //simulation do not allows for promises inside callbacks 
         //for now just log result
 
-        env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
-
+        env::log(format!(
+            "PromiseResult  transfer succeeded:{}",action_succeeded
+            ).as_bytes());
+    
         if !action_succeeded {
             env::log(
                 format!(
@@ -628,10 +593,12 @@ impl NearCLP {
         }
         */
     }
+
 }
 //-------------------------
 // END CONTRACT PUBLIC API
 //-------------------------
+
 
 //#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]

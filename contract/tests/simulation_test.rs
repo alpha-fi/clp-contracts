@@ -102,7 +102,7 @@ fn get_pool_info(r: &RuntimeStandalone, funtok: &str) -> PoolInfo {
     );
 }
 
-fn showFunTokBal(r:&mut RuntimeStandalone, acc:&ExternalUser) -> u128 {
+fn show_funtok_bal(r:&mut RuntimeStandalone, acc:&ExternalUser) -> u128 {
     println!("let's see how many tokens {} has now",acc.account_id());
     let funt_balance:u128 = get_funtok_balance(r, &acc).into();
     println!("{} fun tokens {}", acc.account_id(), funt_balance);
@@ -171,7 +171,7 @@ fn alice_is_a_lp() {
         NEP21_STORAGE_DEPOSIT //refundable, required if the fun-contract needs more storage
     );
 
-    showFunTokBal(&mut r,&alice);
+    show_funtok_bal(&mut r,&alice);
 
     println!("alice adds first liquidity");
     let near_deposit: u128 = ntoy(3_000);
@@ -223,7 +223,7 @@ fn alice_is_a_lp() {
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    let carol_funt_balance_pre = showFunTokBal(&mut r, &carol);
+    let carol_funt_balance_pre = show_funtok_bal(&mut r, &carol);
 
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = ntoy(10);
@@ -247,7 +247,7 @@ fn alice_is_a_lp() {
 
 
     println!("let's see how many token carol has after the swap");
-    let carol_funt_balance_post = showFunTokBal(&mut r, &carol);
+    let carol_funt_balance_post = show_funtok_bal(&mut r, &carol);
 
     let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
 

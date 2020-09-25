@@ -54,14 +54,18 @@ export async function gasCheck() {
 }
 
 export async function calcPriceFromIn( token1, token2) {
-  if(token1.name === token2.name) {
-    return token1.balance;
+  const amount1 = Number(token1.amount);
+  if(amount1 < 1) {
+    return 0;
+  }
+  if(token1.tokenIndex === token2.tokenIndex) {
+    return amount1;
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address, 
-      near_in: token1.amount});
+      near_in: amount1});
     return price;
   }
   else {
@@ -70,28 +74,30 @@ export async function calcPriceFromIn( token1, token2) {
       const price = await window.contract.price_token_to_token_in( {
         from: token1.address,
         to: token2.address,
-        tokens_in: token1.amount});
+        tokens_in: amount1});
       return price;
     }
     else {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
         token: token1.address, 
-        tokens_in: token1.amount});
+        tokens_in: amount1});
       return price;
     }
   } 
 }
 
 export async function swapFromIn( token1, token2 ) {
-  if(token1.name === token2.name) {
+  const amount1 = Number(token1.amount);
+  const amount2 = Number(token2.amount);
+  if(token1.tokenIndex === token2.tokenIndex) {
     return false;
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
     const price = await window.contract.swap_near_to_reserve_exact_in( {
       token: token2.address, 
-      min_tokens: 2 }); // ?? value
+      min_tokens: amount2 }); 
     return price;
   }
   else {
@@ -100,16 +106,16 @@ export async function swapFromIn( token1, token2 ) {
       const price = await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        tokens_from: 2, // ??
-        min_tokens_to: 2 }); // ??
+        tokens_from: amount1, 
+        min_tokens_to: amount2 }); 
       return price;
     }
     else {
       // NEP-21 to Native
       const price = await window.contract.swap_reserve_to_near_exact_in( {
         token: token1.address,
-        tokens_paid: 2, // ??
-        min_near: 2 }); // ??
+        tokens_paid: amount1,
+        min_near: amount2 });
       return price;
     }
   } 

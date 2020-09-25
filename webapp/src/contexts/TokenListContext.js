@@ -7,6 +7,8 @@ import { getERC20Balance } from "../services/web3utils";
 
 import { default as testTokenList } from '../assets/test-token-near.json';
 
+import { initNEP } from '../services/near-nep21-util'
+
 const initialState = {
   tokenList: testTokenList
 }
@@ -21,7 +23,8 @@ const updateBalances = (tokenList, w3, ethAccount) => {
       token.balance = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000 ;
     }
     if(token.type === "NEP-21") {
-      token.balance = 2;
+      await initNEP( token.address );
+      token.balance = await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
     }
   });
   return tl;

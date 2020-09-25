@@ -185,7 +185,7 @@ impl NearCLP {
         max_token_amount: Balance,
         min_shares_amont: Balance,
     ) {
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
         let shares_minted;
         let near_amount = env::attached_deposit();
@@ -284,7 +284,7 @@ impl NearCLP {
     ) {
         assert!(shares > 0 && min_near > 0 && min_tokens > 0, "E2");
         let caller = env::predecessor_account_id();
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(current_shares >= shares, "E5");
 
@@ -317,7 +317,7 @@ impl NearCLP {
 
     /// Returns the owner balance of shares of a pool identified by token.
     pub fn shares_balance_of(&self, token: AccountId, owner: AccountId) -> Balance {
-        return self.get_pool(&token).shares.get(&owner).unwrap_or(0);
+        return self.must_get_pool(&token).shares.get(&owner).unwrap_or(0);
     }
 
     /**********************
@@ -502,7 +502,7 @@ impl NearCLP {
     /// assets
     pub fn price_near_to_token_in(&self, token: AccountId, near_in: Balance) -> Balance {
         assert!(near_in > 0, "E2");
-        let p = self.get_pool(&token);
+        let p = self.must_get_pool(&token);
         return self.calc_out_amount(near_in, p.near_bal, p.token_bal);
     }
 
@@ -510,14 +510,14 @@ impl NearCLP {
     /// `tokens_out` of `tokens`
     pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: Balance) -> Balance {
         assert!(tokens_out > 0, "E2");
-        let p = self.get_pool(&token);
+        let p = self.must_get_pool(&token);
         return self.calc_in_amount(tokens_out, p.token_bal, p.near_bal);
     }
 
     /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
     pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: Balance) -> Balance {
         assert!(tokens_in > 0, "E2");
-        let p = self.get_pool(&token);
+        let p = self.must_get_pool(&token);
         return self.calc_out_amount(tokens_in, p.token_bal, p.near_bal);
     }
 
@@ -525,7 +525,7 @@ impl NearCLP {
     /// `tokens_out` of `tokens`
     pub fn price_token_to_near_out(&self, token: AccountId, near_out: Balance) -> Balance {
         assert!(near_out > 0, "E2");
-        let p = self.get_pool(&token);
+        let p = self.must_get_pool(&token);
         return self.calc_in_amount(near_out, p.near_bal, p.token_bal);
     }
 
@@ -537,8 +537,8 @@ impl NearCLP {
         tokens_in: Balance,
     ) -> Balance {
         assert!(tokens_in > 0, "E2");
-        let p1 = self.get_pool(&from);
-        let p2 = self.get_pool(&to);
+        let p1 = self.must_get_pool(&from);
+        let p2 = self.must_get_pool(&to);
         let (_, tokens_out) = self._price_swap_tokens_in(&p1, &p2, tokens_in);
         return tokens_out;
     }
@@ -552,8 +552,8 @@ impl NearCLP {
         tokens_out: Balance,
     ) -> Balance {
         assert!(tokens_out > 0, "E2");
-        let p1 = self.get_pool(&from);
-        let p2 = self.get_pool(&to);
+        let p1 = self.must_get_pool(&from);
+        let p2 = self.must_get_pool(&to);
         let (_, tokens_in) = self._price_swap_tokens_out(&p1, &p2, tokens_out);
         return tokens_in;
     }

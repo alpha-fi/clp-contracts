@@ -21,7 +21,7 @@ build-quick:
 	@cargo build
 
 deploy:
-	@near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)
+	near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)
 
 init:
 	@echo near call $(NCLP_ACC) new '{"owner_id": "nearswap.testnet"}' --accountId $(NCLP_ACC)

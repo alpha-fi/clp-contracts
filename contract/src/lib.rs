@@ -154,6 +154,8 @@ impl NearCLP {
     /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
     /// account - which we call the Pool Reserve Token.
     /// If a pool for give token exists then "E1" assert exception is thrown.
+    /// TODO: charge user for a storage created!
+    #[payable]
     pub fn create_pool(&mut self, token: AccountId) {
         assert!(
             self.pools
@@ -183,7 +185,7 @@ impl NearCLP {
         &mut self,
         token: AccountId,
         max_token_amount: Balance,
-        min_shares_amont: Balance,
+        min_shares_amount: Balance,
     ) {
         let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
@@ -205,7 +207,7 @@ impl NearCLP {
             computed_token_amount = near_amount * p.token_bal / p.near_bal + 1;
             shares_minted = near_amount * p.total_shares / near_amount;
             assert!(max_token_amount >= computed_token_amount, "E3");
-            assert!(min_shares_amont <= shares_minted, "E4");
+            assert!(min_shares_amount <= shares_minted, "E4");
 
             p.shares.insert(
                 &caller,

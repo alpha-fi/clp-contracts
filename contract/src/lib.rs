@@ -4,7 +4,11 @@ use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
 use uint::construct_uint;
-//use util::yton;
+
+pub mod util;
+use crate::util::{
+    MAX_GAS, NEP21_STORAGE_DEPOSIT, yton
+};
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
@@ -12,8 +16,6 @@ use uint::construct_uint;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 mod internal;
-mod nep21;
-pub mod util;
 
 // Errors
 // "E1" - Pool for this token already exists
@@ -238,10 +240,10 @@ impl NearCLP {
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            util::SINGLE_CALL_GAS / 3,
+            MAX_GAS / 3,
         );
 
-        //schedule a call to transfer the fun tokens
+        //schedule a call to transfer nep21 tokens
         let args: Vec<u8> = format!(
             r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
             oid = caller,
@@ -250,7 +252,11 @@ impl NearCLP {
         )
         .into();
         Promise::new(token) //call the token contract
-            .function_call("transfer_from".into(), args, 0, util::SINGLE_CALL_GAS / 3)
+            .function_call(
+                "transfer_from".into(), 
+                args, 
+                NEP21_STORAGE_DEPOSIT, 
+                MAX_GAS / 3)
             .then(callback); //after that, the callback will check success/failure
 
         // TODO:
@@ -291,15 +297,14 @@ impl NearCLP {
         p.token_bal -= token_amount;
         p.near_bal -= near_amount;
 
-        Promise::new(caller.clone()) // caller is clone because it has to be used later
-            .transfer(near_amount as u128)
-            .and(nep21::ext_nep21::transfer(
-                caller,
-                token_amount.into(),
-                &token,
-                0,
-                util::SINGLE_CALL_GAS / 3,
-            ));
+        //send near to caller
+        let send_near = Promise::new(caller.clone()) // caller is clone because it has to be used later
+            .transfer(near_amount);
+        //send token to caller
+        let send_tokens = self.schedule_nep21_tansfer(&token, env::current_account_id(), env::predecessor_account_id(), token_amount);
+        //schedule  both in parallel
+        send_near.and(send_tokens);
+        //TO-DO COMPLEX-CALLBACKS
     }
 
     /// Returns the owner balance of shares of a pool identified by token.
@@ -576,7 +581,7 @@ impl NearCLP {
                 .as_bytes(),
             );
             panic!("callback");
-            // TODO ROLLBACK add_liquidity
+            //TO-DO ROLLBACK add_liquidity
         }
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.

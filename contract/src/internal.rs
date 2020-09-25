@@ -1,5 +1,5 @@
 use crate::*;
-use util::*;
+
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {
@@ -37,7 +37,7 @@ impl NearCLP {
         let numerator = in_with_fee * U256::from(out_bal);
         let denominator = U256::from(in_bal) * U256::from(1000) + in_with_fee;
         let result = (numerator / denominator).as_u128();
-        env::log(format!("return {}", result).as_bytes());
+        env::log(format!("return {}", yton(result)).as_bytes());
         return result;
     }
 
@@ -51,6 +51,41 @@ impl NearCLP {
         let result = (numerator / denominator + 1).as_u128();
         return result;
     }
+
+
+    pub(crate) fn schedule_nep21_tansfer(&mut self,
+        token: &AccountId, 
+        from_account: AccountId, 
+        to_account: AccountId, 
+        amount:u128
+    ) -> Promise
+    {
+        return Promise::new(token.clone())
+            .function_call(
+                "transfer_from".into(),
+                format!(r#"{{
+                        "owner_id": "{}",
+                        "new_owner_id": "{}",
+                        "amount": "{}"
+                        }}"#, 
+                        from_account,
+                        to_account,
+                        amount
+                ).as_bytes().to_vec(),
+                util::NEP21_STORAGE_DEPOSIT,//refundable, required if the fun-contract needs more storage
+                util::MAX_GAS/3
+            )
+        ;
+        //TO-DO add rollback callback
+        // .then(ext_self::add_liquidity_transfer_callback(
+        //     env::current_account_id(),
+        //     token,
+        //     0,
+        //     MAX_GAS/3,
+        // ));
+
+    }
+
 
     pub(crate) fn _swap_near(
         &mut self,
@@ -71,35 +106,10 @@ impl NearCLP {
         p.near_bal += near;
         self.set_pool(token, p);
 
-        //TO-DO change the callback
-        nep21::ext_nep21::transfer(
-            recipient,
-            reserve.into(),
-            token,
-            NEP21_STORAGE_DEPOSIT,
-            SINGLE_CALL_GAS / 3,
-        )
-        .then(ext_self::add_liquidity_transfer_callback(
-            env::current_account_id(),
-            token,
-            0,
-            SINGLE_CALL_GAS / 3,
-        ));
+        //send the token from CLP account to buyer
+        self.schedule_nep21_tansfer(token,env::current_account_id(), env::predecessor_account_id(), reserve);
+	//TO-DO callbacks
 
-        //let transfer_args =
-
-        /*
-        Promise::new(env::current_account_id())
-        .function_call("transfer".as_bytes(), arguments: Vec<u8>, amount: Balance, gas: Gas)
-        .call(nep21::ext_nep21::transfer(recipient, reserve.into(), token, 0, SINGLE_CALL_GAS)
-        .then(
-            ext_status_message::after_nep21_transfer(
-                recipient,
-                &account_id,
-                0,
-                CANT_FAIL_GAS,
-            ),
-            */
     }
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
@@ -161,16 +171,12 @@ impl NearCLP {
         p.token_bal += reserve;
         p.near_bal -= near;
         self.set_pool(&token, p);
-        Promise::new(recipient)
-            .transfer(near as u128)
-            .and(nep21::ext_nep21::transfer_from(
-                buyer,
-                env::current_account_id(),
-                reserve.into(),
-                token,
-                0,
-                SINGLE_CALL_GAS / 3,
-            ));
+        
+        //get the token from buyer into CLP
+        let promise = self.schedule_nep21_tansfer(token,buyer,env::current_account_id(), reserve);
+        //and in the same batch send NEAR to client
+        promise.transfer(near);
+        //TO-DO COMPLEX ROLLBACKS
     }
 
     /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
@@ -232,21 +238,14 @@ impl NearCLP {
         p2.near_bal += near_swap;
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p1);
-        nep21::ext_nep21::transfer_from(
-            buyer,
-            env::current_account_id(),
-            token1_in.into(),
-            token1,
-            0,
-            SINGLE_CALL_GAS / 3,
-        )
-        .and(nep21::ext_nep21::transfer(
-            recipient,
-            token2_out.into(),
-            token2,
-            0,
-            SINGLE_CALL_GAS / 3,
-        ));
+
+        //get the token from buyer into CLP
+        let promise1 = self.schedule_nep21_tansfer(token1, buyer.clone(), env::current_account_id(), token1_in);
+        //send the buyer the bougth token
+        let promise2 = self.schedule_nep21_tansfer(token2, env::current_account_id(), buyer.clone(), token2_out);
+        //do both in parallel
+        promise1.and(promise2);
+        //TO-DO COMPLEX ROLLBACKS
     }
 
     pub(crate) fn _price_swap_tokens_in(

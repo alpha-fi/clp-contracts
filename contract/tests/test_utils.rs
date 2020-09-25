@@ -11,6 +11,9 @@ use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+pub const MAX_GAS: u64 = 300_000_000_000_000;
+
+
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
     near_amount * 10u128.pow(24)
@@ -147,7 +150,7 @@ pub fn near_call(
     method: &str,
     args: &[u8],
     gas: U64,
-    deposit: Balance,
+    deposit: Balance
 ) -> TxResult {
     let tx = sending_account
         .new_tx(runtime, contract_id)

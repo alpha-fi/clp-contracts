@@ -1,3 +1,5 @@
+export NCLP_ACC=beta-1.nearswap.testnet
+
 test:
 	cargo +nightly test  --
 # Test output can be recovered (e.g., for debugging) by passing `--nocapture`
@@ -19,5 +21,7 @@ build-quick:
 	@cargo build
 
 deploy:
-	@near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NEAR_ACCOUNT)
-	@echo near call $(NEAR_ACCOUNT) new '{"owner_id": "nearswap.testnet"}' --accountId $(NEAR_ACCOUNT)
+	@near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)
+
+init:
+	@echo near call $(NCLP_ACC) new '{"owner_id": "nearswap.testnet"}' --accountId $(NCLP_ACC)

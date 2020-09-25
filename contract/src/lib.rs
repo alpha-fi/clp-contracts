@@ -231,20 +231,8 @@ impl NearCLP {
 
         self.set_pool(&token, &p);
 
-        //schedule a call to transfer the fun tokens
-        let args: Vec<u8> = format!(
-            r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
-            oid = caller,
-            noid = env::current_account_id(),
-            amount = computed_token_amount
-        )
-        .as_bytes()
-        .to_vec();
-
-        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
-        let callback_args = format!(r#"{{ "token":"{tok}" }}"#, tok = token)
-            .as_bytes()
-            .to_vec();
+        // Prepare a callback for liquidity transfer which we will attach later on.
+        let callback_args = format!(r#"{{ "token":"{tok}" }}"#, tok = token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
             "add_liquidity_transfer_callback".into(),
             callback_args,
@@ -252,10 +240,17 @@ impl NearCLP {
             SINGLE_CALL_GAS / 2,
         );
         //let callback=ext_self::add_liquidity_transfer_callback(env::current_account_id(),&token,0,SINGLE_CALL_GAS/2);
-        //let callback_args=format!(r#"{{}}"#).as_bytes().to_vec();
+        //let callback_args="{}".into();
         //let callback=Promise::new(token.clone()).function_call("get_total_supply".into(), callback_args, 0, SINGLE_CALL_GAS/2);
 
-        //now we can schedule the call
+        let args: Vec<u8> = format!(
+            r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
+            oid = caller,
+            noid = env::current_account_id(),
+            amount = computed_token_amount
+        )
+        .into();
+
         Promise::new(token) //call the token contract
             .function_call("transfer_from".into(), args, 0, SINGLE_CALL_GAS / 2)
             .then(callback);

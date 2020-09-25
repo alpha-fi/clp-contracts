@@ -14,10 +14,17 @@ mod internal;
 mod nep21;
 mod util;
 
+<<<<<<< Updated upstream
 // Prepaid gas for making a single simple call.
 const SINGLE_CALL_GAS: u64 = 200_000_000_000_000;
 const TEN_NEAR: u128 = 10_000_000_000_000_000_000_000_000;
 
+=======
+// Prepaid gas -- TO-DO we need to adjust this properly
+const SINGLE_CALL_GAS: u64 = 300_000_000_000_000;
+const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
+                               
+>>>>>>> Stashed changes
 // Errors
 // "E1" - Pool for this token already exists
 // "E2" - all token arguments must be positive.
@@ -231,6 +238,7 @@ impl NearCLP {
 
         self.set_pool(&token, &p);
 
+<<<<<<< Updated upstream
         // Prepare a callback for liquidity transfer which we will attach later on.
         let callback_args = format!(r#"{{ "token":"{tok}" }}"#, tok = token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
@@ -267,6 +275,26 @@ impl NearCLP {
         );
         */
         // TODO:
+=======
+        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
+        let callback_args=format!(r#"{{ "token":"{tok}" }}"#, tok=token).as_bytes().to_vec();
+        let callback=Promise::new(env::current_account_id())
+            .function_call("add_liquidity_transfer_callback".into(), callback_args, 
+                0, 10_000_000_000_000);
+        
+        //schedule a call to transfer the fun tokens
+        let args:Vec<u8>=format!(r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#, oid=caller,noid=env::current_account_id(), amount=computed_token_amount).as_bytes().to_vec();
+        Promise::new(token) //call the token contract
+            .function_call("transfer_from".into(), 
+                args,
+                0,
+                10_000_000_000_000)
+            .then(callback)
+            ;
+            
+
+            // TODO:
+>>>>>>> Stashed changes
         // Handling exception is work-in-progress in NEAR runtime
         // 1. rollback `p` on changes or move the pool update to a promise
         // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.

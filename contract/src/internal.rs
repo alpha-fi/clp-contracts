@@ -70,6 +70,22 @@ impl NearCLP {
         p.token_bal -= reserve;
         p.near_bal += near;
         self.set_pool(token, p);
+<<<<<<< Updated upstream
+=======
+        
+        //TO-DO change the callback
+        nep21::ext_nep21::transfer(recipient, reserve.into(), token, NEP21_STORAGE_DEPOSIT, SINGLE_CALL_GAS/2)
+            .then(
+                ext_self::add_liquidity_transfer_callback(
+                    env::current_account_id(),
+                    token,
+                    0,
+                    SINGLE_CALL_GAS/2,
+                )
+            );
+        
+            //let transfer_args = 
+>>>>>>> Stashed changes
 
         nep21::ext_nep21::transfer(
             recipient,

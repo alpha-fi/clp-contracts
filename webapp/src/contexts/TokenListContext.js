@@ -5,7 +5,7 @@ import { Web3Context } from "../contexts/Web3Context";
 
 import { getERC20Balance } from "../services/web3utils";
 
-import { default as testTokenList } from '../assets/test-token-list.json';
+import { default as testTokenList } from '../assets/test-token-near.json';
 
 const initialState = {
   tokenList: testTokenList
@@ -19,6 +19,9 @@ const updateBalances = (tokenList, w3, ethAccount) => {
     }
     if (token.type === "Native token") {
       token.balance = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000 ;
+    }
+    if(token.type === "NEP-21") {
+      token.balance = 2;
     }
   });
   return tl;

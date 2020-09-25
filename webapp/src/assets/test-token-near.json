@@ -1,0 +1,37 @@
+{
+  "name": "Default List",
+  "tokens": [
+    {
+      "name": "NEAR",
+      "type": "Native token",
+      "address": "",
+      "symbol": "NEAR",
+      "decimals": 9,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png"
+    },
+    {
+      "name": "GOLD",
+      "type": "NEP-21",
+      "address": "gold.nearswap.testnet",
+      "symbol": "GOLD",
+      "decimals": 9,
+      "logoURI": ""
+    },
+    {
+      "name": "USD",
+      "type": "NEP-21",
+      "address": "usd.nearswap.testnet",
+      "symbol": "USD",
+      "decimals": 9,
+      "logoURI": ""
+    },
+    {
+      "name": "Abundance Token",
+      "type": "NEP-21",
+      "address": "mint_with_json-workaround-for-mintablefuntoken.chad",
+      "symbol": "nABD",
+      "decimals": 9,
+      "logoURI": ""
+    }
+  ]
+}

@@ -76,7 +76,7 @@ impl NearCLP {
                 util::MAX_GAS/3
             )
         ;
-        //TO-DO add rollback callback
+        //TODO add rollback callback
         // .then(ext_self::add_liquidity_transfer_callback(
         //     env::current_account_id(),
         //     token,
@@ -108,7 +108,7 @@ impl NearCLP {
 
         //send the token from CLP account to buyer
         self.schedule_nep21_tansfer(token,env::current_account_id(), env::predecessor_account_id(), reserve);
-	//TO-DO callbacks
+	    //TODO callbacks
 
     }
 
@@ -176,7 +176,7 @@ impl NearCLP {
         let promise = self.schedule_nep21_tansfer(token,buyer,env::current_account_id(), reserve);
         //and in the same batch send NEAR to client
         promise.transfer(near);
-        //TO-DO COMPLEX ROLLBACKS
+        //TODO COMPLEX ROLLBACKS
     }
 
     /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
@@ -245,7 +245,7 @@ impl NearCLP {
         let promise2 = self.schedule_nep21_tansfer(token2, env::current_account_id(), buyer.clone(), token2_out);
         //do both in parallel
         promise1.and(promise2);
-        //TO-DO COMPLEX ROLLBACKS
+        //TODO COMPLEX ROLLBACKS
     }
 
     pub(crate) fn _price_swap_tokens_in(

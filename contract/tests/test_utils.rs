@@ -13,6 +13,13 @@ use serde::Serialize;
 
 pub const MAX_GAS: u64 = 300_000_000_000_000;
 
+// E24: 1e24 - the number you need to mulitply by to convert an amount in NEARS to YOCTO nears
+// usage: { amount: 50*E24 } 
+pub const E24 : u128 = 1_000_000_000_000_000_000_000_000;
+
+// if the nep21 requires account creatim, the contract retains some near for storage backing
+pub const NEP21_STORAGE_DEPOSIT: u128 = 4*E24/100; //0.04 NEAR
+
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {

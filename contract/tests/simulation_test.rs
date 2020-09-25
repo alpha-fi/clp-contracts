@@ -22,13 +22,6 @@ pub const CAROL_ACCOUNT_NAME: &str = "carol";
 pub const DAVE_ACCOUNT_NAME: &str = "dave";
 pub const FUN_TOKEN2_ACCOUNT_NAME: &str = "fun_token_2";
 
-// E24: 1e24 - the number you need to mulitply by to convert an amount in NEARS to YOCTO nears
-// usage: { amount: 50*E24 } 
-const E24 : u128 = 1_000_000_000_000_000_000_000_000;
-
-// if the nep21 requires account creatim, the contract retains some near for storage backing
-const NEP21_STORAGE_DEPOSIT: u128 = 4*E24/100; //0.04 NEAR
-
 #[test]
 fn deploy_fungible_mint_for_alice() {
     let (mut r, _, fungible_token, _, _, _, _, _, _) = basic_setup();

@@ -304,7 +304,7 @@ impl NearCLP {
         let send_tokens = self.schedule_nep21_tansfer(&token, env::current_account_id(), env::predecessor_account_id(), token_amount);
         //schedule  both in parallel
         send_near.and(send_tokens);
-        //TO-DO COMPLEX-CALLBACKS
+        //TODO COMPLEX-CALLBACKS
     }
 
     /// Returns the owner balance of shares of a pool identified by token.
@@ -581,7 +581,7 @@ impl NearCLP {
                 .as_bytes(),
             );
             panic!("callback");
-            //TO-DO ROLLBACK add_liquidity
+            //TODO ROLLBACK add_liquidity
         }
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.

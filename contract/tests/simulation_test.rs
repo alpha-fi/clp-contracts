@@ -20,6 +20,8 @@ pub const CAROL_ACCOUNT_NAME: &str = "carol";
 pub const DAVE_ACCOUNT_NAME: &str = "dave";
 pub const FUN_TOKEN2_ACCOUNT_NAME: &str = "fun_token_2";
 
+const NEP21_STORAGE_DEPOSIT: u128 = 10_000_000_000_000_000_000_000_000;
+
 #[test]
 fn deploy_fungible_mint_for_alice() {
     let (mut r, _, fungible_token, _, _, _, _, _, _) = basic_setup();
@@ -94,9 +96,16 @@ fn get_pool_info(r: &RuntimeStandalone, funtok: &str) -> PoolInfo {
     );
 }
 
+fn show_funtok_bal(r:&mut RuntimeStandalone, acc:&ExternalUser) -> u128 {
+    println!("let's see how many tokens {} has now",acc.account_id());
+    let funt_balance:u128 = get_funtok_balance(r, &acc).into();
+    println!("{} fun tokens {}", acc.account_id(), funt_balance);
+    return funt_balance;
+}
+
 #[test]
 fn alice_is_a_lp() {
-    let (mut r, _, fungible_token, fun_token2, clp, alice, _bob, carol, _dave) = basic_setup();
+    let (mut r, _, fungible_token, _fun_token2, clp, alice, _bob, carol, _dave) = basic_setup();
 
     let args = NewFungibleTokenArgs {
         owner_id: FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
@@ -106,13 +115,13 @@ fn alice_is_a_lp() {
     println!("deploy_and_init_fungible_token");
     deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
 
-    let args2 = NewFungibleTokenArgs {
-        owner_id: FUN_TOKEN2_ACCOUNT_NAME.into(),
-        total_supply: U128(10_000_000),
-    };
+    // let args2 = NewFungibleTokenArgs {
+    //     owner_id: FUN_TOKEN2_ACCOUNT_NAME.into(),
+    //     total_supply: U128(10_000_000),
+    // };
 
-    println!("deploy_and_init_fungible_token 2");
-    deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(MAX_GAS), &args2).unwrap();
+    //println!("deploy_and_init_fungible_token 2");
+    //deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(MAX_GAS), &args2).unwrap();
 
     let args_clp = NewClpArgs {
         owner: ALICE_ACCOUNT_NAME.into(),
@@ -141,8 +150,24 @@ fn alice_is_a_lp() {
         "new pool should be empty"
     );
 
-    println!("alice adds first liquidity");
 
+    // send som token to alice
+    println!("send some funtok to alice");
+    call(
+        &mut r,
+        &fungible_token,
+        &fungible_token.account_id(),
+        "transfer",
+        format!(r#"{{
+            "new_owner_id": "{}",
+            "amount": "202020"
+        }}"#, ALICE_ACCOUNT_NAME),
+        NEP21_STORAGE_DEPOSIT //refundable, required if the fun-contract needs more storage
+    );
+
+    show_funtok_bal(&mut r,&alice);
+
+    println!("alice adds first liquidity");
     let near_deposit: u128 = ntoy(3_000);
     let token_deposit: u128 = ntoy(3_000_000); // 1/1000 ratio
 
@@ -189,15 +214,11 @@ fn alice_is_a_lp() {
             r#"{{
             "new_owner_id": {},
             "amount": "191919",
-        }}"#,
-            "carol"
-        ),
-        TEN_NEAR, //refundable, required if the fun-contract needs more storage
+        }}"#,"carol"),
+        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    println!("let's see how many tokens carol has now");
-    let carol_funt_balance_pre: u128 = get_funtok_balance(&mut r, &carol).into();
-    println!("Carol fun tokens {}", carol_funt_balance_pre);
+    let carol_funt_balance_pre = show_funtok_bal(&mut r, &carol);
 
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = ntoy(10);
@@ -219,9 +240,9 @@ fn alice_is_a_lp() {
         carol_deposit_yoctos.into(),
     );
 
+
     println!("let's see how many token carol has after the swap");
-    let carol_funt_balance_post: u128 = get_funtok_balance(&mut r, &carol).into();
-    println!("Carol tokens after {}", carol_funt_balance_post);
+    let carol_funt_balance_post = show_funtok_bal(&mut r, &carol);
 
     let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
 

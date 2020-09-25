@@ -175,6 +175,8 @@ impl FungibleToken {
         // Retrieving the account from the state.
         let mut account = self.get_account(&owner_id);
 
+        env::log(format!("transfer_from {} to {}, {}",owner_id,new_owner_id,amount).as_bytes());
+
         // Checking and updating unlocked balance
         if account.balance < amount {
             env::panic(b"Not enough balance");

@@ -1,21 +1,15 @@
 mod utils;
-use crate::utils::{
-    ExternalUser,
-    MAX_GAS,
-};
+use crate::utils::{ExternalUser, MAX_GAS, TEN_NEAR};
 use near_clp::PoolInfo;
 //use near_primitives::errors::ActionErrorKind;
 //use near_primitives::errors::TxExecutionError;
-use near_primitives::{
-    transaction::ExecutionStatus,
-    types::{AccountId},
-};
+use near_primitives::{transaction::ExecutionStatus, types::AccountId};
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use utils::{
-    deploy_and_init_fungible_token, deploy_clp, near_call, near_view, new_root, ntoy,
-    NewClpArgs, NewFungibleTokenArgs,
+    deploy_and_init_fungible_token, deploy_clp, near_call, near_view, new_root, ntoy, NewClpArgs,
+    NewFungibleTokenArgs,
 };
 
 pub const CLP_ACCOUNT_NAME: &str = "nearclp";
@@ -142,7 +136,7 @@ fn alice_is_a_lp() {
         &alice,
         &clp.account_id(),
         "create_pool",
-        format!(r#"{{ "token":"{}" }}"#,FUNGIBLE_TOKEN_ACCOUNT_NAME),
+        format!(r#"{{ "token":"{}" }}"#, FUNGIBLE_TOKEN_ACCOUNT_NAME),
         0,
     );
 
@@ -186,7 +180,7 @@ fn alice_is_a_lp() {
             r#"{{
                     "token": "{tok}",
                     "max_token_amount": {mta},
-                    "min_shares_amont": {msa}
+                    "min_shares_amount": {msa}
                 }}"#,
             tok = FUNGIBLE_TOKEN_ACCOUNT_NAME,
             mta = token_deposit,
@@ -206,7 +200,7 @@ fn alice_is_a_lp() {
         "new pool balance should be from first deposit"
     );
 
-    println!("pool_info:{}",pool_info);
+    println!("pool_info:{}", pool_info);
     let prev_pool_near_blance = pool_info.near_bal;
 
     // Check Carols's fungible token balance before
@@ -216,7 +210,8 @@ fn alice_is_a_lp() {
         &fungible_token,
         &fungible_token.account_id(),
         "transfer",
-        format!(r#"{{
+        format!(
+            r#"{{
             "new_owner_id": {},
             "amount": "191919",
         }}"#,"carol"),
@@ -227,7 +222,7 @@ fn alice_is_a_lp() {
 
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = ntoy(10);
-    let min_token_expected: u128 = ntoy(9900); 
+    let min_token_expected: u128 = ntoy(9900);
 
     call(
         &mut r,
@@ -251,7 +246,10 @@ fn alice_is_a_lp() {
 
     let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
 
-    assert!(carol_received >= min_token_expected, "carol should have received at least min_token_expected");
+    assert!(
+        carol_received >= min_token_expected,
+        "carol should have received at least min_token_expected"
+    );
 
     assert_eq!(
         get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
@@ -513,40 +511,39 @@ fn basic_setup() -> (
 }
 
 //util fn
-fn get_funtok_balance(    
-    r: &mut RuntimeStandalone,
-    account: &ExternalUser
-) -> U128 {
-
+fn get_funtok_balance(r: &mut RuntimeStandalone, account: &ExternalUser) -> U128 {
     let result: U128 = near_view(
         &r,
         &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
         "get_balance",
         &json!({
             "owner_id": &account.account_id()
-        })
+        }),
     );
 
     return result;
-
 }
 
-pub fn call(    
+pub fn call(
     runtime: &mut RuntimeStandalone,
     sending_account: &ExternalUser,
     contract: &AccountId,
     method: &str,
     args: String,
-    attached_amount: u128
+    attached_amount: u128,
 ) {
-
     let gas = MAX_GAS;
 
     let tx = sending_account
         .new_tx(runtime, contract)
-        .function_call(method.into(), args.as_bytes().to_vec(), gas.into(), attached_amount)
+        .function_call(
+            method.into(),
+            args.as_bytes().to_vec(),
+            gas.into(),
+            attached_amount,
+        )
         .sign(&sending_account.signer);
-    
+
     let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
     runtime.process_all().unwrap(); //proces until there's no more generated receipts
 
@@ -562,22 +559,26 @@ pub fn call(
     */
 
     println!("--------------------------------");
-    println!("-- {}.{}() --", contract,method);
+    println!("-- {}.{}() --", contract, method);
     println!("execution_outcome.status {:?}", execution_outcome.status);
     println!("execution_outcome {:?}", execution_outcome);
     match execution_outcome.status {
         ExecutionStatus::Failure(msg) => panic!(msg),
-        ExecutionStatus::SuccessValue(value) => println!("execution_outcome.status => success {:?}",value),
-        ExecutionStatus::SuccessReceiptId(_) => panic!("thre are pending receipts! call runtime.process_all() to complete all txns"),
+        ExecutionStatus::SuccessValue(value) => {
+            println!("execution_outcome.status => success {:?}", value)
+        }
+        ExecutionStatus::SuccessReceiptId(_) => {
+            panic!("thre are pending receipts! call runtime.process_all() to complete all txns")
+        }
         ExecutionStatus::Unknown => unreachable!(),
     }
     println!("-- RECEIPTS ({}) --", execution_outcome.receipt_ids.len());
-    let mut count_failed=0;
+    let mut count_failed = 0;
     for elem in execution_outcome.receipt_ids {
         let outcome2 = runtime.outcome(&elem);
-        println!("receipt outcome: {:?}", outcome2); 
-        match outcome2 { 
-            Some(outcome2) =>{
+        println!("receipt outcome: {:?}", outcome2);
+        match outcome2 {
+            Some(outcome2) => {
                 println!("receipt logs: {:?}", outcome2.logs);
                 match outcome2.status {
                     ExecutionStatus::Failure(txresult) => {
@@ -588,13 +589,12 @@ pub fn call(
                     ExecutionStatus::SuccessReceiptId(_) => panic!("there are pending receipts! call runtime.process_all() to complete all txns"),
                     ExecutionStatus::Unknown => unreachable!(),
                 }
-            },
-            None =>println!("None")
+            }
+            None => println!("None"),
         }
     }
-    if count_failed>0 {
-        panic!(format!("{} RECEIPT(S) FAILED",count_failed));
+    if count_failed > 0 {
+        panic!(format!("{} RECEIPT(S) FAILED", count_failed));
     }
     println!("--------------------------------");
 }
-

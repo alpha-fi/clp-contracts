@@ -9,7 +9,7 @@ impl NearCLP {
         );
     }
 
-    pub(crate) fn get_pool(&self, ref token: &AccountId) -> Pool {
+    pub(crate) fn must_get_pool(&self, ref token: &AccountId) -> Pool {
         match self.pools.get(token) {
             None => env::panic(b"Pool for this token doesn't exist"),
             Some(p) => return p,
@@ -112,7 +112,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         assert!(near_paid > 0 && min_tokens > 0, "E2");
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         // env::log(format!(
         //         "self.calc_out_amount({},{},{})",near_paid, p.near_bal, p.token_bal
         //         ).as_bytes(),);
@@ -132,7 +132,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         assert!(tokens_out > 0 && max_near_paid > 0, "E2");
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.near_bal, p.token_bal);
         // panics if near_to_pay > max_near_paid
         let near_refund = max_near_paid - near_to_pay;
@@ -184,7 +184,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         assert!(tokens_paid > 0 && min_near > 0, "E2");
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         let near_out = self.calc_out_amount(tokens_paid, p.token_bal, p.near_bal);
         assert!(near_out >= min_near, "E7");
         self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
@@ -201,7 +201,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         assert!(near_out > 0 && max_tokens_paid > 0, "E2");
-        let mut p = self.get_pool(&token);
+        let mut p = self.must_get_pool(&token);
         let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
         assert!(tokens_to_pay <= max_tokens_paid, "E8");
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
@@ -282,8 +282,8 @@ impl NearCLP {
     ) {
         assert!(tokens1_paid > 0 && min_tokens2 > 0, "E2");
         assert_ne!(token1, token2, "E9");
-        let mut p1 = self.get_pool(&token1);
-        let mut p2 = self.get_pool(&token2);
+        let mut p1 = self.must_get_pool(&token1);
+        let mut p2 = self.must_get_pool(&token2);
         let (near_swap, tokens2_out) = self._price_swap_tokens_in(&p1, &p2, tokens1_paid);
         assert!(tokens2_out >= min_tokens2, "E7");
 
@@ -311,8 +311,8 @@ impl NearCLP {
     ) {
         assert!(tokens2_out > 0 && max_tokens1_paid > 0, "E2");
         assert_ne!(token1, token2, "E9");
-        let mut p1 = self.get_pool(&token1);
-        let mut p2 = self.get_pool(&token2);
+        let mut p1 = self.must_get_pool(&token1);
+        let mut p2 = self.must_get_pool(&token2);
         let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
         assert!(tokens1_to_pay >= max_tokens1_paid, "E8");
 

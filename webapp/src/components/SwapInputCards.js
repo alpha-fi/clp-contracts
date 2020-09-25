@@ -78,11 +78,12 @@ export default function SwapInputCards(props) {
   }
 
   // Handle amount changes
-  function handleFromAmountChange(event) {
+  async function handleFromAmountChange(event) {
+    event.persist();
     setFromAmount(event.target.value);
-
+    
     // Logs result of calcPriceFromIn()
-    let res = calcPriceFromIn(inputs.state.swap.from, inputs.state.swap.to);
+    const res = await calcPriceFromIn(inputs.state.swap.from, inputs.state.swap.to);
     console.log(res);
 
     dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: event.target.value, isValid: true } });

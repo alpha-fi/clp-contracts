@@ -58,9 +58,6 @@ export async function calcPriceFromIn( token1, token2) {
   if(amount1 < 1) {
     return 0;
   }
-  if(token1.tokenIndex === token2.tokenIndex) {
-    return amount1;
-  }
   if(token1.type === "Native token") {
     // Native to NEP-21
     console.log("AMM ", amount1);
@@ -94,9 +91,6 @@ export async function calcPriceFromIn( token1, token2) {
 export async function swapFromIn( token1, token2 ) {
   const amount1 = Number(token1.amount);
   const amount2 = Number(token2.amount);
-  if(token1.tokenIndex === token2.tokenIndex) {
-    return false;
-  }
   if(token1.type === "Native token") {
     // Native to NEP-21
     const price = await window.contract.swap_near_to_reserve_exact_in( {
@@ -133,9 +127,6 @@ export async function calcPriceFromOut( token1, token2) {
   if(amount2 < 1) {
     return 0;
   }
-  if(token1.tokenIndex === token2.tokenIndex) {
-    return amount2;
-  }
   if(token1.type === "Native token") {
     // Native to NEP-21
     console.log("AMM ", amount1);
@@ -169,9 +160,6 @@ export async function calcPriceFromOut( token1, token2) {
 export async function swapFromOut( token1, token2 ) {
   const amount1 = Number(token1.amount);
   const amount2 = Number(token2.amount);
-  if(token1.tokenIndex === token2.tokenIndex) {
-    return false;
-  }
   if(token1.type === "Native token") {
     // Native to NEP-21
     const price = await window.contract.swap_near_to_reserve_exact_out( {

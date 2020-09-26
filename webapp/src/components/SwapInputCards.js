@@ -5,6 +5,7 @@ import { calcPriceFromIn } from "../services/near-nep21-util";
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
+import { NotificationContext } from "../contexts/NotificationContext";
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -42,6 +43,9 @@ export default function SwapInputCards(props) {
 
   // Token list state (used to populate button with token logo and symbol)
   const tokenListState = useContext(TokenListContext);
+
+  // Notification state
+  const notification = useContext(NotificationContext);
 
   // Local state (amount values; needed for updating directly in inputs)
   const [fromAmount, setFromAmount] = useState("");
@@ -154,6 +158,10 @@ export default function SwapInputCards(props) {
     let isApproved = true;
 
     dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
+    notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+      heading: "Token swap approved",
+      message: "You can now make a swap."
+    }});
   }
 
   async function handleSwap() {
@@ -168,6 +176,11 @@ export default function SwapInputCards(props) {
           // Reset needsApproval
           dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
             needsApproval: (inputs.state.swap.to.type === "NEP-21" && inputs.state.swap.from.type === "NEP-21")
+          }});
+          // Notify user
+          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+            heading: "Swap complete",
+            message: "Your swap has been submitted."
           }});
       });
     } catch (e) {

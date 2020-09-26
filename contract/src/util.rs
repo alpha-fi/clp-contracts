@@ -3,6 +3,7 @@ use uint::construct_uint;
 
 /// Near denomination = 1e24. Usage: { amount: 50*E24 }
 pub const NDENOM: u128 = 1_000_000_000_000_000_000_000_000;
+const NDENOM_ROUNDING: u128 = 500_000_000_000_000_000_000_000;
 
 /// Prepaid gas costs. TODO: we need to adjust this value properly.
 pub const MAX_GAS: u64 = 200_000_000_000_000;
@@ -38,7 +39,7 @@ pub fn is_promise_success() -> bool {
 
 /// yoctoNEAR to NEAR. Rounds to nearest.
 pub fn yton(yocto_amount: u128) -> u128 {
-    (yocto_amount + (5 * 10u128.pow(23))) / 10u128.pow(24)
+    (yocto_amount + NDENOM_ROUNDING) / NDENOM
 }
 
 #[macro_export]

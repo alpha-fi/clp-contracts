@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { calcPriceFromIn } from "../services/near-nep21-util";
+import { calcPriceFromOut, swapFromOut, incAllowance } from "../services/near-nep21-util";
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -91,91 +91,91 @@ export default function SwapInputCards(props) {
   }
 
   // Handle 'From' amount changes
-  async function handleFromAmountChange(event) {
-    event.persist();                   // Persist event because this is an async function
-    setFromAmount(event.target.value); // Update local state
+  async function handleFromAmountChange(amount, isShallowUpdate) {
+    setFromAmount(amount); // Update local state
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
     let newStatus = ((
-      isNonzeroNumber(event.target.amount) && inputs.state.swap.to.isValid
+      isNonzeroNumber(amount) && inputs.state.swap.to.isValid
     ) ? "readyToSwap" : "notReadyToSwap" );
 
     // Update inputs state
     dispatch({ type: 'SET_FROM_AMOUNT', payload: {
-      amount: event.target.value,
-      isValid: isNonzeroNumber(event.target.amount),
+      amount: amount,
+      isValid: isNonzeroNumber(amount),
       status: newStatus // possible values: notReadyToSwap, readyToSwap, swapping
     }});
 
-    // Calculate the value of the other input box
-    let updatedToken = { ...inputs.state.swap.from, amount: event.target.value };
-    let calculatedToPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.to)
-    .then(function(result) {
-      if (Number(result) !== 0)
-        setToAmount(result); // Update other input box with calculated price
-      // Update inputs state
-      dispatch({ type: 'SET_TO_AMOUNT', payload: {
-        amount: result,
-        isValid: isNonzeroNumber(result),
-        status: inputs.state.swap.status
-      }});
-    });
+    // Calculate the value of the other input box (only called when the user types)
+    if (!isShallowUpdate) {
+      let updatedToken = { ...inputs.state.swap.from, amount: amount };
+      let calculatedToPrice = await calcPriceFromOut(updatedToken, inputs.state.swap.to)
+      .then(function(result) {
+        handleToAmountChange(result, true); // Shallow update the other input box
+      });
+    }
   }
 
   // Handle 'To' amount changes
-  async function handleToAmountChange(event) {
-    event.persist();                 // Persist event because this is an async function
-    setToAmount(event.target.value); // Update local state
+  async function handleToAmountChange(amount, isShallowUpdate) {
+    setToAmount(amount); // Update local state
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
     let newStatus = ((
-      isNonzeroNumber(event.target.amount) && inputs.state.swap.from.isValid
+      isNonzeroNumber(amount) && inputs.state.swap.from.isValid
     ) ? "readyToSwap" : "notReadyToSwap" );
 
     // Update inputs state
     dispatch({ type: 'SET_TO_AMOUNT', payload: {
-      amount: event.target.value,
-      isValid: isNonzeroNumber(event.target.amount),
+      amount: amount,
+      isValid: isNonzeroNumber(amount),
       status: newStatus // possible values: notReadyToSwap, readyToSwap
     }});
 
-    // Calculate the value of the other input box
-    let updatedToken = { ...inputs.state.swap.to, amount: event.target.value };
-    let calculatedToPrice = await calcPriceFromIn(inputs.state.swap.from, updatedToken)
-    .then(function(result) {
-      if (Number(result) !== 0)
-        setFromAmount(result); // Update other input box with calculated price
-      // Update inputs state
-      dispatch({ type: 'SET_FROM_AMOUNT', payload: {
-        amount: result,
-        isValid: isNonzeroNumber(result),
-        status: inputs.state.swap.status
-      }});
-    });
+    // Calculate the value of the other input box (only called when the user types)
+    if (!isShallowUpdate) {
+      let updatedToken = { ...inputs.state.swap.from, amount: amount };
+      let calculatedToPrice = await calcPriceFromOut(updatedToken, inputs.state.swap.to)
+      .then(function(result) {
+        handleFromAmountChange(result, true); // Shallow update the other input box
+      });
+    }
   }
 
   async function handleApprovalSubmission() {
-    // Approval function here
-    let isApproved = true;
-
-    dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
-    notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-      heading: "Token swap approved",
-      message: "You can now make a swap."
-    }});
+    let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
+    .then(function(result) {
+      notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+        heading: "Creating allowance",
+        message: "Waiting to receive confirmation..."
+      }});
+      if (result) {
+        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Token swap approved",
+          message: "You can now make a swap."
+        }});
+      } else {
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Failed to create allowance.",
+          message: "Please try again."
+        }});
+      }
+    });
   }
 
   async function handleSwap() {
     try {
-      let swap = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
+      let swap = await swapFromOut(inputs.state.swap.from, inputs.state.swap.to)
         .then(function(result) {
           // Reset amounts in local state
           setFromAmount("");
           setToAmount("");
           // Reset amounts in input state
           dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: "", isValid: false, status: "notReadyToSwap" }});
+          dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: "", isValid: false, status: "notReadyToSwap" }});
           // Reset needsApproval
           dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
             needsApproval: (inputs.state.swap.to.type === "NEP-21" && inputs.state.swap.from.type === "NEP-21")
@@ -200,7 +200,14 @@ export default function SwapInputCards(props) {
         <Row className="px-2">
           <Col>
             <div className="input-group-lg mb-1">
-              <input type="text" value={fromAmount} className="form-control border-0 bg-transparent" placeholder="0.0" onChange={handleFromAmountChange}/>
+              {/* FROM INPUT */}
+              <input
+                type="text"
+                value={fromAmount}
+                className="form-control border-0 bg-transparent"
+                placeholder="0.0"
+                onChange={(e) => handleFromAmountChange(e.target.value, false)}
+              />
             </div>
           </Col>
           <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">
@@ -232,7 +239,14 @@ export default function SwapInputCards(props) {
         <Row className="px-2">
           <Col>
             <div className="input-group-lg mb-1">
-              <input type="text" value={toAmount} className="form-control border-0 bg-transparent" placeholder="0.0" onChange={handleToAmountChange}/>
+              {/* TO INPUT */}
+              <input
+                type="text"
+                value={toAmount}
+                className="form-control border-0 bg-transparent"
+                placeholder="0.0"
+                onChange={(e) => handleToAmountChange(e.target.value, false)}
+              />
             </div>
           </Col>
           <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">

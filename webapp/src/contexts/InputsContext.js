@@ -120,9 +120,9 @@ const InputsProvider = ( { children } ) => {
             isValid: state.swap.from.isValid,             // leave isValid alone (which just checks for a non-zero number)
           },                                              //
           to: state.swap.to,                              // leave the other input card alone
-          needsApproval: (                                // NEP-21<>NEP-21 requires an extra approval, so check for
-            action.payload.type === "NEP-21" &&           //    it and set it. It can be updated later if
-            state.swap.to.type === "NEP-21"),             //    needed by dispatching UPDATE_SWAP_APPROVAL
+          needsApproval:                                  // NEP-21<>NEP-21 requires an extra approval, so check for
+            action.payload.type === "NEP-21",             //    it and set it. It can be updated later if
+                                                          //    needed by dispatching UPDATE_SWAP_APPROVAL
           status: "notReadyToSwap",                       // RESET status to notReadyToSwap
         }, currencySelectionModal: { isVisible: false }}; // Close the currency selection modal
 
@@ -140,9 +140,9 @@ const InputsProvider = ( { children } ) => {
             isValid: state.swap.to.isValid,               // leave isValid alone (which just checks for a non-zero number)
           },                                              //
           from: state.swap.from,                          // leave the other input card alone
-          needsApproval: (                                // NEP-21<>NEP-21 requires an extra approval, so check for
-            action.payload.type === "NEP-21" &&           //    it and set it. It can be updated later if
-            state.swap.from.type === "NEP-21"),           //    needed by dispatching UPDATE_SWAP_APPROVAL
+          needsApproval:                                  // NEP-21<>NEP-21 requires an extra approval, so check for
+            state.swap.from.type === "NEP-21",            //    it and set it. It can be updated later if
+                                                          //    needed by dispatching UPDATE_SWAP_APPROVAL
           status: "notReadyToSwap",                       // RESET status to notReadyToSwap
         }, currencySelectionModal: { isVisible: false }}; // close the currency selection modal
 

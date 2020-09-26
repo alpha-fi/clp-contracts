@@ -1,6 +1,6 @@
 import React, {createContext, useReducer} from 'react';
 
-const initialState = { 
+let initialState = { 
   swap: {
     from: {
       amount: "",     // Amount of tokens
@@ -49,10 +49,17 @@ const initialState = {
   }
 };
 
+// Initialize with previous input state if found in local storage
+let savedInputs = localStorage.getItem("inputs");
+if (savedInputs) {
+  initialState = JSON.parse(savedInputs);
+}
+
 const InputsContext = createContext(initialState);
 const { Provider } = InputsContext;
 
 const InputsProvider = ( { children } ) => {
+
   const [state, dispatch] = useReducer((state, action) => {
     switch(action.type) {
       case 'SET_FROM_AMOUNT':
@@ -184,6 +191,9 @@ const InputsProvider = ( { children } ) => {
         to: state.swap.to, from: state.swap.from }}
       case 'SET_CURRENCY_SELECTION_INPUT':
         return { ...state, currencySelectionModal: { selectedInput: action.payload.input, isVisible: !state.isVisible } };
+      case 'SAVE_INPUTS_TO_LOCAL_STORAGE':
+        localStorage.setItem("inputs", JSON.stringify(state));
+        return state;
       default:
         throw new Error();
     };

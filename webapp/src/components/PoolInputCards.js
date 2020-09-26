@@ -41,25 +41,25 @@ export default function PoolInputCards(props) {
 
   // Handles updating button view and input information
   function handleInput1TokenUpdate() {
-    // Find URL of token logo, symbol, type, and address of INPUT1 input
-    let input1ImageUrl = findCurrencyLogoUrl(inputs.state.pool.input1.tokenIndex, tokenListState.state.tokenList);
-    let input1Symbol = tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].symbol;
-    let input1Type = tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].type;
-    let input1Address = tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].address;
-    // Update image, symbol, and type of selected currency
+    // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
-      payload: { logoUrl: input1ImageUrl, symbol: input1Symbol, type: input1Type, address: input1Address }
+      payload: { 
+        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input1.tokenIndex, tokenListState.state.tokenList),
+        symbol: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].symbol,
+        type: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].type,
+        tokenIndex: inputs.state.pool.input1.tokenIndex,
+        address: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].address }
     });
   }
   function handleInput2TokenUpdate() {
-    // Find URL of token logo, symbol, type, and address of INPUT2 input
-    let input2ImageUrl = findCurrencyLogoUrl(inputs.state.pool.input2.tokenIndex, tokenListState.state.tokenList);
-    let input2Symbol = tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].symbol;
-    let input2Type = tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].type;
-    let input2Address = tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].address;
-    // Update image, symbol, and type of selected currency
+    // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
-      payload: { logoUrl: input2ImageUrl, symbol: input2Symbol, type: input2Type, address: input2Address }
+      payload: { 
+        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input2.tokenIndex, tokenListState.state.tokenList),
+        symbol: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].symbol,
+        type: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].type,
+        tokenIndex: inputs.state.pool.input2.tokenIndex,
+        address: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].address }
     });
   }
 

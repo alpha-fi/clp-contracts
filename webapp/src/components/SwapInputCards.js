@@ -48,8 +48,8 @@ export default function SwapInputCards(props) {
   const notification = useContext(NotificationContext);
 
   // Local state (amount values; needed for updating directly in inputs)
-  const [fromAmount, setFromAmount] = useState("");
-  const [toAmount, setToAmount] = useState("");
+  const [fromAmount, setFromAmount] = useState(inputs.state.swap.from.amount);
+  const [toAmount, setToAmount] = useState(inputs.state.swap.to.amount);
   // const [isReadyToSwap, setIsReadyToSwap] = useState();
 
   // Handles updating button view and input information
@@ -85,9 +85,11 @@ export default function SwapInputCards(props) {
   // Handle opening modal to select currency
   function handleCurrencySelectionModalFrom() {
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "from" } });
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
   function handleCurrencySelectionModalTo() { 
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "to" } });
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
 
   // Handle 'From' amount changes
@@ -145,6 +147,7 @@ export default function SwapInputCards(props) {
   }
 
   async function handleApprovalSubmission() {
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
     let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
     .then(function(result) {
       notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
@@ -168,6 +171,7 @@ export default function SwapInputCards(props) {
 
   async function handleSwap() {
     try {
+      dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
       let swap = await swapFromOut(inputs.state.swap.from, inputs.state.swap.to)
         .then(function(result) {
           // Reset amounts in local state

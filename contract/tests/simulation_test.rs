@@ -9,7 +9,7 @@ use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
-use test_utils::*;
+
 
 pub const CLP_ACC: &str = "nearclp";
 pub const NEP21_ACC: &str = "fungible_token";

@@ -231,7 +231,7 @@ impl NearCLP {
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            MAX_GAS / 3,
+            20 * TGAS,
         );
 
         //schedule a call to transfer nep21 tokens
@@ -247,7 +247,7 @@ impl NearCLP {
                 "transfer_from".into(),
                 args,
                 NEP21_STORAGE_DEPOSIT,
-                MAX_GAS / 3,
+                20 * TGAS
             )
             .then(callback); //after that, the callback will check success/failure
 

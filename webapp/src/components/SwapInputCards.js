@@ -95,18 +95,6 @@ export default function SwapInputCards(props) {
     event.persist();                   // Persist event because this is an async function
     setFromAmount(event.target.value); // Update local state
 
-    // Calculate the value of the other input box
-    let calculatedToPrice = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
-    .then(function(result) {
-      setToAmount(result); // Update other input box with calculated price
-      // Update inputs state
-      dispatch({ type: 'SET_TO_AMOUNT', payload: {
-        amount: result,
-        isValid: isNonzeroNumber(result),
-        status: inputs.state.swap.status
-      }});
-    });
-
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
     let newStatus = ((
@@ -119,25 +107,26 @@ export default function SwapInputCards(props) {
       isValid: isNonzeroNumber(event.target.amount),
       status: newStatus // possible values: notReadyToSwap, readyToSwap, swapping
     }});
-    
+
+    // Calculate the value of the other input box
+    let updatedToken = { ...inputs.state.swap.from, amount: event.target.value };
+    let calculatedToPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.to)
+    .then(function(result) {
+      if (Number(result) !== 0)
+        setToAmount(result); // Update other input box with calculated price
+      // Update inputs state
+      dispatch({ type: 'SET_TO_AMOUNT', payload: {
+        amount: result,
+        isValid: isNonzeroNumber(result),
+        status: inputs.state.swap.status
+      }});
+    });
   }
 
   // Handle 'To' amount changes
   async function handleToAmountChange(event) {
     event.persist();                 // Persist event because this is an async function
     setToAmount(event.target.value); // Update local state
-
-    // Calculate the value of the other input box
-    let calculatedToPrice = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
-    .then(function(result) {
-      setFromAmount(result); // Update other input box with calculated price
-      // Update inputs state
-      dispatch({ type: 'SET_FROM_AMOUNT', payload: {
-        amount: result,
-        isValid: isNonzeroNumber(result),
-        status: inputs.state.swap.status
-      }});
-    });
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
@@ -151,6 +140,20 @@ export default function SwapInputCards(props) {
       isValid: isNonzeroNumber(event.target.amount),
       status: newStatus // possible values: notReadyToSwap, readyToSwap
     }});
+
+    // Calculate the value of the other input box
+    let updatedToken = { ...inputs.state.swap.to, amount: event.target.value };
+    let calculatedToPrice = await calcPriceFromIn(inputs.state.swap.from, updatedToken)
+    .then(function(result) {
+      if (Number(result) !== 0)
+        setFromAmount(result); // Update other input box with calculated price
+      // Update inputs state
+      dispatch({ type: 'SET_FROM_AMOUNT', payload: {
+        amount: result,
+        isValid: isNonzeroNumber(result),
+        status: inputs.state.swap.status
+      }});
+    });
   }
 
   async function handleApprovalSubmission() {

@@ -6,7 +6,7 @@ test:
 # cargo test  -- --nocapture
 
 test-unit:
-	@cargo +nightly test --lib
+	@cargo +nightly test --lib -- --nocapture
 
 build:
 # more about flags: https://github.com/near-examples/simulation-testing#gotchas

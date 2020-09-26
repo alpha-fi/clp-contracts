@@ -1,5 +1,6 @@
 mod test_utils;
 use crate::test_utils::*;
+use near_clp::util::{MAX_GAS, NDENOM, NEP21_STORAGE_DEPOSIT};
 use near_clp::PoolInfo;
 
 //use near_primitives::errors::ActionErrorKind;
@@ -7,39 +8,30 @@ use near_clp::PoolInfo;
 use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
-use near_sdk::AccountId;
 use serde_json::json;
-use test_utils::{
-    deploy_and_init_fungible_token, deploy_clp, near_call, near_view, new_root, ntoy, NewClpArgs,
-    NewFungibleTokenArgs,
-};
+use test_utils::*;
 
-pub const CLP_ACCOUNT_NAME: &str = "nearclp";
-pub const FUNGIBLE_TOKEN_ACCOUNT_NAME: &str = "fungible_token";
-pub const ALICE_ACCOUNT_NAME: &str = "alice";
-pub const BOB_ACCOUNT_NAME: &str = "bob";
-pub const CAROL_ACCOUNT_NAME: &str = "carol";
-pub const DAVE_ACCOUNT_NAME: &str = "dave";
-pub const FUN_TOKEN2_ACCOUNT_NAME: &str = "fun_token_2";
+pub const CLP_ACC: &str = "nearclp";
+pub const NEP21_ACC: &str = "fungible_token";
+pub const ALICE_ACC: &str = "alice";
+pub const BOB_ACC: &str = "bob";
+pub const CAROL_ACC: &str = "carol";
+pub const DAVE_ACC: &str = "dave";
+pub const NEP21_ACC2: &str = "fun_token_2";
 
 #[test]
 fn deploy_fungible_mint_for_alice() {
     let (mut r, _, fungible_token, _, _, _, _, _, _) = basic_setup();
-    let total_supply = 1_000_000*E24;
+    let total_supply = 1_000_000 * NDENOM;
 
     let args = NewFungibleTokenArgs {
-        owner_id: FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        owner_id: NEP21_ACC.into(),
         total_supply: U128(total_supply.clone()),
     };
 
     deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
 
-    let returned_supply: U128 = near_view(
-        &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
-        "get_total_supply",
-        "",
-    );
+    let returned_supply: U128 = near_view(&r, &NEP21_ACC.into(), "get_total_supply", "");
     assert_eq!(returned_supply.0, total_supply);
     println!("Note that we can use println! instead of env::log in simulation tests.");
     let demo_variable = "-- --nocapture".to_string();
@@ -50,10 +42,10 @@ fn deploy_fungible_mint_for_alice() {
 
     let alice_balance: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_NAME,
+            "owner_id": ALICE_ACC,
         }),
     );
     // Confirm Alice's initial balance is 0
@@ -65,7 +57,7 @@ fn deploy_fungible_mint_for_alice() {
         &fungible_token.account_id(),
         "transfer",
         &serde_json::to_vec(&json!({
-            "new_owner_id": ALICE_ACCOUNT_NAME,
+            "new_owner_id": ALICE_ACC,
             "amount": "191919",
         }))
         .unwrap(),
@@ -76,10 +68,10 @@ fn deploy_fungible_mint_for_alice() {
 
     let alice_balance: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_NAME,
+            "owner_id": ALICE_ACC,
         }),
     );
     // Confirm Alice's initial balance has increased to set amount
@@ -88,12 +80,7 @@ fn deploy_fungible_mint_for_alice() {
 
 // utility, get pool info from CLP
 fn get_pool_info(r: &RuntimeStandalone, funtok: &str) -> PoolInfo {
-    return near_view(
-        r,
-        &CLP_ACCOUNT_NAME.into(),
-        "pool_info",
-        &json!({ "token": funtok }),
-    );
+    return near_view(r, &CLP_ACC.into(), "pool_info", &json!({ "token": funtok }));
 }
 
 //helper fn
@@ -109,15 +96,15 @@ fn alice_adds_liquidity_carol_swaps() {
     let (mut r, _, fungible_token, _fun_token2, clp, alice, _bob, carol, _dave) = basic_setup();
 
     let args = NewFungibleTokenArgs {
-        owner_id: FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
-        total_supply: U128(1_000_000*E24),
+        owner_id: NEP21_ACC.into(),
+        total_supply: U128(1_000_000 * NDENOM),
     };
 
     println!("deploy_and_init_fungible_token");
     deploy_and_init_fungible_token(&mut r, &fungible_token, "new", U64(MAX_GAS), &args).unwrap();
 
     // let args2 = NewFungibleTokenArgs {
-    //     owner_id: FUN_TOKEN2_ACCOUNT_NAME.into(),
+    //     owner_id: NEP21_ACC2.into(),
     //     total_supply: U128(10_000_000),
     // };
 
@@ -125,7 +112,7 @@ fn alice_adds_liquidity_carol_swaps() {
     //deploy_and_init_fungible_token(&mut r, &fun_token2, "new", U64(MAX_GAS), &args2).unwrap();
 
     let args_clp = NewClpArgs {
-        owner: ALICE_ACCOUNT_NAME.into(),
+        owner: ALICE_ACC.into(),
     };
     println!("deploy_and_init_clp");
     deploy_clp(&mut r, &clp, "new", U64(MAX_GAS), &args_clp).unwrap();
@@ -137,12 +124,12 @@ fn alice_adds_liquidity_carol_swaps() {
         &alice,
         &clp,
         "create_pool",
-        format!(r#"{{ "token":"{}" }}"#, FUNGIBLE_TOKEN_ACCOUNT_NAME),
+        format!(r#"{{ "token":"{}" }}"#, NEP21_ACC),
         0,
     );
 
     assert_eq!(
-        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
+        get_pool_info(&r, &NEP21_ACC),
         PoolInfo {
             near_bal: 0,
             token_bal: 0,
@@ -158,11 +145,15 @@ fn alice_adds_liquidity_carol_swaps() {
         &fungible_token,
         &fungible_token,
         "transfer",
-        format!(r#"{{
+        format!(
+            r#"{{
             "new_owner_id": "{}",
             "amount": "{}"
-        }}"#, ALICE_ACCOUNT_NAME, 202_020*E24),
-        NEP21_STORAGE_DEPOSIT //refundable, required if the fun-contract needs more storage
+        }}"#,
+            ALICE_ACC,
+            202_020 * NDENOM
+        ),
+        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
     println!("alice adds first liquidity");
@@ -176,14 +167,17 @@ fn alice_adds_liquidity_carol_swaps() {
         &alice,
         &fungible_token,
         "inc_allowance",
-        format!(r#"{{
+        format!(
+            r#"{{
             "escrow_account_id": "{}",
             "amount": "{}"
-        }}"#, CLP_ACCOUNT_NAME, token_deposit),
-        NEP21_STORAGE_DEPOSIT //refundable, required if the fun-contract needs more storage
+        }}"#,
+            CLP_ACC, token_deposit
+        ),
+        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    show_funtok_bal(&mut r,&alice);
+    show_funtok_bal(&mut r, &alice);
 
     //add_liquidity
     call(
@@ -197,7 +191,7 @@ fn alice_adds_liquidity_carol_swaps() {
                     "max_token_amount": {mta},
                     "min_shares_amount": {msa}
                 }}"#,
-            tok = FUNGIBLE_TOKEN_ACCOUNT_NAME,
+            tok = NEP21_ACC,
             mta = token_deposit,
             msa = near_deposit
         ),
@@ -205,7 +199,7 @@ fn alice_adds_liquidity_carol_swaps() {
     );
 
     //get pool state before swap
-    let pool_info_pre_swap = get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME);
+    let pool_info_pre_swap = get_pool_info(&r, &NEP21_ACC);
     assert_eq!(
         pool_info_pre_swap,
         PoolInfo {
@@ -225,20 +219,22 @@ fn alice_adds_liquidity_carol_swaps() {
         &fungible_token,
         &fungible_token,
         "transfer",
-            format!(r#"{{
+        format!(
+            r#"{{
                 "new_owner_id": "{}",
                 "amount": "{}"
             }}"#,
-                "carol",
-                19_000*E24),
+            "carol",
+            19_000 * NDENOM
+        ),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
     let carol_funt_balance_pre = show_funtok_bal(&mut r, &carol);
 
     println!("carol swaps some near for tokens");
-    let carol_deposit_yoctos: u128 = 10*E24;
-    let min_token_expected: u128 = 98*E24; //1-10 relation near/token
+    let carol_deposit_yoctos: u128 = 10 * NDENOM;
+    let min_token_expected: u128 = 98 * NDENOM; //1-10 relation near/token
 
     call(
         &mut r,
@@ -250,7 +246,7 @@ fn alice_adds_liquidity_carol_swaps() {
                 "token": "{tok}",
                 "min_tokens": {min_tok}
                 }}"#,
-            tok = FUNGIBLE_TOKEN_ACCOUNT_NAME,
+            tok = NEP21_ACC,
             min_tok = min_token_expected
         ),
         carol_deposit_yoctos.into(),
@@ -267,9 +263,9 @@ fn alice_adds_liquidity_carol_swaps() {
     );
 
     assert_eq!(
-        get_pool_info(&r, &FUNGIBLE_TOKEN_ACCOUNT_NAME),
+        get_pool_info(&r, &NEP21_ACC),
         PoolInfo {
-            near_bal:  (pool_info_pre_swap.near_bal + carol_deposit_yoctos).into(),
+            near_bal: (pool_info_pre_swap.near_bal + carol_deposit_yoctos).into(),
             token_bal: (pool_info_pre_swap.token_bal - carol_received).into(),
             total_shares: pool_info_pre_swap.total_shares,
         },
@@ -279,10 +275,10 @@ fn alice_adds_liquidity_carol_swaps() {
     /*
     let mut alice_counter: u8 = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_NAME.into(),
+        &NEP21_ACC2.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_NAME
+            "account": ALICE_ACC
         })
     );
 
@@ -290,7 +286,7 @@ fn alice_adds_liquidity_carol_swaps() {
 
     let mut execution_outcome = near_call(&mut r,
         &alice,
-        &FUN_TOKEN2_ACCOUNT_NAME,
+        &NEP21_ACC2,
         "increment",
         &[],
         U64(MAX_GAS),
@@ -304,10 +300,10 @@ fn alice_adds_liquidity_carol_swaps() {
 
     alice_counter = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_NAME.into(),
+        &NEP21_ACC2.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_NAME
+            "account": ALICE_ACC
         })
     );
 
@@ -319,10 +315,10 @@ fn alice_adds_liquidity_carol_swaps() {
     // Check Alice's fungible token balance before, which should be zero.
     let mut alice_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_NAME
+            "owner_id": ALICE_ACC
         })
     );
 
@@ -331,11 +327,11 @@ fn alice_adds_liquidity_carol_swaps() {
     // Now increment again
     execution_outcome = near_call(&mut r,
         &alice,
-        &CLP_ACCOUNT_NAME,
+        &CLP_ACC,
         "cross_contract_increment",
         &serde_json::to_vec(&json!({
-            "counter_account": FUN_TOKEN2_ACCOUNT_NAME,
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
+            "counter_account": NEP21_ACC2,
+            "token_account": NEP21_ACC,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -348,10 +344,10 @@ fn alice_adds_liquidity_carol_swaps() {
     // Check that the number has increased to 2
     alice_counter = near_view(
         &r,
-        &FUN_TOKEN2_ACCOUNT_NAME.into(),
+        &NEP21_ACC2.into(),
         "get_num",
         &json!({
-            "account": ALICE_ACCOUNT_NAME
+            "account": ALICE_ACC
         })
     );
 
@@ -365,10 +361,10 @@ fn alice_adds_liquidity_carol_swaps() {
     /*
     let alice_new_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_NAME
+            "owner_id": ALICE_ACC
         })
     );
 
@@ -380,12 +376,12 @@ fn alice_adds_liquidity_carol_swaps() {
 
     let will_error = near_call(&mut r,
         &simulation_example,
-        &CLP_ACCOUNT_NAME,
+        &CLP_ACC,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
-            "recipient_account": CLP_ACCOUNT_NAME,
+            "token_account": NEP21_ACC,
+            "recipient_account": CLP_ACC,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -415,10 +411,10 @@ fn alice_adds_liquidity_carol_swaps() {
     // Confirm that the simulation account has zero fungible tokens
     let fungible_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": CLP_ACCOUNT_NAME
+            "owner_id": CLP_ACC
         })
     );
 
@@ -428,10 +424,10 @@ fn alice_adds_liquidity_carol_swaps() {
 
     near_call(&mut r,
               &fungible_token,
-              &FUNGIBLE_TOKEN_ACCOUNT_NAME,
+              &NEP21_ACC,
               "transfer",
               &serde_json::to_vec(&json!({
-            "new_owner_id": CLP_ACCOUNT_NAME,
+            "new_owner_id": CLP_ACC,
             "amount": "50",
         }),).unwrap(),
               U64(MAX_GAS),
@@ -442,12 +438,12 @@ fn alice_adds_liquidity_carol_swaps() {
 
     let will_succeed = near_call(&mut r,
         &simulation_example,
-        &CLP_ACCOUNT_NAME,
+        &CLP_ACC,
         "send_token_if_counter_even",
         &serde_json::to_vec(&json!({
             "new_num": alice_counter.clone(),
-            "token_account": FUNGIBLE_TOKEN_ACCOUNT_NAME,
-            "recipient_account": ALICE_ACCOUNT_NAME,
+            "token_account": NEP21_ACC,
+            "recipient_account": ALICE_ACC,
         }),).unwrap(),
         U64(MAX_GAS),
         0
@@ -459,10 +455,10 @@ fn alice_adds_liquidity_carol_swaps() {
 
     alice_tokens = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": ALICE_ACCOUNT_NAME
+            "owner_id": ALICE_ACC
         })
     );
 
@@ -470,10 +466,10 @@ fn alice_adds_liquidity_carol_swaps() {
 
     let fungible_tokens: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
-            "owner_id": CLP_ACCOUNT_NAME
+            "owner_id": CLP_ACC
         })
     );
 
@@ -495,31 +491,31 @@ fn basic_setup() -> (
     let (mut r, main) = new_root("main.testnet".into());
 
     let fungible_token = main
-        .create_external(&mut r, &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(), ntoy(1_000_000))
+        .create_external(&mut r, &NEP21_ACC.into(), ntoy(1_000_000))
         .unwrap();
 
     let funt2 = main
-        .create_external(&mut r, &FUN_TOKEN2_ACCOUNT_NAME.into(), ntoy(1_000_000))
+        .create_external(&mut r, &NEP21_ACC2.into(), ntoy(1_000_000))
         .unwrap();
 
     let clp = main
-        .create_external(&mut r, &CLP_ACCOUNT_NAME.into(), ntoy(1_000_000))
+        .create_external(&mut r, &CLP_ACC.into(), ntoy(1_000_000))
         .unwrap();
 
     let alice = main
-        .create_external(&mut r, &ALICE_ACCOUNT_NAME.into(), ntoy(1_000_000))
+        .create_external(&mut r, &ALICE_ACC.into(), ntoy(1_000_000))
         .unwrap();
 
     let bob = main
-        .create_external(&mut r, &BOB_ACCOUNT_NAME.into(), ntoy(2_000_000))
+        .create_external(&mut r, &BOB_ACC.into(), ntoy(2_000_000))
         .unwrap();
 
     let carol = main
-        .create_external(&mut r, &CAROL_ACCOUNT_NAME.into(), ntoy(5_000))
+        .create_external(&mut r, &CAROL_ACC.into(), ntoy(5_000))
         .unwrap();
 
     let dave = main
-        .create_external(&mut r, &DAVE_ACCOUNT_NAME.into(), ntoy(3_000))
+        .create_external(&mut r, &DAVE_ACC.into(), ntoy(3_000))
         .unwrap();
 
     return (r, main, fungible_token, funt2, clp, alice, bob, carol, dave);
@@ -529,7 +525,7 @@ fn basic_setup() -> (
 fn get_funtok_balance(r: &mut RuntimeStandalone, account: &ExternalUser) -> U128 {
     let result: U128 = near_view(
         &r,
-        &FUNGIBLE_TOKEN_ACCOUNT_NAME.into(),
+        &NEP21_ACC.into(),
         "get_balance",
         &json!({
             "owner_id": &account.account_id()
@@ -541,9 +537,9 @@ fn get_funtok_balance(r: &mut RuntimeStandalone, account: &ExternalUser) -> U128
 
 /**utility fn schedule a call in the simulator, execute it, and all its receipts
  * report errors and lgos from all receipts
- * 
+ *
  */
-pub fn call(    
+pub fn call(
     runtime: &mut RuntimeStandalone,
     sending_account: &ExternalUser,
     contract: &ExternalUser,
@@ -555,7 +551,12 @@ pub fn call(
 
     let tx = sending_account
         .new_tx(runtime, contract.account_id())
-        .function_call(method.into(), args.as_bytes().to_vec(), gas.into(), attached_amount)
+        .function_call(
+            method.into(),
+            args.as_bytes().to_vec(),
+            gas.into(),
+            attached_amount,
+        )
         .sign(&sending_account.signer);
 
     let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
@@ -573,7 +574,7 @@ pub fn call(
     */
 
     println!("--------------------------------");
-    println!("-- {}.{}() --", contract.account_id(),method);
+    println!("-- {}.{}() --", contract.account_id(), method);
     println!("execution_outcome.status {:?}", execution_outcome.status);
     println!("execution_outcome {:?}", execution_outcome);
     match execution_outcome.status {
@@ -586,14 +587,17 @@ pub fn call(
         }
         ExecutionStatus::Unknown => unreachable!(),
     }
-    println!("--------- RECEIPTS ({})", execution_outcome.receipt_ids.len());
-    let mut count_failed=0;
-    let mut inx=0;
+    println!(
+        "--------- RECEIPTS ({})",
+        execution_outcome.receipt_ids.len()
+    );
+    let mut count_failed = 0;
+    let mut inx = 0;
     for elem in execution_outcome.receipt_ids {
         let outcome2 = runtime.outcome(&elem);
-        println!("---- Receipt {} outcome: {:?}", inx, outcome2); 
-        match outcome2 { 
-            Some(outcome2) =>{
+        println!("---- Receipt {} outcome: {:?}", inx, outcome2);
+        match outcome2 {
+            Some(outcome2) => {
                 println!("receipt {} logs: {:?}", inx, outcome2.logs);
                 match outcome2.status {
                     ExecutionStatus::Failure(txresult) => {
@@ -607,7 +611,7 @@ pub fn call(
             }
             None => println!("None"),
         }
-        inx+=1;
+        inx += 1;
     }
     if count_failed > 0 {
         panic!(format!("{} RECEIPT(S) FAILED", count_failed));

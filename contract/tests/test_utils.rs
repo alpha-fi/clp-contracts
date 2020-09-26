@@ -11,15 +11,7 @@ use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-pub const MAX_GAS: u64 = 300_000_000_000_000;
-
-// E24: 1e24 - the number you need to mulitply by to convert an amount in NEARS to YOCTO nears
-// usage: { amount: 50*E24 } 
-pub const E24 : u128 = 1_000_000_000_000_000_000_000_000;
-
-// if the nep21 requires account creatim, the contract retains some near for storage backing
-pub const NEP21_STORAGE_DEPOSIT: u128 = 4*E24/100; //0.04 NEAR
-
+// use near_clp::util::{MAX_GAS, NEP21_STORAGE_DEPOSIT};
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
@@ -157,7 +149,7 @@ pub fn near_call(
     method: &str,
     args: &[u8],
     gas: U64,
-    deposit: Balance
+    deposit: Balance,
 ) -> TxResult {
     let tx = sending_account
         .new_tx(runtime, contract_id)

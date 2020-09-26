@@ -1,10 +1,4 @@
 use crate::*;
-use uint::construct_uint;
-
-construct_uint! {
-    /// 256-bit unsigned integer.
-    pub struct u256(4);
-}
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {
@@ -28,22 +22,10 @@ impl NearCLP {
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
-        // this is getInputPrice in Uniswap
-        env::log(
-            format!(
-                "in_amount {} out_bal {} in_bal {}",
-                yton(in_amount),
-                yton(out_bal),
-                yton(in_bal)
-            )
-            .as_bytes(),
-        );
-        let in_with_fee = u256::from(in_amount * 997);
-        let numerator = in_with_fee * u256::from(out_bal);
-        let denominator = u256::from(in_bal) * u256::from(1000) + in_with_fee;
-        let result = (numerator / denominator).as_u128();
-        env::log(format!("return {}", yton(result)).as_bytes());
-        return result;
+        // in_a * out_bal / (in_bal + in_a)  and scaling for fee
+        let in_net = u256::from(in_amount) * 997;
+        let r: u256 = in_net * u256::from(out_bal) / (u256::from(in_bal) * 1000 + in_net);
+        return r.as_u128();
     }
 
     /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
@@ -51,36 +33,34 @@ impl NearCLP {
     /// respectively.
     pub(crate) fn calc_in_amount(&self, out_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getOutputPrice in Uniswap
-        let numerator = u256::from(in_bal) * u256::from(out_amount) * u256::from(1000);
-        let denominator = u256::from(out_bal - out_amount) * u256::from(997);
-        let result = (numerator / denominator + 1).as_u128();
-        return result;
+        // (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
+        let numerator = u256::from(in_bal) * u256::from(out_amount) * 1000;
+        let r: u256 = numerator / u256::from(out_bal - out_amount) / 997;
+        return r.as_u128();
     }
 
-
-    pub(crate) fn schedule_nep21_tansfer(&mut self,
-        token: &AccountId, 
-        from_account: AccountId, 
-        to_account: AccountId, 
-        amount:u128
-    ) -> Promise
-    {
-        return Promise::new(token.clone())
-            .function_call(
-                "transfer_from".into(),
-                format!(r#"{{
+    pub(crate) fn schedule_nep21_tansfer(
+        &mut self,
+        token: &AccountId,
+        from_account: AccountId,
+        to_account: AccountId,
+        amount: u128,
+    ) -> Promise {
+        return Promise::new(token.clone()).function_call(
+            "transfer_from".into(),
+            format!(
+                r#"{{
                         "owner_id": "{}",
                         "new_owner_id": "{}",
                         "amount": "{}"
-                        }}"#, 
-                        from_account,
-                        to_account,
-                        amount
-                ).as_bytes().to_vec(),
-                util::NEP21_STORAGE_DEPOSIT,//refundable, required if the fun-contract needs more storage
-                util::MAX_GAS/3
+                        }}"#,
+                from_account, to_account, amount
             )
-        ;
+            .as_bytes()
+            .to_vec(),
+            util::NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
+            util::MAX_GAS / 3,
+        );
         //TODO add rollback callback
         // .then(ext_self::add_liquidity_transfer_callback(
         //     env::current_account_id(),
@@ -88,9 +68,7 @@ impl NearCLP {
         //     0,
         //     MAX_GAS/3,
         // ));
-
     }
-
 
     pub(crate) fn _swap_near(
         &mut self,
@@ -100,21 +78,23 @@ impl NearCLP {
         reserve: Balance,
         recipient: AccountId,
     ) {
-        env::log(
-            format!(
-                "User purchased {} {} for {} YoctoNEAR",
-                reserve, token, near
-            )
-            .as_bytes(),
+        // TODO: remove this
+        println!(
+            "User purchased {} {} for {} YoctoNEAR",
+            reserve, token, near
         );
         p.token_bal -= reserve;
         p.near_bal += near;
         self.set_pool(token, p);
 
         //send the token from CLP account to buyer
-        self.schedule_nep21_tansfer(token,env::current_account_id(), env::predecessor_account_id(), reserve);
-	    //TODO callbacks
-
+        self.schedule_nep21_tansfer(
+            token,
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            reserve,
+        );
+        //TODO callbacks
     }
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
@@ -128,9 +108,6 @@ impl NearCLP {
     ) {
         assert!(near_paid > 0 && min_tokens > 0, "E2");
         let mut p = self.must_get_pool(&token);
-        // env::log(format!(
-        //         "self.calc_out_amount({},{},{})",near_paid, p.near_bal, p.token_bal
-        //         ).as_bytes(),);
         let tokens_out = self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
         assert!(tokens_out >= min_tokens, "E7");
         self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
@@ -166,19 +143,16 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        env::log(
-            format!(
-                "User purchased {} NEAR tokens for {} reserve tokens",
-                near, reserve
-            )
-            .as_bytes(),
+        println!(
+            "User purchased {} NEAR tokens for {} reserve tokens",
+            near, reserve
         );
         p.token_bal += reserve;
         p.near_bal -= near;
         self.set_pool(&token, p);
-        
+
         //get the token from buyer into CLP
-        let promise = self.schedule_nep21_tansfer(token,buyer,env::current_account_id(), reserve);
+        let promise = self.schedule_nep21_tansfer(token, buyer, env::current_account_id(), reserve);
         //and in the same batch send NEAR to client
         promise.transfer(near);
         //TODO COMPLEX ROLLBACKS
@@ -230,12 +204,9 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        env::log(
-            format!(
-                "User purchased {} {} tokens for {} {} tokens",
-                token2_out, token2, token1_in, token1
-            )
-            .as_bytes(),
+        println!(
+            "User purchased {} {} tokens for {} {} tokens",
+            token2_out, token2, token1_in, token1,
         );
         p1.token_bal += token1_in;
         p1.near_bal -= near_swap;
@@ -245,9 +216,19 @@ impl NearCLP {
         self.set_pool(&token2, p1);
 
         //get the token from buyer into CLP
-        let promise1 = self.schedule_nep21_tansfer(token1, buyer.clone(), env::current_account_id(), token1_in);
+        let promise1 = self.schedule_nep21_tansfer(
+            token1,
+            buyer.clone(),
+            env::current_account_id(),
+            token1_in,
+        );
         //send the buyer the bougth token
-        let promise2 = self.schedule_nep21_tansfer(token2, env::current_account_id(), buyer.clone(), token2_out);
+        let promise2 = self.schedule_nep21_tansfer(
+            token2,
+            env::current_account_id(),
+            buyer.clone(),
+            token2_out,
+        );
         //do both in parallel
         promise1.and(promise2);
         //TODO COMPLEX ROLLBACKS

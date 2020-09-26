@@ -2,13 +2,10 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Promise, PromiseResult};
-use uint::construct_uint;
+use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
 
 pub mod util;
-use crate::util::{
-    MAX_GAS, NEP21_STORAGE_DEPOSIT, yton
-};
+use crate::util::*;
 //use std::collections::UnorderedMap;
 
 // a way to optimize memory management
@@ -27,11 +24,7 @@ mod internal;
 // "E7" - computed amount of buying tokens is smaller than user required minimum.
 // "E8" - computed amount of selling tokens is bigger than user required maximum.
 // "E9" - assets (tokens) must be different in token to token swap.
-
-construct_uint! {
-    /// 256-bit unsigned integer.
-    pub struct u256(4);
-}
+// "E10" - Pool is empty and can't make a swap.
 
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -136,6 +129,7 @@ impl NearCLP {
             env::is_valid_account_id(new_owner.as_bytes()),
             "fee_dst account ID is invalid."
         );
+        env_log!("Changing owner from {} to {}", self.owner, new_owner);
         self.owner = new_owner;
     }
 
@@ -188,7 +182,6 @@ impl NearCLP {
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
-            env::log(b"Creating a first deposit");
             p.near_bal = near_amount;
             shares_minted = p.near_bal;
             p.total_shares = shares_minted;
@@ -210,12 +203,11 @@ impl NearCLP {
             p.total_shares += shares_minted;
         }
 
-        env::log(
-            format!(
-                "Minting {} of shares for {} NEAR and {} reserve tokens",
-                shares_minted, near_amount, computed_token_amount
-            )
-            .as_bytes(),
+        env_log!(
+            "Minting {} of shares for {} NEAR and {} reserve tokens",
+            shares_minted,
+            near_amount,
+            computed_token_amount
         );
         println!(
             ">> in contract, attached deposit: {}, PoolInfo: {}",
@@ -246,10 +238,11 @@ impl NearCLP {
         .into();
         Promise::new(token) //call the token contract
             .function_call(
-                "transfer_from".into(), 
-                args, 
-                NEP21_STORAGE_DEPOSIT, 
-                MAX_GAS / 3)
+                "transfer_from".into(),
+                args,
+                NEP21_STORAGE_DEPOSIT,
+                MAX_GAS / 3,
+            )
             .then(callback); //after that, the callback will check success/failure
 
         // TODO:
@@ -274,16 +267,17 @@ impl NearCLP {
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(current_shares >= shares, "E5");
 
-        let near_amount = (u256::from(shares) * u256::from(p.near_bal) / u256::from(p.total_shares)).as_u128();
-        let token_amount = (u256::from(shares) * u256::from(p.token_bal) / u256::from(p.total_shares)).as_u128();
+        let total_shares2 = u256::from(p.total_shares);
+        let shares2 = u256::from(shares);
+        let near_amount = (shares2 * u256::from(p.near_bal) / total_shares2).as_u128();
+        let token_amount = (shares2 * u256::from(p.token_bal) / total_shares2).as_u128();
         assert!(near_amount >= min_near && token_amount >= min_tokens, "E6");
 
-        env::log(
-            format!(
-                "Reedeming {} shares for {} NEAR and {} reserve tokens",
-                shares, near_amount, token_amount
-            )
-            .as_bytes(),
+        env_log!(
+            "Reedeming {} shares for {} NEAR and {} reserve tokens",
+            shares,
+            near_amount,
+            token_amount,
         );
         p.shares.insert(&caller, &(current_shares - shares));
         p.total_shares -= shares;
@@ -294,7 +288,12 @@ impl NearCLP {
         let send_near = Promise::new(caller.clone()) // caller is clone because it has to be used later
             .transfer(near_amount);
         //send token to caller
-        let send_tokens = self.schedule_nep21_tansfer(&token, env::current_account_id(), env::predecessor_account_id(), token_amount);
+        let send_tokens = self.schedule_nep21_tansfer(
+            &token,
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            token_amount,
+        );
         //schedule  both in parallel
         send_near.and(send_tokens);
         //TODO COMPLEX-CALLBACKS
@@ -545,7 +544,7 @@ impl NearCLP {
 
     //TODO callbacks
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
-        env::log(format!("enter add_liquidity_transfer_callback").as_bytes());
+        println!("enter add_liquidity_transfer_callback");
 
         assert_eq!(
             env::current_account_id(),
@@ -553,30 +552,17 @@ impl NearCLP {
             "Can be called only as a callback"
         );
 
-        assert_eq!(
-            env::promise_results_count(),
-            1,
-            "Contract expected a result on the callback"
-        );
-        let action_succeeded = match env::promise_result(0) {
-            PromiseResult::Successful(_) => true,
-            _ => false,
-        };
-
         // TODO: simulation doesn't allow using a promise inside callbacks.
         // For now we just log result
-        env::log(format!("PromiseResult  transfer succeeded:{}", action_succeeded).as_bytes());
-        if !action_succeeded {
-            env::log(
-                format!(
-                    "from add_liquidity_transfer_callback, token:{} transfer FAILED!",
-                    token
-                )
-                .as_bytes(),
+        if !is_promise_success() {
+            env_log!(
+                "add_liquidity_transfer_callback: token {} transfer FAILED!",
+                token
             );
             panic!("callback");
             //TODO ROLLBACK add_liquidity
         }
+        println!("PromiseResult  transfer succeeded");
 
         // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
         /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
@@ -663,10 +649,6 @@ mod tests {
             self.vm.attached_deposit = attached_deposit;
             testing_env!(self.vm.clone());
         }
-
-        // pub fn accounts_c(self) -> Accounts {
-        //     return self.accounts;
-        // }
     }
 
     fn init() -> (Ctx, NearCLP) {
@@ -748,7 +730,7 @@ mod tests {
         assert_eq!(pools, expected);
     }
 
-    #[test]
+    // #[test] TODO
     fn add_liquidity_happy_path() {
         let (mut ctx, mut c) = init();
         let a = ctx.accounts.predecessor.clone();

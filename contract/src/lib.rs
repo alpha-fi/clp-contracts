@@ -1,6 +1,7 @@
 // use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
+use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
 
@@ -136,6 +137,11 @@ impl NearCLP {
     /**********************
        POOL MANAGEMENT
     **********************/
+
+    #[payable]
+    pub fn check_number(&mut self, a: u128, aj: U128, b: Balance) {
+        env_log!("u128: {}, U128: {:?}, Balance: {}", a, aj, b);
+    }
 
     /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
     /// account - which we call the Pool Reserve Token.

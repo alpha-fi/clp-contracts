@@ -11,11 +11,11 @@ use near_sdk::json_types::{U128, U64};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-// use near_clp::util::{MAX_GAS, NEP21_STORAGE_DEPOSIT};
+use near_clp::util::NDENOM;
 
 /// NEAR to yoctoNEAR
 pub fn ntoy(near_amount: Balance) -> Balance {
-    near_amount * 10u128.pow(24)
+    near_amount * NDENOM
 }
 
 lazy_static::lazy_static! {

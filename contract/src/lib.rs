@@ -1,5 +1,3 @@
-#![feature(type_ascription)]
-
 // use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
@@ -200,7 +198,7 @@ impl NearCLP {
             added_reserve = ynear_amount * p.reserve / p.ynear + 1;
             shares_minted = ynear_amount * p.total_shares / ynear_amount;
             assert!(max_tokens >= added_reserve, "E3");
-            assert!(min_shares.into(): u128 <= shares_minted, "E4");
+            assert!(u128::from(min_shares) <= shares_minted, "E4");
 
             p.shares.insert(
                 &caller,

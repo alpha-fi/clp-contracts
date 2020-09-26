@@ -48,7 +48,7 @@ export default function PoolInputCards(props) {
     let input1Address = tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].address;
     // Update image, symbol, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
-      payload: { logoUrl: input1ImageUrl, symbol: input1Symbol, type: input1Type, isValid: false, address: input1Address }
+      payload: { logoUrl: input1ImageUrl, symbol: input1Symbol, type: input1Type, address: input1Address }
     });
   }
   function handleInput2TokenUpdate() {
@@ -59,7 +59,7 @@ export default function PoolInputCards(props) {
     let input2Address = tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].address;
     // Update image, symbol, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
-      payload: { logoUrl: input2ImageUrl, symbol: input2Symbol, type: input2Type, isValid: false, address: input2Address }
+      payload: { logoUrl: input2ImageUrl, symbol: input2Symbol, type: input2Type, address: input2Address }
     });
   }
 
@@ -75,13 +75,19 @@ export default function PoolInputCards(props) {
   }
 
   // Handle amount changes
-  function handleInput1AmountChange(event) {
+  async function handleInput1AmountChange(event) {
+    event.persist();
     setInput1Amount(event.target.value);
-    dispatch({ type: 'SET_INPUT1_AMOUNT', payload: { amount: event.target.value, isValid: true } });
+    // Check if amount is a non-zero number
+    let isAmountValid = (!isNaN(event.target.value) && (event.target.value > 0));
+    dispatch({ type: 'SET_INPUT1_AMOUNT', payload: { amount: event.target.value, isValid: isAmountValid } });
   }
-  function handleInput2AmountChange(event) {
+  async function handleInput2AmountChange(event) {
+    event.persist();
     setInput2Amount(event.target.value);
-    dispatch({ type: 'SET_INPUT2_AMOUNT', payload: { amount: event.target.value, isValid: true } });
+    // Check if amount is a non-zero number
+    let isAmountValid = (!isNaN(event.target.value) && (event.target.value > 0));
+    dispatch({ type: 'SET_INPUT2_AMOUNT', payload: { amount: event.target.value, isValid: isAmountValid } });
   }
 
   return (
@@ -147,6 +153,8 @@ export default function PoolInputCards(props) {
           </Col>
         </Row>
       </Theme>
+      <br/>
+      <Button variant="warning" block disabled>Add Liquidity</Button>
     </>
   );
 }

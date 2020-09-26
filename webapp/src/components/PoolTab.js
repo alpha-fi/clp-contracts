@@ -1,7 +1,5 @@
 import React, { useContext } from "react";
 
-import { InputsContext } from "../contexts/InputsContext";
-
 import PoolInputCards from "./PoolInputCards"
 import PoolInfoCard from "./PoolInfoCard"
 
@@ -15,9 +13,6 @@ const Hr = styled("hr")`
 `;
 
 export default function PoolTab() {
-
-  const inputs = useContext(InputsContext);
-
   return (
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>
@@ -27,12 +22,6 @@ export default function PoolTab() {
       <Hr className="mt-4"/>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>PROVIDE LIQUIDITY</small></p>
       <PoolInputCards/>
-      <br/>
-      {/* Enable submission only if inputs are valid */}
-      {(inputs.state.pool.input1.isValid && inputs.state.pool.input2.isValid)
-        ? <Button variant="warning" block disabled>Add Liquidity</Button>
-        : <Button variant="warning" block disabled>Add Liquidity</Button>
-      }
     </>
   );
 }

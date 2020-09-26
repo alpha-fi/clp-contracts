@@ -44,7 +44,6 @@ export const CurrencyTable = () => {
             logoUrl: newImageUrl, 
             symbol: newSymbol, 
             type: newType, 
-            isValid: true, 
             address: newAddress }
         });
         break;
@@ -55,7 +54,6 @@ export const CurrencyTable = () => {
             logoUrl: newImageUrl, 
             symbol: newSymbol, 
             type: newType, 
-            isValid: true, 
             address: newAddress }
         });
         break;
@@ -66,7 +64,6 @@ export const CurrencyTable = () => {
             logoUrl: newImageUrl, 
             symbol: newSymbol, 
             type: newType, 
-            isValid: true, 
             address: newAddress }
         });
         break;
@@ -77,7 +74,6 @@ export const CurrencyTable = () => {
             logoUrl: newImageUrl, 
             symbol: newSymbol, 
             type: newType, 
-            isValid: true, 
             address: newAddress }
         });
     }

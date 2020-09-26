@@ -26,6 +26,14 @@ const Theme = styled("div")`
   }
 `;
 
+function isNonzeroNumber(num) {
+  return (!isNaN(num) && (num > 0));
+}
+// Test contract call function 
+async function testContractCall( token1, token2) {
+  return await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
+}
+
 export default function SwapInputCards(props) {
 
   // Global state
@@ -38,28 +46,29 @@ export default function SwapInputCards(props) {
   // Local state (amount values; needed for updating directly in inputs)
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("");
+  // const [isReadyToSwap, setIsReadyToSwap] = useState();
 
   // Handles updating button view and input information
   function handleFromTokenUpdate() {
-    // Find URL of token logo, symbol, type, and address of FROM input
-    let fromImageUrl = findCurrencyLogoUrl(inputs.state.swap.from.tokenIndex, tokenListState.state.tokenList);
-    let fromSymbol = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].symbol;
-    let fromType = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].type;
-    let fromAddress = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].address;
-    // Update image, symbol, and type of selected currency
+    // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
-      payload: { logoUrl: fromImageUrl, symbol: fromSymbol, type: fromType, isValid: false, address: fromAddress }
+      payload: { 
+        logoUrl: findCurrencyLogoUrl(inputs.state.swap.from.tokenIndex, tokenListState.state.tokenList), 
+        symbol: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].symbol, 
+        type: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].type, 
+        tokenIndex: inputs.state.swap.from.tokenIndex,
+        address: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].address }
     });
   }
   function handleToTokenUpdate() {
-    // Find URL of token logo, symbol, type, and address of TO input
-    let toImageUrl = findCurrencyLogoUrl(inputs.state.swap.to.tokenIndex, tokenListState.state.tokenList);
-    let toSymbol = tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].symbol;
-    let toType = tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].type;
-    let toAddress = tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].address;
-    // Update image, symbol, and type of selected currency
+    // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', 
-      payload: { logoUrl: toImageUrl, symbol: toSymbol, type: toType, isValid: false, address: toAddress }
+      payload: { 
+        logoUrl: findCurrencyLogoUrl(inputs.state.swap.to.tokenIndex, tokenListState.state.tokenList), 
+        symbol: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].symbol, 
+        type: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].type, 
+        tokenIndex: inputs.state.swap.to.tokenIndex,
+        address: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].address }
     });
   }
 
@@ -77,20 +86,93 @@ export default function SwapInputCards(props) {
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "to" } });
   }
 
-  // Handle amount changes
+  // Handle 'From' amount changes
   async function handleFromAmountChange(event) {
-    event.persist();
-    setFromAmount(event.target.value);
-    
-    // Logs result of calcPriceFromIn()
-    const res = await calcPriceFromIn(inputs.state.swap.from, inputs.state.swap.to);
-    console.log(res);
+    event.persist();                   // Persist event because this is an async function
+    setFromAmount(event.target.value); // Update local state
 
-    dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: event.target.value, isValid: true } });
+    // Calculate the value of the other input box
+    let calculatedToPrice = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
+    .then(function(result) {
+      setToAmount(result); // Update other input box with calculated price
+      // Update inputs state
+      dispatch({ type: 'SET_TO_AMOUNT', payload: {
+        amount: result,
+        isValid: isNonzeroNumber(result),
+        status: inputs.state.swap.status
+      }});
+    });
+
+    // If both inputs are valid non-zero numbers, set status to readyToSwap
+    // Otherwise, set to notReadyToSwap
+    let newStatus = ((
+      isNonzeroNumber(event.target.amount) && inputs.state.swap.to.isValid
+    ) ? "readyToSwap" : "notReadyToSwap" );
+
+    // Update inputs state
+    dispatch({ type: 'SET_FROM_AMOUNT', payload: {
+      amount: event.target.value,
+      isValid: isNonzeroNumber(event.target.amount),
+      status: newStatus // possible values: notReadyToSwap, readyToSwap, swapping
+    }});
+    
   }
-  function handleToAmountChange(event) {
-    setToAmount(event.target.value);
-    dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: event.target.value, isValid: true } });
+
+  // Handle 'To' amount changes
+  async function handleToAmountChange(event) {
+    event.persist();                 // Persist event because this is an async function
+    setToAmount(event.target.value); // Update local state
+
+    // Calculate the value of the other input box
+    let calculatedToPrice = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
+    .then(function(result) {
+      setFromAmount(result); // Update other input box with calculated price
+      // Update inputs state
+      dispatch({ type: 'SET_FROM_AMOUNT', payload: {
+        amount: result,
+        isValid: isNonzeroNumber(result),
+        status: inputs.state.swap.status
+      }});
+    });
+
+    // If both inputs are valid non-zero numbers, set status to readyToSwap
+    // Otherwise, set to notReadyToSwap
+    let newStatus = ((
+      isNonzeroNumber(event.target.amount) && inputs.state.swap.from.isValid
+    ) ? "readyToSwap" : "notReadyToSwap" );
+
+    // Update inputs state
+    dispatch({ type: 'SET_TO_AMOUNT', payload: {
+      amount: event.target.value,
+      isValid: isNonzeroNumber(event.target.amount),
+      status: newStatus // possible values: notReadyToSwap, readyToSwap
+    }});
+  }
+
+  async function handleApprovalSubmission() {
+    // Approval function here
+    let isApproved = true;
+
+    dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
+  }
+
+  async function handleSwap() {
+    try {
+      let swap = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
+        .then(function(result) {
+          // Reset amounts in local state
+          setFromAmount("");
+          setToAmount("");
+          // Reset amounts in input state
+          dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: "", isValid: false, status: "notReadyToSwap" }});
+          // Reset needsApproval
+          dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
+            needsApproval: (inputs.state.swap.to.type === "NEP-21" && inputs.state.swap.from.type === "NEP-21")
+          }});
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   return (
@@ -156,6 +238,23 @@ export default function SwapInputCards(props) {
           </Col>
         </Row>
       </Theme>
+      <br/>
+      {/* Display approve button if NEP-21 <> NEP-21 swap */}
+      {(inputs.state.swap.needsApproval)
+        && <Button variant="warning" block
+             disabled={(inputs.state.swap.status !== "readyToSwap")}
+             onClick={handleApprovalSubmission}
+           >
+             Approve tokens (0.04 NEAR)
+           </Button>}
+
+      {/* Enable submission only if inputs are valid */}
+      <Button variant="warning" block
+        disabled={((inputs.state.swap.status !== "readyToSwap") || inputs.state.swap.needsApproval)}
+        onClick={handleSwap}
+      >
+        Swap
+      </Button>
     </>
   );
 }

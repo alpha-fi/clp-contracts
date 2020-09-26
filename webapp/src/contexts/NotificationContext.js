@@ -1,12 +1,18 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useEffect } from "react";
 
 const NotificationContext = React.createContext();
 const { Provider } = NotificationContext;
 
-const initialState = {
+let initialState = {
   heading: "",
   message: "",
   show: false,
+}
+
+// Initialize with previous notification state if found in local storage
+let notifs = localStorage.getItem("notifs");
+if (notifs) {
+  initialState = JSON.parse(notifs);
 }
 
 const NotificationProvider = ({ children }) => {
@@ -14,12 +20,15 @@ const NotificationProvider = ({ children }) => {
   const [state, dispatch] = useReducer((state, action) => {
     switch(action.type) {
       case 'SHOW_NOTIFICATION':
-        return { 
+        let newNotif = {
           heading: action.payload.heading,
           message: action.payload.message,
           show: true,
-        };
+        }
+        localStorage.setItem("notifs", JSON.stringify(newNotif));
+        return newNotif;
       case 'HIDE_NOTIFICATION':
+        localStorage.setItem("notifs", JSON.stringify({ show: false }));
         return { 
           ...state,
           show: false,

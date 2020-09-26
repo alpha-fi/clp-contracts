@@ -189,6 +189,38 @@ const InputsProvider = ( { children } ) => {
           needsApproval: action.payload.needsApproval,
           status: state.swap.status,
         to: state.swap.to, from: state.swap.from }}
+      case 'CLEAR_SWAP_INPUTS':
+        return { ...state, swap: {
+          from: { 
+            amount: "",                                 // CLEAR amount
+            symbol: state.swap.from.symbol,             // leave symbol
+            type: state.swap.from.type,                 // leave type
+            logoUrl: state.swap.from.logoUrl,           // leave logo
+            tokenIndex: state.swap.from.tokenIndex,     // leave token index
+            address: state.swap.from.address,           // leave address
+            isValid: false,                             // RESET isValid
+          },                                            //
+          to: { 
+            amount: "",                                 // CLEAR amount
+            symbol: state.swap.to.symbol,               // leave symbol
+            type: state.swap.to.type,                   // leave type
+            logoUrl: state.swap.to.logoUrl,             // leave logo
+            tokenIndex: state.swap.to.tokenIndex,       // leave token index
+            address: state.swap.to.address,             // leave address
+            isValid: false,                             // RESET isValid
+          },                                            //
+          needsApproval: state.swap.needsApproval,      // leave needsApproval
+          status: "notReadyToSwap",                     // UPDATE status
+        }};
+      case 'SWITCH_SWAP_INPUTS':
+        let oldFrom = state.swap.from;
+        let oldTo = state.swap.to;
+        return { ...state, swap: {
+          from: oldTo,
+          to: oldFrom,
+          needsApproval: state.swap.needsApproval,      // leave needsApproval
+          status: "notReadyToSwap",                     // UPDATE status
+        }};
       case 'SET_CURRENCY_SELECTION_INPUT':
         return { ...state, currencySelectionModal: { selectedInput: action.payload.input, isVisible: !state.isVisible } };
       case 'SAVE_INPUTS_TO_LOCAL_STORAGE':

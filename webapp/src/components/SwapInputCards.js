@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { calcPriceFromOut, swapFromOut, incAllowance } from "../services/near-nep21-util";
@@ -32,6 +32,8 @@ function isNonzeroNumber(num) {
 }
 // Test contract call function 
 async function testContractCall( token1, token2) {
+  console.log("testContractCall called. [token1.amount, token2.amount]")
+  console.log([token1.amount, token2.amount])
   return await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
 }
 
@@ -50,7 +52,6 @@ export default function SwapInputCards(props) {
   // Local state (amount values; needed for updating directly in inputs)
   const [fromAmount, setFromAmount] = useState(inputs.state.swap.from.amount);
   const [toAmount, setToAmount] = useState(inputs.state.swap.to.amount);
-  // const [isReadyToSwap, setIsReadyToSwap] = useState();
 
   // Handles updating button view and input information
   function handleFromTokenUpdate() {
@@ -138,8 +139,8 @@ export default function SwapInputCards(props) {
 
     // Calculate the value of the other input box (only called when the user types)
     if (!isShallowUpdate) {
-      let updatedToken = { ...inputs.state.swap.from, amount: amount };
-      let calculatedToPrice = await calcPriceFromOut(updatedToken, inputs.state.swap.to)
+      let updatedToken = { ...inputs.state.swap.to, amount: amount };
+      let calculatedToPrice = await calcPriceFromOut(inputs.state.swap.from, updatedToken)
       .then(function(result) {
         handleFromAmountChange(result, true); // Shallow update the other input box
       });
@@ -148,41 +149,49 @@ export default function SwapInputCards(props) {
 
   async function handleApprovalSubmission() {
     dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+    notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+      heading: "Creating allowance",
+      message: "Waiting to receive confirmation..."
+    }});
     let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
+    // let isApproved = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
     .then(function(result) {
+      alert(result);
+      dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
       notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-        heading: "Creating allowance",
-        message: "Waiting to receive confirmation..."
+        heading: "Token swap approved",
+        message: "You can now make a swap."
       }});
-      if (result) {
-        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Token swap approved",
-          message: "You can now make a swap."
-        }});
-      } else {
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Failed to create allowance.",
-          message: "Please try again."
-        }});
-      }
+    })
+    .catch(function(error) {
+      notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+        heading: "Failed to create allowance.",
+        message: error
+      }});
     });
   }
+  // might need to use useCallback to get result when window changes
+  //
+  // const handleApprovalSubmission = useCallback(async () => {
+  //   dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+  //   dispatch({ type: 'SUBMIT_ALLOWANCE' });
+  //   notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+  //     heading: "Creating allowance",
+  //     message: "Waiting to receive confirmation..."
+  //   }});
+  //   let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
+  // }, []);
 
   async function handleSwap() {
     try {
       dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
       let swap = await swapFromOut(inputs.state.swap.from, inputs.state.swap.to)
         .then(function(result) {
-          // Reset amounts in local state
-          setFromAmount("");
-          setToAmount("");
-          // Reset amounts in input state
-          dispatch({ type: 'SET_TO_AMOUNT', payload: { amount: "", isValid: false, status: "notReadyToSwap" }});
-          dispatch({ type: 'SET_FROM_AMOUNT', payload: { amount: "", isValid: false, status: "notReadyToSwap" }});
+          // Reset amounts
+          clearInputs();
           // Reset needsApproval
           dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
-            needsApproval: (inputs.state.swap.to.type === "NEP-21" && inputs.state.swap.from.type === "NEP-21")
+            needsApproval: (inputs.state.swap.to.type === "NEP-21")
           }});
           // Notify user
           notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
@@ -193,6 +202,22 @@ export default function SwapInputCards(props) {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // Clear inputs
+  function clearInputs() {
+    setFromAmount("");
+    setToAmount("");
+    dispatch({type: 'CLEAR_SWAP_INPUTS'});
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+  }
+
+  function switchInputs() {
+    let oldTo = toAmount;
+    setToAmount("")
+    handleFromAmountChange(oldTo);
+    dispatch({type: 'SWITCH_SWAP_INPUTS'});
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
 
   return (
@@ -234,7 +259,7 @@ export default function SwapInputCards(props) {
         </Row>
       </Theme>
       <div className="text-center my-2">
-        <BsArrowUpDown/>
+        <span onClick={switchInputs} style={{ cursor: 'pointer' }}><BsArrowUpDown/></span>
       </div>
       <Theme className="py-2">
         <label className="ml-4 mb-1 mt-0">
@@ -272,8 +297,20 @@ export default function SwapInputCards(props) {
           </Col>
         </Row>
       </Theme>
-      <br/>
-      {/* Display approve button if NEP-21 <> NEP-21 swap */}
+
+      <div className="text-center my-2">
+        {/* Display textual information before user swaps */}
+        { ((inputs.state.swap.status === "readyToSwap") && !inputs.state.swap.needsApproval) &&
+          <small className="text-secondary">
+            You'll get at least <b className="text-black">{inputs.state.swap.to.amount}</b> {inputs.state.swap.to.symbol}{' '}
+            for <b className="text-black">{inputs.state.swap.from.amount}</b> {inputs.state.swap.from.symbol}.
+          </small>
+        }
+        {/* Clear button */}
+        <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear inputs</Button>
+      </div>
+
+      {/* Display approve button if NEP-21 -> ____ swap */}
       {(inputs.state.swap.needsApproval)
         && <Button variant="warning" block
              disabled={(inputs.state.swap.status !== "readyToSwap")}
@@ -281,6 +318,10 @@ export default function SwapInputCards(props) {
            >
              Approve tokens (0.04 NEAR)
            </Button>}
+      
+      {/*<Button variant="primary" block
+       onClick={handleApprovalSubmission}
+     >Approve tokens (test button)</Button>*/}
 
       {/* Enable submission only if inputs are valid */}
       <Button variant="warning" block

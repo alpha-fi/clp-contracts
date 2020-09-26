@@ -77,6 +77,9 @@ export const CurrencyTable = () => {
             address: newAddress }
         });
     }
+
+    // Save selection in local storage
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }    
 
   return (

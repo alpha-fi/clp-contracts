@@ -1,6 +1,6 @@
 import { Contract} from 'near-api-js'
 import getConfig from '../config'
-
+import BN from 'bn.js'
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 
 export async function getBalanceNEP( contractName ) {
@@ -20,10 +20,10 @@ export async function getBalanceNEP( contractName ) {
 
 }
 
-export async function incAllowance( allowAmount ) {
+export async function incAllowance( token ) {
   window.nep21 = await new Contract(
     window.walletConnection.account(),
-    contractName ,
+    token.address ,
     {
       // View methods are read only
       viewMethods: [],
@@ -35,7 +35,7 @@ export async function incAllowance( allowAmount ) {
   try {
     await window.nep21.inc_allowance({ 
       escrow_account_id: nearConfig.contractName, 
-      amount: allowAmount});
+      amount: token.amount});
     return true;
   } catch(error) {
     return false;
@@ -64,6 +64,7 @@ export async function calcPriceFromIn( token1, token2) {
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address, 
       near_in: amount1});
+      console.log(price);
     return price;
   }
   else {
@@ -95,7 +96,8 @@ export async function swapFromIn( token1, token2 ) {
     // Native to NEP-21
     const price = await window.contract.swap_near_to_reserve_exact_in( {
       token: token2.address, 
-      min_tokens: amount2 }); 
+      min_tokens: amount2 }, 
+      new BN('100000000000000000000').mul(new BN('600'))); 
     return price;
   }
   else {
@@ -129,7 +131,6 @@ export async function calcPriceFromOut( token1, token2) {
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
-    console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_out( {
       token: token2.address, 
       tokens_out: amount2});
@@ -189,4 +190,32 @@ export async function swapFromOut( token1, token2 ) {
       console.error("Error: Token type error");
     }
   } 
+}
+
+export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
+  await window.contract.add_liquidity( { token: tokenDetails.address, 
+    max_token_amount: maxTokenAmount,
+    min_shares_amount: minSharesAmount
+  } )
+}
+
+export async function createPool( tokenDetails ) {
+  const info = await window.contract.pool_info( { token: tokenDetails.address} );
+  
+  if(poolexist) {  // todo:working
+    return false;
+  }
+
+  await window.contract.create_pool( { token: tokenDetails.address });
+
+  await addLiquiduty( tokenDetails.address, maxTokenAmount, minSharesAmount);
+}
+
+export async function browsePools() {
+  try {
+    const poolInfo = await window.contract.list_pools();
+    return poolInfo;
+  } catch (error) {
+    console.error('cannot fetch pool list');
+  }
 }

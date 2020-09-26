@@ -58,11 +58,13 @@ export async function calcPriceFromIn( token1, token2) {
   if(amount1 < 1) {
     return 0;
   }
-  if(token1.tokenIndex === token2.tokenIndex) {
+  if(token1.tokenIndex === token2.tokenIndex || 
+    (token1.type === "Native Token"  && token1.type === token2.type ) ) {
     return amount1;
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
+    console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address, 
       near_in: amount1});
@@ -79,10 +81,15 @@ export async function calcPriceFromIn( token1, token2) {
     }
     else {
       // NEP-21 to Native
-      const price = await window.contract.price_token_to_near_in( {
-        token: token1.address, 
-        tokens_in: amount1});
-      return price;
+      if(token2.type === "Native token") {
+        const price = await window.contract.price_token_to_near_in( {
+          token: token1.address, 
+          tokens_in: amount1});
+        return price;
+      }
+      else {
+        console.log("Error: Token type error");
+      }
     }
   } 
 }
@@ -90,7 +97,8 @@ export async function calcPriceFromIn( token1, token2) {
 export async function swapFromIn( token1, token2 ) {
   const amount1 = Number(token1.amount);
   const amount2 = Number(token2.amount);
-  if(token1.tokenIndex === token2.tokenIndex) {
+  if(token1.tokenIndex === token2.tokenIndex|| 
+    (token1.type === "Native Token"  && token1.type === token2.type ) ) {
     return false;
   }
   if(token1.type === "Native token") {
@@ -112,11 +120,16 @@ export async function swapFromIn( token1, token2 ) {
     }
     else {
       // NEP-21 to Native
-      const price = await window.contract.swap_reserve_to_near_exact_in( {
-        token: token1.address,
-        tokens_paid: amount1,
-        min_near: amount2 });
-      return price;
+      if(token2.type === "Native token") {
+        const price = await window.contract.swap_reserve_to_near_exact_in( {
+          token: token1.address,
+          tokens_paid: amount1,
+          min_near: amount2 });
+        return price;
+      }
+      else {
+        console.log("Error: Token type error");
+      }
     }
   } 
 }

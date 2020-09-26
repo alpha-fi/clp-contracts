@@ -2,11 +2,13 @@ export NCLP_ACC=beta-1.nearswap.testnet
 
 test:
 	cargo +nightly test  --
-# Test output can be recovered (e.g., for debugging) by passing `--nocapture`
-# cargo test  -- --nocapture
+
+test-debug:
+	cargo +nightly test  -- --nocapture
 
 test-unit:
 	@cargo +nightly test --lib -- --nocapture
+
 
 build:
 # more about flags: https://github.com/near-examples/simulation-testing#gotchas

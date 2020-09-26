@@ -188,7 +188,7 @@ impl NearCLP {
         assert!(near_out > 0 && max_tokens_paid > 0, "E2");
         let mut p = self.must_get_pool(&token);
         let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
-        assert!(tokens_to_pay <= max_tokens_paid, "E8");
+        assert!(tokens_to_pay <= max_tokens_paid, "E8"); //computed amount of selling tokens is bigger than user required maximum.
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
 
@@ -204,7 +204,7 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        println!(
+        env_log!(
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
@@ -213,7 +213,7 @@ impl NearCLP {
         p2.token_bal -= token2_out;
         p2.near_bal += near_swap;
         self.set_pool(&token1, p1);
-        self.set_pool(&token2, p1);
+        self.set_pool(&token2, p2);
 
         //get the token from buyer into CLP
         let promise1 = self.schedule_nep21_tansfer(
@@ -299,7 +299,8 @@ impl NearCLP {
         let mut p1 = self.must_get_pool(&token1);
         let mut p2 = self.must_get_pool(&token2);
         let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
-        assert!(tokens1_to_pay >= max_tokens1_paid, "E8");
+        //env_log!("tokens1_to_pay {} max_tokens1_paid {}",yton(tokens1_to_pay),yton(max_tokens1_paid));
+        assert!(tokens1_to_pay <= max_tokens1_paid, "E8"); //computed amount of selling tokens is bigger than user required maximum.
 
         self._swap_tokens(
             &mut p1,

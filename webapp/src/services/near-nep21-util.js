@@ -58,8 +58,7 @@ export async function calcPriceFromIn( token1, token2) {
   if(amount1 < 1) {
     return 0;
   }
-  if(token1.tokenIndex === token2.tokenIndex || 
-    (token1.type === "Native Token"  && token1.type === token2.type ) ) {
+  if(token1.tokenIndex === token2.tokenIndex) {
     return amount1;
   }
   if(token1.type === "Native token") {
@@ -79,17 +78,15 @@ export async function calcPriceFromIn( token1, token2) {
         tokens_in: amount1});
       return price;
     }
-    else {
+    else if(token2.type === "Native token") {
       // NEP-21 to Native
-      if(token2.type === "Native token") {
-        const price = await window.contract.price_token_to_near_in( {
-          token: token1.address, 
-          tokens_in: amount1});
-        return price;
-      }
-      else {
-        console.log("Error: Token type error");
-      }
+      const price = await window.contract.price_token_to_near_in( {
+        token: token1.address, 
+        tokens_in: amount1});
+      return price;
+    }
+    else {
+      console.log("Error: Token type error");
     }
   } 
 }
@@ -97,8 +94,7 @@ export async function calcPriceFromIn( token1, token2) {
 export async function swapFromIn( token1, token2 ) {
   const amount1 = Number(token1.amount);
   const amount2 = Number(token2.amount);
-  if(token1.tokenIndex === token2.tokenIndex|| 
-    (token1.type === "Native Token"  && token1.type === token2.type ) ) {
+  if(token1.tokenIndex === token2.tokenIndex) {
     return false;
   }
   if(token1.type === "Native token") {
@@ -118,18 +114,91 @@ export async function swapFromIn( token1, token2 ) {
         min_tokens_to: amount2 }); 
       return price;
     }
-    else {
+    else if(token2.type === "Native token") {
       // NEP-21 to Native
-      if(token2.type === "Native token") {
         const price = await window.contract.swap_reserve_to_near_exact_in( {
           token: token1.address,
           tokens_paid: amount1,
           min_near: amount2 });
         return price;
       }
-      else {
-        console.log("Error: Token type error");
+    else {
+      console.error("Error: Token type error");
+    }
+  } 
+}
+
+export async function calcPriceFromOut( token1, token2) {
+  const amount2 = Number(token2.amount);
+  if(amount2 < 1) {
+    return 0;
+  }
+  if(token1.tokenIndex === token2.tokenIndex) {
+    return amount2;
+  }
+  if(token1.type === "Native token") {
+    // Native to NEP-21
+    console.log("AMM ", amount1);
+    const price = await window.contract.price_near_to_token_out( {
+      token: token2.address, 
+      tokens_out: amount2});
+    return price;
+  }
+  else {
+    if(token2.type === "NEP-21") {
+      // NEP-21 to NEP-21
+      const price = await window.contract.price_token_to_token_out( {
+        from: token1.address,
+        to: token2.address,
+        tokens_out: amount2});
+      return price;
+    }
+    else if(token2.type === "Native token") {
+      // NEP-21 to Native
+      const price = await window.contract.price_token_to_near_out( {
+        token: token1.address, 
+        near_out: amount2});
+      return price;
+    }
+    else {
+      console.log("Error: Token type error");
+    }
+  } 
+}
+
+export async function swapFromOut( token1, token2 ) {
+  const amount1 = Number(token1.amount);
+  const amount2 = Number(token2.amount);
+  if(token1.tokenIndex === token2.tokenIndex) {
+    return false;
+  }
+  if(token1.type === "Native token") {
+    // Native to NEP-21
+    const price = await window.contract.swap_near_to_reserve_exact_out( {
+      token: token2.address, 
+      tokens_out: amount2 }); 
+    return price;
+  }
+  else {
+    if(token2.type === "NEP-21") {
+      // NEP-21 to NEP-21
+      const price = await window.contract.swap_tokens_exact_out( {
+        from: token1.address,
+        to: token2.address,
+        tokens_to: amount2, 
+        max_tokens_from: amount1 }); 
+      return price;
+    }
+    else if(token2.type === "Native token") {
+      // NEP-21 to Native
+        const price = await window.contract.swap_reserve_to_near_exact_out( {
+          token: token1.address,
+          near_out: amount2,
+          max_tokens: amount1 });
+        return price;
       }
+    else {
+      console.error("Error: Token type error");
     }
   } 
 }

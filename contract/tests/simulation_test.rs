@@ -167,8 +167,8 @@ fn create_pool_add_liquidity(
         format!(
             r#"{{
                     "token": "{tok}",
-                    "max_tokens": {mta},
-                    "min_shares": {msa}
+                    "max_tokens": "{mta}",
+                    "min_shares": "{msa}"
                 }}"#,
             tok = token.account_id,
             mta = token_amount,
@@ -255,7 +255,7 @@ fn alice_adds_liquidity_carol_swaps() {
         format!(
             r#"{{
                 "token": "{tok}",
-                "min_tokens": {min_tok}
+                "min_tokens": "{min_tok}"
                 }}"#,
             tok = NEP21_ACC,
             min_tok = min_token_expected
@@ -324,8 +324,8 @@ fn alice_adds_liquidity_carol_swaps() {
             r#"{{
                 "from": "{from}",
                 "to": "{to}",
-                "tokens_to": {tokto},
-                "max_tokens_from": {max_tok_from}
+                "to_tokens": "{tokto}",
+                "max_from_tokens": "{max_tok_from}"
                 }}"#,
             from = &ctx.nep21_1.account_id(),
             to = &ctx.nep21_2.account_id(),

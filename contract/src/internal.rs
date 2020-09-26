@@ -83,8 +83,8 @@ impl NearCLP {
             "User purchased {} {} for {} YoctoNEAR",
             reserve, token, near
         );
-        p.token_bal -= reserve;
-        p.near_bal += near;
+        p.reserve -= reserve;
+        p.ynear += near;
         self.set_pool(token, p);
 
         //send the token from CLP account to buyer
@@ -108,7 +108,7 @@ impl NearCLP {
     ) {
         assert!(near_paid > 0 && min_tokens > 0, "E2");
         let mut p = self.must_get_pool(&token);
-        let tokens_out = self.calc_out_amount(near_paid, p.near_bal, p.token_bal);
+        let tokens_out = self.calc_out_amount(near_paid, p.ynear, p.reserve);
         assert!(tokens_out >= min_tokens, "E7");
         self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
     }
@@ -125,7 +125,7 @@ impl NearCLP {
     ) {
         assert!(tokens_out > 0 && max_near_paid > 0, "E2");
         let mut p = self.must_get_pool(&token);
-        let near_to_pay = self.calc_in_amount(tokens_out, p.near_bal, p.token_bal);
+        let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
         // panics if near_to_pay > max_near_paid
         let near_refund = max_near_paid - near_to_pay;
         if near_refund > 0 {
@@ -147,8 +147,8 @@ impl NearCLP {
             "User purchased {} NEAR tokens for {} reserve tokens",
             near, reserve
         );
-        p.token_bal += reserve;
-        p.near_bal -= near;
+        p.reserve += reserve;
+        p.ynear -= near;
         self.set_pool(&token, p);
 
         //get the token from buyer into CLP
@@ -160,7 +160,7 @@ impl NearCLP {
 
     /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
     /// `min_near`.
-    pub(crate) fn _swap_reserve_exact_in(
+    pub(crate) fn _swap_token_exact_in(
         &mut self,
         token: &AccountId,
         tokens_paid: Balance,
@@ -170,14 +170,14 @@ impl NearCLP {
     ) {
         assert!(tokens_paid > 0 && min_near > 0, "E2");
         let mut p = self.must_get_pool(&token);
-        let near_out = self.calc_out_amount(tokens_paid, p.token_bal, p.near_bal);
+        let near_out = self.calc_out_amount(tokens_paid, p.reserve, p.ynear);
         assert!(near_out >= min_near, "E7");
         self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
     }
 
     /// Pool sells `tokens_out` reserve tokens for NEAR tokens. Asserts that a user pays
     /// no more than `max_near_paid`.
-    pub(crate) fn _swap_reserve_exact_out(
+    pub(crate) fn _swap_token_exact_out(
         &mut self,
         token: &AccountId,
         near_out: Balance,
@@ -187,8 +187,8 @@ impl NearCLP {
     ) {
         assert!(near_out > 0 && max_tokens_paid > 0, "E2");
         let mut p = self.must_get_pool(&token);
-        let tokens_to_pay = self.calc_in_amount(near_out, p.near_bal, p.token_bal);
-        assert!(tokens_to_pay <= max_tokens_paid, "E8"); //computed amount of selling tokens is bigger than user required maximum.
+        let tokens_to_pay = self.calc_in_amount(near_out, p.ynear, p.reserve);
+        assert!(tokens_to_pay <= max_tokens_paid, "E8");
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
 
@@ -208,10 +208,10 @@ impl NearCLP {
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
-        p1.token_bal += token1_in;
-        p1.near_bal -= near_swap;
-        p2.token_bal -= token2_out;
-        p2.near_bal += near_swap;
+        p1.reserve += token1_in;
+        p1.ynear -= near_swap;
+        p2.reserve -= token2_out;
+        p2.ynear += near_swap;
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p2);
 
@@ -240,8 +240,8 @@ impl NearCLP {
         p_out: &Pool,
         tokens_in: Balance,
     ) -> (Balance, Balance) {
-        let near_swap = self.calc_out_amount(tokens_in, p_in.token_bal, p_in.near_bal);
-        let tokens2_out = self.calc_out_amount(near_swap, p_out.near_bal, p_out.token_bal);
+        let near_swap = self.calc_out_amount(tokens_in, p_in.reserve, p_in.ynear);
+        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.reserve);
         return (near_swap, tokens2_out);
     }
 
@@ -251,8 +251,8 @@ impl NearCLP {
         p_out: &Pool,
         tokens_out: Balance,
     ) -> (Balance, Balance) {
-        let near_swap = self.calc_in_amount(tokens_out, p_out.token_bal, p_out.near_bal);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.near_bal, p_in.token_bal);
+        let near_swap = self.calc_in_amount(tokens_out, p_out.reserve, p_out.ynear);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.ynear, p_in.reserve);
         return (near_swap, tokens1_to_pay);
     }
 

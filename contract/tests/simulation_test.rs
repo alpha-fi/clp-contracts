@@ -1,10 +1,11 @@
+#![allow(unused)]
+
 mod test_utils;
 use crate::test_utils::*;
 use near_clp::util::{MAX_GAS, NDENOM, NEP21_STORAGE_DEPOSIT};
 use near_clp::PoolInfo;
 
-//use near_primitives::errors::ActionErrorKind;
-//use near_primitives::errors::TxExecutionError;
+//use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;
 use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::{U128, U64};
@@ -113,8 +114,8 @@ fn create_pool_add_liquidity(
     assert_eq!(
         get_pool_info(&r, &token.account_id()),
         PoolInfo {
-            near_bal: 0,
-            token_bal: 0,
+            ynear: 0,
+            reserve: 0,
             total_shares: 0
         },
         "new pool should be empty"
@@ -166,8 +167,8 @@ fn create_pool_add_liquidity(
         format!(
             r#"{{
                     "token": "{tok}",
-                    "max_token_amount": {mta},
-                    "min_shares_amount": {msa}
+                    "max_tokens": {mta},
+                    "min_shares": {msa}
                 }}"#,
             tok = token.account_id,
             mta = token_amount,
@@ -216,8 +217,8 @@ fn alice_adds_liquidity_carol_swaps() {
     assert_eq!(
         pool_info_pre_swap,
         PoolInfo {
-            near_bal: near_deposit.into(),
-            token_bal: token_deposit.into(),
+            ynear: near_deposit.into(),
+            reserve: token_deposit.into(),
             total_shares: near_deposit.into()
         },
         "new pool balance should be from first deposit"
@@ -246,12 +247,11 @@ fn alice_adds_liquidity_carol_swaps() {
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = 10 * NDENOM;
     let min_token_expected: u128 = 98 * NDENOM; //1-10 relation near/token
-
     call(
         &mut ctx.r,
         &ctx.carol,
         &ctx.clp,
-        "swap_near_to_reserve_exact_in",
+        "swap_near_to_token_exact_in",
         format!(
             r#"{{
                 "token": "{tok}",
@@ -265,9 +265,7 @@ fn alice_adds_liquidity_carol_swaps() {
 
     println!("let's see how many token carol has after the swap");
     let carol_funt_balance_post = show_funtok_bal(&mut ctx.r, &ctx.nep21_1, &ctx.carol);
-
     let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
-
     assert!(
         carol_received >= min_token_expected,
         "carol should have received at least min_token_expected"
@@ -276,8 +274,8 @@ fn alice_adds_liquidity_carol_swaps() {
     assert_eq!(
         get_pool_info(&ctx.r, &NEP21_ACC),
         PoolInfo {
-            near_bal: (pool_info_pre_swap.near_bal + carol_deposit_yoctos).into(),
-            token_bal: (pool_info_pre_swap.token_bal - carol_received).into(),
+            ynear: (pool_info_pre_swap.ynear + carol_deposit_yoctos).into(),
+            reserve: (pool_info_pre_swap.reserve - carol_received).into(),
             total_shares: pool_info_pre_swap.total_shares,
         },
         "new pool balance after swap"

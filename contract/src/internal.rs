@@ -204,7 +204,7 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        env_log!(
+        println!!(
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );

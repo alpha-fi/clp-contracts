@@ -14,19 +14,6 @@ export default function SettingsButton() {
   const web3State = useContext(Web3Context);
   const { currentUser, web3Modal } = web3State;
 
-  // Return disabled settings button if no wallets connected
-  if (!window.walletConnection.isSignedIn() && !currentUser) {
-    return (
-      <>
-        <Dropdown alignRight>
-          <Dropdown.Toggle disabled variant="warning"className="py-2 mr-1 mb-1">
-            <FaCog/>
-          </Dropdown.Toggle>
-        </Dropdown>
-      </>
-    )
-  }
-
   // Initialize connection information
   let nearConnected, ethConnected = "";
   if (window.walletConnection.isSignedIn()) {

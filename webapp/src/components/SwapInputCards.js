@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { calcPriceFromOut, swapFromOut, incAllowance } from "../services/near-nep21-util";
+import { calcPriceFromIn, swapFromOut, incAllowance } from "../services/near-nep21-util";
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -95,25 +95,37 @@ export default function SwapInputCards(props) {
 
   // Handle 'From' amount changes
   async function handleFromAmountChange(amount, isShallowUpdate) {
-    setFromAmount(amount); // Update local state
+    if (amount !== 0) {
+      setFromAmount(amount); // Update local state
+    } else {
+      setFromAmount("");
+    }
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
-    let newStatus = ((
-      isNonzeroNumber(amount) && inputs.state.swap.to.isValid
-    ) ? "readyToSwap" : "notReadyToSwap" );
+    let newIsValid;
+    if (!isShallowUpdate) {
+      // Not a shallow update
+      newIsValid = isNonzeroNumber(amount) && (amount <= tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance);
+    } else {
+      // Shallow update (called by the other input)
+      newIsValid = isNonzeroNumber(amount);
+    }
+    let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
+    console.log(["newIsValid", newIsValid]);
+    console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_FROM_AMOUNT', payload: {
       amount: amount,
-      isValid: isNonzeroNumber(amount),
+      isValid: newIsValid,
       status: newStatus // possible values: notReadyToSwap, readyToSwap, swapping
     }});
 
     // Calculate the value of the other input box (only called when the user types)
     if (!isShallowUpdate) {
       let updatedToken = { ...inputs.state.swap.from, amount: amount };
-      let calculatedToPrice = await calcPriceFromOut(updatedToken, inputs.state.swap.to)
+      let calculatedToPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.to)
       .then(function(result) {
         handleToAmountChange(result, true); // Shallow update the other input box
       });
@@ -122,25 +134,37 @@ export default function SwapInputCards(props) {
 
   // Handle 'To' amount changes
   async function handleToAmountChange(amount, isShallowUpdate) {
-    setToAmount(amount); // Update local state
+    if (amount !== 0) {
+      setToAmount(amount); // Update local state
+    } else {
+      setToAmount("");
+    }
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
-    let newStatus = ((
-      isNonzeroNumber(amount) && inputs.state.swap.from.isValid
-    ) ? "readyToSwap" : "notReadyToSwap" );
+    let newIsValid;
+    if (!isShallowUpdate) {
+      // Not a shallow update
+      newIsValid = isNonzeroNumber(amount) && (amount <= tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].balance);
+    } else {
+      // Shallow update (called by the other input)
+      newIsValid = isNonzeroNumber(amount);
+    }
+    let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
+    console.log(["newIsValid", newIsValid]);
+    console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_TO_AMOUNT', payload: {
       amount: amount,
-      isValid: isNonzeroNumber(amount),
+      isValid: newIsValid,
       status: newStatus // possible values: notReadyToSwap, readyToSwap
     }});
 
     // Calculate the value of the other input box (only called when the user types)
     if (!isShallowUpdate) {
       let updatedToken = { ...inputs.state.swap.to, amount: amount };
-      let calculatedToPrice = await calcPriceFromOut(inputs.state.swap.from, updatedToken)
+      let calculatedToPrice = await calcPriceFromIn(inputs.state.swap.from, updatedToken)
       .then(function(result) {
         handleFromAmountChange(result, true); // Shallow update the other input box
       });
@@ -300,7 +324,7 @@ export default function SwapInputCards(props) {
 
       <div className="text-center my-2">
         {/* Display textual information before user swaps */}
-        { ((inputs.state.swap.status === "readyToSwap") && !inputs.state.swap.needsApproval) &&
+        { ((inputs.state.swap.status === "readyToSwap")) &&
           <small className="text-secondary">
             You'll get at least <b className="text-black">{inputs.state.swap.to.amount}</b> {inputs.state.swap.to.symbol}{' '}
             for <b className="text-black">{inputs.state.swap.from.amount}</b> {inputs.state.swap.from.symbol}.

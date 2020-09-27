@@ -2,6 +2,8 @@ import { Contract} from 'near-api-js'
 import getConfig from '../config'
 
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
+const attachNear1 = '300000000000000';
+const attachNear2 = '60000000000000000000000';
 
 export async function getBalanceNEP( contractName ) {
 
@@ -142,7 +144,10 @@ export async function swapFromIn( token1, token2 ) {
     await window.contract.swap_near_to_token_exact_in( {
       token: token2.address, 
       min_tokens: amount2 
-    });
+    },
+    attachNear1,
+    attachNear2
+    );
     
   }
   else {
@@ -152,7 +157,10 @@ export async function swapFromIn( token1, token2 ) {
         from: token1.address,
         to: token2.address,
         from_tokens: amount1, 
-        min_to_tokens: amount2 }); 
+        min_to_tokens: amount2 },
+        attachNear1,
+        attachNear2
+        ); 
     
     }
     else if(token2.type === "Native token") {
@@ -160,7 +168,10 @@ export async function swapFromIn( token1, token2 ) {
         await window.contract.swap_token_to_near_exact_in( {
           token: token1.address,
           tokens_paid: amount1,
-          min_ynear: amount2 });
+          min_ynear: amount2 },
+          attachNear1,
+          attachNear2
+          );
     
       }
     else {
@@ -214,8 +225,8 @@ export async function swapFromOut( token1, token2 ) {
     await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
       tokens_out: amount2 },
-      '300000000000000',
-      '60000000000000000000000'
+      attachNear1,
+      attachNear2
       ); 
   
   }
@@ -226,7 +237,10 @@ export async function swapFromOut( token1, token2 ) {
         from: token1.address,
         to: token2.address,
         to_tokens: amount2, 
-        max_from_tokens: amount1 }); 
+        max_from_tokens: amount1 },
+        attachNear1,
+        attachNear2
+        ); 
       
     }
     else if(token2.type === "Native token") {
@@ -234,7 +248,10 @@ export async function swapFromOut( token1, token2 ) {
         await window.contract.swap_token_to_near_exact_out( {
           token: token1.address,
           ynear_out: amount2,
-          max_tokens: amount1 });
+          max_tokens: amount1 },
+          attachNear1,
+          attachNear2
+          );
       
       }
     else {

@@ -36,7 +36,7 @@ impl NearCLP {
         // (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
         let numerator = u256::from(in_bal) * u256::from(out_amount) * 1000;
         let r: u256 = numerator / u256::from(out_bal - out_amount) / 997;
-        return r.as_u128();
+        return r.as_u128() + 1;
     }
 
     pub(crate) fn schedule_nep21_tansfer(

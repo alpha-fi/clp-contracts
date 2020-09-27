@@ -811,8 +811,64 @@ mod tests {
         println!("Pool info: {}", p);
         assert_eq!(p.ynear, ynear_deposit, "Near balance should be correct");
         assert_eq!(p.reserve, token_deposit, "Token balance should be correct");
+
+        // TODO tests
+        // + add liquidity with max_balance > allowance
     }
 
-    // TODO tests
-    // + add liquidity with max_balance > allowance
+    #[test]
+    fn calc_price() {
+        let (_, c) = init();
+        const G: u128 = 1_000_000_000;
+        let assert_in = |buy, in_bal, out_bal, expected| {
+            assert_eq!(c.calc_in_amount(buy, in_bal, out_bal), expected)
+        };
+
+        // #  test in prices  #
+        // Note, the output is always +1, because we add 1 at the end.
+
+        // ## test same supply ## - we expect x*1.003 + 1
+        assert_in(1, 10, 10, 2);
+        assert_in(1, G, G, 2);
+        assert_in(2, G, G, 3);
+        assert_in(100, G, G, 101);
+        // now the 0.3% takes effect
+        assert_in(1000, G, G, 1004);
+        assert_in(10_000, G, G, 10_031);
+        assert_in(20_000, NDENOM, NDENOM, 20_061);
+
+        // ## test 2:1 ## - we expect 2x*1.003 + 1
+        assert_in(1, 2 * G, G, 3);
+        assert_in(10_000, 2 * G, G, 20_061);
+        assert_in(20_000, 2 * NDENOM, NDENOM, 40_121);
+
+        // ## test 1:2 ## - we expect 0.5x*1.003 + 1
+        assert_in(1, G, 2 * G, 1);
+        assert_in(10_000, G, 2 * G, 5000 + 15 + 1);
+        assert_in(20_000, NDENOM, 2 * NDENOM, 10_000 + 31);
+
+        assert_in(10, 12 * NDENOM, 2400, 50360285878556170603862u128);
+
+        // #  test out prices  #
+        let assert_out = |sell, in_bal, out_bal, expected| {
+            assert_eq!(c.calc_out_amount(sell, in_bal, out_bal), expected)
+        };
+
+        // ## test same supply ## - we expect x*0.997
+        assert_out(1, G, G, 0); // 0 because we cut the decimals (should be 0.997)
+        assert_out(10, G, G, 9); // again rounding, should be 9.97
+        assert_out(1_000, G, G, 996); // rounding again...
+        assert_out(100_000, NDENOM, NDENOM, 99699);
+
+        // ## test 2:1 ## - we expect 0.5x*0.997
+        assert_out(1, 2 * G, G, 0); // 0 because we cut the decimals (should be 0.997)
+        assert_out(10, 2 * G, G, 4); // again rounding, should be 9.97
+        assert_out(1_000, 2 * G, G, 996 / 2); // rounding again...
+        assert_out(100_000, 2 * NDENOM, NDENOM, 99699 / 2); // 49849
+
+        // ## test 1:2  ## - we expect 2x*0.997
+        assert_out(1, G, 2 * G, 1); // 0 because we cut the decimals (should be 1.997)
+        assert_out(1_000, G, 2 * G, 1993); // rounding again...
+        assert_out(100_000, NDENOM, 2 * NDENOM, 199399);
+    }
 }

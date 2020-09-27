@@ -81,7 +81,7 @@ fn create_pool_add_liquidity(
         &owner,
         &clp,
         "create_pool",
-        format!(r#"{{ "token":"{}" }}"#, token.account_id()),
+        &json!({"token": token.account_id()}),
         0,
     );
 
@@ -101,14 +101,7 @@ fn create_pool_add_liquidity(
         &token,
         &token,
         "transfer",
-        format!(
-            r#"{{
-            "new_owner_id": "{}",
-            "amount": "{}"
-        }}"#,
-            owner.account_id(),
-            token_amount
-        ),
+        &json!({"new_owner_id": owner.account_id(), "amount": token_amount.to_string()}),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
@@ -120,13 +113,7 @@ fn create_pool_add_liquidity(
         &owner,
         &token,
         "inc_allowance",
-        format!(
-            r#"{{
-            "escrow_account_id": "{}",
-            "amount": "{}"
-        }}"#,
-            CLP_ACC, token_amount
-        ),
+        &json!({"escrow_account_id": CLP_ACC, "amount": token_amount.to_string()}),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
@@ -138,16 +125,9 @@ fn create_pool_add_liquidity(
         &owner,
         &clp,
         "add_liquidity",
-        format!(
-            r#"{{
-                    "token": "{tok}",
-                    "max_tokens": "{mta}",
-                    "min_shares": "{msa}"
-                }}"#,
-            tok = token.account_id,
-            mta = token_amount,
-            msa = near_amount
-        ),
+        &json!({"token": token.account_id,
+                "max_tokens": token_amount.to_string(),
+                "min_shares": near_amount.to_string()}),
         near_amount.into(), //send NEAR
     );
 
@@ -200,14 +180,7 @@ fn test_clp_add_liquidity_and_swap() {
         &ctx.nep21_1,
         &ctx.nep21_1,
         "transfer",
-        format!(
-            r#"{{
-                "new_owner_id": "{}",
-                "amount": "{}"
-            }}"#,
-            "carol",
-            19_000 * NDENOM
-        ),
+        &json!({"new_owner_id": "carol", "amount": (19_000 * NDENOM).to_string()}),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
@@ -221,14 +194,8 @@ fn test_clp_add_liquidity_and_swap() {
         &ctx.carol,
         &ctx.clp,
         "swap_near_to_token_exact_in",
-        format!(
-            r#"{{
-                "token": "{tok}",
-                "min_tokens": "{min_tok}"
-                }}"#,
-            tok = NEP21_ACC,
-            min_tok = min_token_expected
-        ),
+        &json!({"token": NEP21_ACC,
+                "min_tokens": min_token_expected.to_string()}),
         carol_deposit_yoctos.into(),
     );
 
@@ -267,7 +234,7 @@ fn test_clp_add_liquidity_and_swap() {
     //carol tries to swap nep1 she owns with nep2 from bob's pool
 
     //she gives allowance to CLP first
-    let carol_tok_from_max_amount = 15 * NDENOM;
+    let carol_allowance = 15 * NDENOM;
 
     println!("carol gives allowance to CLP");
 
@@ -276,13 +243,7 @@ fn test_clp_add_liquidity_and_swap() {
         &ctx.carol,
         &ctx.nep21_1,
         "inc_allowance",
-        format!(
-            r#"{{
-            "escrow_account_id": "{}",
-            "amount": "{}"
-        }}"#,
-            CLP_ACC, carol_tok_from_max_amount
-        ),
+        &json!({"escrow_account_id": CLP_ACC, "amount": carol_allowance.to_string()}),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the nep21-contract needs more storage
     );
 
@@ -294,18 +255,11 @@ fn test_clp_add_liquidity_and_swap() {
         &ctx.carol,
         &ctx.clp,
         "swap_tokens_exact_out",
-        format!(
-            r#"{{
-                "from": "{from}",
-                "to": "{to}",
-                "to_tokens": "{tokto}",
-                "max_from_tokens": "{max_tok_from}"
-                }}"#,
-            from = &ctx.nep21_1.account_id(),
-            to = &ctx.nep21_2.account_id(),
-            tokto = 200 * NDENOM,
-            max_tok_from = carol_tok_from_max_amount,
-        ),
+        &json!({"from": ctx.nep21_1.account_id,
+                "to":  &ctx.nep21_2.account_id,
+                "to_tokens":  (200 * NDENOM).to_string(),
+                "max_from_tokens":  carol_allowance.to_string(),
+        }),
         0,
     );
 

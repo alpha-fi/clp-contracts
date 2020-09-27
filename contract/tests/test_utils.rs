@@ -141,24 +141,20 @@ pub fn near_call<I: Sized + Serialize>(
  * report errors and lgos from all receipts
  *
  */
-pub fn call(
+pub fn call<I: Sized + Serialize>(
     runtime: &mut RuntimeStandalone,
     sending_account: &ExternalUser,
     contract: &ExternalUser,
     method: &str,
-    args: String,
+    args: I,
     attached_amount: u128,
 ) {
     let gas = MAX_GAS;
+    let args = serde_json::to_vec(&args).unwrap();
 
     let tx = sending_account
         .new_tx(runtime, contract.account_id())
-        .function_call(
-            method.into(),
-            args.as_bytes().to_vec(),
-            gas.into(),
-            attached_amount,
-        )
+        .function_call(method.into(), args, gas.into(), attached_amount)
         .sign(&sending_account.signer);
 
     let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome

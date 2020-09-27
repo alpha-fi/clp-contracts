@@ -5,7 +5,6 @@ import Nav from 'react-bootstrap/Nav';
 import Container from 'react-bootstrap/Container';
 
 import ThemeSwitcher from "./ThemeSwitcher";
-import WalletConnectionButtons from "./WalletConnectionButtons";
 import AboutButton from "./AboutButton";
 import SettingsButton from "./SettingsButton";
 
@@ -22,7 +21,6 @@ export default function NavigationBar() {
             <Nav.Link><ThemeSwitcher/></Nav.Link>
             <Nav.Link href="https://github.com/robert-zaremba/near-clp"><FaGithub/></Nav.Link>
           </Nav>
-          <WalletConnectionButtons/>
           <SettingsButton/>
         </Container>
       </Navbar>

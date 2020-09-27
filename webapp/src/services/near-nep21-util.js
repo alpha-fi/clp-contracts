@@ -37,7 +37,11 @@ export async function incAllowance( token ) {
   try {
     await window.nep21.inc_allowance({ 
       escrow_account_id: nearConfig.contractName, 
-      amount: token.amount});
+      amount: token.amount},
+      //attachNear1,
+      //attachNear2
+      );
+     console.log("DONE"); 
     return true;
   } catch(error) {
     return false;
@@ -57,7 +61,8 @@ export async function getAllowance( token ) {
     }
   )
   
-  const allowance = await window.nep21.get_allowance({ 
+  const allowance = await window.nep21.get_allowance({
+    owner_id: window.walletConnection.account(), 
     escrow_account_id: nearConfig.contractName});
   return allowance;
 }

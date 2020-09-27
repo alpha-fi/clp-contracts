@@ -1,7 +1,7 @@
 export NCLP_ACC=beta-1.nearswap.testnet
 
 test:
-	cargo +nightly test  --
+	cargo +nightly test
 
 test-debug:
 	cargo +nightly test  -- --nocapture

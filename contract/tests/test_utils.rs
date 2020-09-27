@@ -1,3 +1,4 @@
+use near_clp::util::*;
 use near_crypto::{InMemorySigner, KeyType, Signer};
 use near_primitives::{
     account::{AccessKey, Account},
@@ -6,45 +7,20 @@ use near_primitives::{
     transaction::{ExecutionOutcome, ExecutionStatus, Transaction},
     types::{AccountId, Balance},
 };
-use near_runtime_standalone::{init_runtime_and_signer, RuntimeStandalone};
-use near_sdk::json_types::{U128, U64};
+use near_runtime_standalone::RuntimeStandalone;
+use near_sdk::json_types::U64;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::ser::Serialize;
 
-use near_clp::util::NDENOM;
+pub type TxResult = Result<ExecutionOutcome, ExecutionOutcome>;
 
-/// NEAR to yoctoNEAR
-pub fn ntoy(near_amount: Balance) -> Balance {
-    near_amount * NDENOM
-}
-
-lazy_static::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../target/wasm32-unknown-unknown/release/near_clp.wasm").as_ref();
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../neardev/nep-21/target/wasm32-unknown-unknown/release/nep21_basic.wasm").as_ref();
-    //static ref COUNTER_BYTES: &'static [u8] = include_bytes!("res/counter.wasm").as_ref();
-}
-
-type TxResult = Result<ExecutionOutcome, ExecutionOutcome>;
-
-fn outcome_into_result(outcome: ExecutionOutcome) -> TxResult {
+pub fn outcome_into_result(outcome: ExecutionOutcome) -> TxResult {
     match outcome.status {
         ExecutionStatus::SuccessValue(_) => Ok(outcome),
         ExecutionStatus::Failure(_) => Err(outcome),
         ExecutionStatus::SuccessReceiptId(_) => panic!("Unresolved ExecutionOutcome run runitme.resolve(tx) to resolve the filnal outcome of tx"),
         ExecutionStatus::Unknown => unreachable!()
     }
-}
-
-/// Specific to fungible token contract's `new` method
-#[derive(Serialize)]
-pub struct NewFungibleTokenArgs {
-    pub owner_id: AccountId,
-    pub total_supply: U128,
-}
-
-#[derive(Serialize)]
-pub struct NewClpArgs {
-    pub owner: AccountId,
 }
 
 #[derive(Clone)]
@@ -142,72 +118,105 @@ pub fn near_view<I: ToString, O: DeserializeOwned>(
     output
 }
 
-pub fn near_call(
+pub fn near_call<I: Sized + Serialize>(
     runtime: &mut RuntimeStandalone,
     sending_account: &ExternalUser,
     contract_id: &AccountId,
     method: &str,
-    args: &[u8],
+    args: I,
     gas: U64,
     deposit: Balance,
 ) -> TxResult {
+    let args = serde_json::to_vec(&args).unwrap();
     let tx = sending_account
         .new_tx(runtime, contract_id)
-        .function_call(method.into(), args.to_vec(), gas.into(), deposit)
+        .function_call(method.into(), args, gas.into(), deposit)
         .sign(&sending_account.signer);
     let ex_outcome = runtime.resolve_tx(tx).unwrap();
     runtime.process_all().unwrap();
     outcome_into_result(ex_outcome)
 }
 
-pub fn deploy_and_init_fungible_token(
+/**utility fn schedule a call in the simulator, execute it, and all its receipts
+ * report errors and lgos from all receipts
+ *
+ */
+pub fn call(
     runtime: &mut RuntimeStandalone,
-    account: &ExternalUser,
-    init_method: &str,
-    gas: U64,
-    args: &NewFungibleTokenArgs,
-) -> TxResult {
-    let tx = account
-        .new_tx(runtime, &account.account_id)
-        // transfer tokens otherwise "wouldn't have enough balance to cover storage"
-        .transfer(ntoy(50))
-        .deploy_contract(FUNGIBLE_TOKEN_BYTES.to_vec())
-        .function_call(
-            init_method.into(),
-            serde_json::to_vec(args).unwrap(),
-            gas.into(),
-            0,
-        )
-        .sign(&account.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
-    runtime.process_all().unwrap();
-    outcome_into_result(res)
-}
+    sending_account: &ExternalUser,
+    contract: &ExternalUser,
+    method: &str,
+    args: String,
+    attached_amount: u128,
+) {
+    let gas = MAX_GAS;
 
-pub fn deploy_clp(
-    runtime: &mut RuntimeStandalone,
-    account: &ExternalUser,
-    init_method: &str,
-    gas: U64,
-    args: &NewClpArgs,
-) -> TxResult {
-    let tx = account
-        .new_tx(runtime, &account.account_id)
-        .transfer(ntoy(50))
-        .deploy_contract(CLP_WASM_BYTES.to_vec())
+    let tx = sending_account
+        .new_tx(runtime, contract.account_id())
         .function_call(
-            init_method.into(),
-            serde_json::to_vec(args).unwrap(),
+            method.into(),
+            args.as_bytes().to_vec(),
             gas.into(),
-            0,
+            attached_amount,
         )
-        .sign(&account.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
-    runtime.process_all().unwrap();
-    outcome_into_result(res)
-}
+        .sign(&sending_account.signer);
 
-pub fn new_root(account_id: AccountId) -> (RuntimeStandalone, ExternalUser) {
-    let (runtime, signer) = init_runtime_and_signer(&account_id);
-    (runtime, ExternalUser { account_id, signer })
+    let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
+    runtime.process_all().unwrap(); //proces until there's no more generated receipts
+
+    /* THE ABOVE CODE REPLACED THIS: near_call(runtime, //runtime
+        sending_account, //sending account
+        contract, //contract
+        method,
+        args.as_bytes(),
+        U64(MAX_GAS),
+        attached_amount
+    )
+    .unwrap();
+    */
+
+    println!("--------------------------------");
+    println!("-- {}.{}() --", contract.account_id(), method);
+    println!("execution_outcome.status {:?}", execution_outcome.status);
+    println!("execution_outcome {:?}", execution_outcome);
+    match execution_outcome.status {
+        ExecutionStatus::Failure(msg) => panic!(msg),
+        ExecutionStatus::SuccessValue(value) => {
+            println!("execution_outcome.status => success {:?}", value)
+        }
+        ExecutionStatus::SuccessReceiptId(_) => {
+            panic!("thre are pending receipts! call runtime.process_all() to complete all txns")
+        }
+        ExecutionStatus::Unknown => unreachable!(),
+    }
+    println!(
+        "--------- RECEIPTS ({})",
+        execution_outcome.receipt_ids.len()
+    );
+    let mut count_failed = 0;
+    let mut inx = 0;
+    for elem in execution_outcome.receipt_ids {
+        let outcome2 = runtime.outcome(&elem);
+        println!("---- Receipt {} outcome: {:?}", inx, outcome2);
+        match outcome2 {
+            Some(outcome2) => {
+                println!("receipt {} logs: {:?}", inx, outcome2.logs);
+                match outcome2.status {
+                    ExecutionStatus::Failure(txresult) => {
+                        println!("receipt {} failure: {:?}", inx, txresult);
+                        count_failed+=1;
+                    },
+                    ExecutionStatus::SuccessValue(value) => println!("receipt {} success {:?}",inx,value),
+                    ExecutionStatus::SuccessReceiptId(_) => panic!("there are pending receipts! call runtime.process_all() to complete all txns"),
+                    ExecutionStatus::Unknown => unreachable!(),
+                }
+            }
+            None => println!("None"),
+        }
+        inx += 1;
+    }
+    if count_failed > 0 {
+        panic!(format!("{} RECEIPT(S) FAILED", count_failed));
+    }
+    println!("--------------------------------");
 }

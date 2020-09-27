@@ -1,81 +1,50 @@
 #![allow(unused)]
 
+mod ctrtypes;
+use crate::ctrtypes::*;
+
 mod test_utils;
 use crate::test_utils::*;
-use near_clp::util::{MAX_GAS, NDENOM, NEP21_STORAGE_DEPOSIT};
+
+use near_clp::util::*;
 use near_clp::PoolInfo;
 
 //use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;
-use near_runtime_standalone::RuntimeStandalone;
+use near_primitives::types::{AccountId, Balance};
+use near_runtime_standalone::{init_runtime_and_signer, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 
-pub const CLP_ACC: &str = "nearclp";
-pub const NEP21_ACC: &str = "fungible_token";
-pub const ALICE_ACC: &str = "alice";
-pub const BOB_ACC: &str = "bob";
-pub const CAROL_ACC: &str = "carol";
-pub const DAVE_ACC: &str = "dave";
-pub const NEP21_ACC2: &str = "fun_token_2";
-
 //#[test]
-fn deploy_fungible_mint_for_alice() {
+fn test_nep21_transer() {
     let mut ctx = Ctx::new();
-    let total_supply = 1_000_000 * NDENOM;
-
-    let args = NewFungibleTokenArgs {
-        owner_id: NEP21_ACC.into(),
-        total_supply: U128(total_supply.clone()),
-    };
-
-    deploy_and_init_fungible_token(&mut ctx.r, &ctx.nep21_1, "new", U64(MAX_GAS), &args).unwrap();
-
-    let returned_supply: U128 = near_view(&ctx.r, &NEP21_ACC.into(), "get_total_supply", "");
-    assert_eq!(returned_supply.0, total_supply);
-    println!("Note that we can use println! instead of env::log in simulation tests.");
-    let demo_variable = "-- --nocapture".to_string();
     println!(
-        "Just remember to to add this after 'cargo test': '{}'",
-        demo_variable
+        "Note that we can use println! instead of env::log in simulation tests. To debug add '-- --nocapture' after 'cargo test': "
     );
 
-    let alice_balance: U128 = near_view(
-        &ctx.r,
-        &NEP21_ACC.into(),
-        "get_balance",
-        &json!({
-            "owner_id": ALICE_ACC,
-        }),
-    );
-    // Confirm Alice's initial balance is 0
-    assert_eq!(alice_balance.0, 0);
+    ctx.deploy_tokens();
+    ctx.deploy_clp();
+    println!("tokens deployed");
+
+    check_nep21_bal(&ctx, &NEP21_ACC.into(), &ALICE_ACC.into(), 0);
+
     // send some to Alice
     let _execution_result = near_call(
         &mut ctx.r,
         &ctx.nep21_1,
         &ctx.nep21_1.account_id(),
         "transfer",
-        &serde_json::to_vec(&json!({
+        &json!({
             "new_owner_id": ALICE_ACC,
             "amount": "191919",
-        }))
-        .unwrap(),
+        }),
         U64(MAX_GAS),
         36_500_000_000_000_000_000_000,
     )
     .unwrap();
 
-    let alice_balance: U128 = near_view(
-        &ctx.r,
-        &NEP21_ACC.into(),
-        "get_balance",
-        &json!({
-            "owner_id": ALICE_ACC,
-        }),
-    );
-    // Confirm Alice's initial balance has increased to set amount
-    assert_eq!(alice_balance.0, 191_919);
+    check_nep21_bal(&ctx, &NEP21_ACC.into(), &ALICE_ACC.into(), 191_919);
 }
 
 // utility, get pool info from CLP
@@ -87,7 +56,12 @@ fn get_pool_info(r: &RuntimeStandalone, token: &str) -> PoolInfo {
 fn show_funtok_bal(r: &mut RuntimeStandalone, token: &ExternalUser, acc: &ExternalUser) -> u128 {
     println!("let's see how many tokens {} has now", acc.account_id());
     let fungt_balance: u128 = get_funtok_balance(r, token, &acc).into();
-    println!("{} has {} {} tokens ", acc.account_id(), token.account_id(), fungt_balance);
+    println!(
+        "{} has {} {} tokens ",
+        acc.account_id(),
+        token.account_id(),
+        fungt_balance
+    );
     return fungt_balance;
 }
 
@@ -178,38 +152,33 @@ fn create_pool_add_liquidity(
     );
 
     let after_adding_info = get_pool_info(&r, &token.account_id());
-    println!("pool after add liq: {} {:?}",&token.account_id(), after_adding_info);
+    println!(
+        "pool after add liq: {} {:?}",
+        &token.account_id(),
+        after_adding_info
+    );
 }
 
 #[test]
-fn alice_adds_liquidity_carol_swaps() {
+fn test_clp_add_liquidity_and_swap() {
     let mut ctx = Ctx::new();
 
-    let args = NewFungibleTokenArgs {
-        owner_id: NEP21_ACC.into(),
-        total_supply: U128(1_000_000 * NDENOM),
-    };
-    println!("deploy_and_init_fungible_token");
-    deploy_and_init_fungible_token(&mut ctx.r, &ctx.nep21_1, "new", U64(MAX_GAS), &args).unwrap();
-
-    let args2 = NewFungibleTokenArgs {
-        owner_id: NEP21_ACC2.into(),
-        total_supply: U128(10_000_000 * NDENOM),
-    };
-    println!("deploy_and_init_fungible_token 2");
-    deploy_and_init_fungible_token(&mut ctx.r, &ctx.nep21_2, "new", U64(MAX_GAS), &args2).unwrap();
-
-    println!("deploy_and_init_CLP");
-    let args_clp = NewClpArgs {
-        owner: ALICE_ACC.into(),
-    };
-    deploy_clp(&mut ctx.r, &ctx.clp, "new", U64(MAX_GAS), &args_clp).unwrap();
+    ctx.deploy_tokens();
+    ctx.deploy_clp();
+    println!("tokens deployed");
 
     let near_deposit = 3_000 * NDENOM;
     let token_deposit = 30_000 * NDENOM;
 
     //---------------
-    create_pool_add_liquidity(&mut ctx.r, &ctx.clp, &ctx.alice, &ctx.nep21_1, near_deposit, token_deposit);
+    create_pool_add_liquidity(
+        &mut ctx.r,
+        &ctx.clp,
+        &ctx.alice,
+        &ctx.nep21_1,
+        near_deposit,
+        token_deposit,
+    );
     //---------------
 
     //get pool state before swap
@@ -285,15 +254,20 @@ fn alice_adds_liquidity_carol_swaps() {
     println!("-----------------------------");
     //bob creates another pool with nep21_2
     //---------------
-    create_pool_add_liquidity(&mut ctx.r, &ctx.clp, &ctx.bob, &ctx.nep21_2, 
-                1000*NDENOM, 500*NDENOM);
+    create_pool_add_liquidity(
+        &mut ctx.r,
+        &ctx.clp,
+        &ctx.bob,
+        &ctx.nep21_2,
+        1000 * NDENOM,
+        500 * NDENOM,
+    );
     //---------------
-
 
     //carol tries to swap nep1 she owns with nep2 from bob's pool
 
     //she gives allowance to CLP first
-    let carol_tok_from_max_amount=15*NDENOM;
+    let carol_tok_from_max_amount = 15 * NDENOM;
 
     println!("carol gives allowance to CLP");
 
@@ -329,7 +303,7 @@ fn alice_adds_liquidity_carol_swaps() {
                 }}"#,
             from = &ctx.nep21_1.account_id(),
             to = &ctx.nep21_2.account_id(),
-            tokto = 200*NDENOM,
+            tokto = 200 * NDENOM,
             max_tok_from = carol_tok_from_max_amount,
         ),
         0,
@@ -337,45 +311,18 @@ fn alice_adds_liquidity_carol_swaps() {
 
     //TDOO println!("carol removes allowance to CLP")
 
-    println!("{} {:?}",&NEP21_ACC, get_pool_info(&ctx.r, &NEP21_ACC) );
-    println!("{} {:?}",&NEP21_ACC2, get_pool_info(&ctx.r, &NEP21_ACC2) );
+    println!("{} {:?}", &NEP21_ACC, get_pool_info(&ctx.r, &NEP21_ACC));
+    println!("{} {:?}", &NEP21_ACC2, get_pool_info(&ctx.r, &NEP21_ACC2));
     //panic!("show");
     //TODO check balances
-
-}
-
-struct Ctx {
-    r: RuntimeStandalone,
-    nep21_1: ExternalUser,
-    nep21_2: ExternalUser,
-    clp: ExternalUser,
-    alice: ExternalUser,
-    bob: ExternalUser,
-    carol: ExternalUser,
-    dave: ExternalUser,
-}
-
-impl Ctx {
-    pub fn new() -> Self {
-        let (mut r, main) = new_root("main.testnet".into());
-        let mut create_u =
-            |addr: &str, b: u128| main.create_external(&mut r, &addr.into(), ntoy(b)).unwrap();
-
-        Self {
-            nep21_1: create_u(&NEP21_ACC, 1_000_000),
-            nep21_2: create_u(&NEP21_ACC2, 1_000_000),
-            clp: create_u(&CLP_ACC, 1_000_000),
-            alice: create_u(&ALICE_ACC, 1_000_000),
-            bob: create_u(&BOB_ACC, 1_000_000),
-            carol: create_u(&CAROL_ACC, 1_000_000),
-            dave: create_u(&DAVE_ACC, 1_000_000),
-            r: r,
-        }
-    }
 }
 
 //util fn
-fn get_funtok_balance(r: &mut RuntimeStandalone, token:&ExternalUser, account: &ExternalUser) -> U128 {
+fn get_funtok_balance(
+    r: &mut RuntimeStandalone,
+    token: &ExternalUser,
+    account: &ExternalUser,
+) -> U128 {
     let result: U128 = near_view(
         &r,
         &token.account_id(),
@@ -388,86 +335,139 @@ fn get_funtok_balance(r: &mut RuntimeStandalone, token:&ExternalUser, account: &
     return result;
 }
 
-/**utility fn schedule a call in the simulator, execute it, and all its receipts
- * report errors and lgos from all receipts
- *
- */
-pub fn call(
+pub const CLP_ACC: &str = "nearclp";
+pub const NEP21_ACC: &str = "fungible_token";
+pub const ALICE_ACC: &str = "alice";
+pub const BOB_ACC: &str = "bob";
+pub const CAROL_ACC: &str = "carol";
+pub const DAVE_ACC: &str = "dave";
+pub const NEP21_ACC2: &str = "fun_token_2";
+
+/// NEAR to yoctoNEAR
+pub fn ntoy(near_amount: Balance) -> Balance {
+    near_amount * NDENOM
+}
+
+/// Ctx encapsulates common variables for a test.
+pub struct Ctx {
+    pub r: RuntimeStandalone,
+    pub nep21_1: ExternalUser,
+    pub nep21_2: ExternalUser,
+    pub clp: ExternalUser,
+    pub alice: ExternalUser,
+    pub bob: ExternalUser,
+    pub carol: ExternalUser,
+    pub dave: ExternalUser,
+}
+impl Ctx {
+    pub fn new() -> Self {
+        let signer_account: AccountId = "main.testnet".to_string();
+        let (mut r, signer) = init_runtime_and_signer(&signer_account);
+        let signer_u = ExternalUser {
+            account_id: signer_account,
+            signer: signer,
+        };
+        let mut create_u = |addr: &str, b: u128| {
+            signer_u
+                .create_external(&mut r, &addr.into(), ntoy(b))
+                .unwrap()
+        };
+
+        Self {
+            nep21_1: create_u(&NEP21_ACC, 1_000_000),
+            nep21_2: create_u(&NEP21_ACC2, 1_000_000),
+            clp: create_u(&CLP_ACC, 1_000_000),
+            alice: create_u(&ALICE_ACC, 1_000_000),
+            bob: create_u(&BOB_ACC, 1_000_000),
+            carol: create_u(&CAROL_ACC, 1_000_000),
+            dave: create_u(&DAVE_ACC, 1_000_000),
+            r: r,
+        }
+    }
+
+    pub fn deploy_tokens(&mut self) {
+        println!("deploy_nep21");
+        let mut args = NewNEP21Args {
+            owner_id: NEP21_ACC.into(),
+            total_supply: U128(1_000_000 * NDENOM),
+        };
+        deploy_nep21(&mut self.r, &self.nep21_1, U64(MAX_GAS), &args).unwrap();
+
+        println!("deploy_nep21 2");
+        args.owner_id = NEP21_ACC2.into();
+        deploy_nep21(&mut self.r, &self.nep21_2, U64(MAX_GAS), &args).unwrap();
+
+        let supply: U128 = near_view(&self.r, &NEP21_ACC.into(), "get_total_supply", "");
+        assert_eq!(supply.0, args.total_supply.into());
+    }
+
+    pub fn deploy_clp(&mut self) {
+        println!("deploy_and_init_CLP");
+        let args_clp = NewClpArgs {
+            owner: ALICE_ACC.into(),
+        };
+        deploy_clp(&mut self.r, &self.clp, U64(MAX_GAS), &args_clp).unwrap();
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../target/wasm32-unknown-unknown/release/near_clp.wasm").as_ref();
+    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../neardev/nep-21/target/wasm32-unknown-unknown/release/nep21_basic.wasm").as_ref();
+}
+
+pub fn deploy_nep21(
     runtime: &mut RuntimeStandalone,
-    sending_account: &ExternalUser,
-    contract: &ExternalUser,
-    method: &str,
-    args: String,
-    attached_amount: u128,
-) {
-    let gas = MAX_GAS;
-
-    let tx = sending_account
-        .new_tx(runtime, contract.account_id())
+    signer: &ExternalUser,
+    gas: U64,
+    args: &NewNEP21Args,
+) -> TxResult {
+    let tx = signer
+        .new_tx(runtime, &signer.account_id)
+        // transfer tokens otherwise "wouldn't have enough balance to cover storage"
+        .transfer(ntoy(50))
+        .deploy_contract(FUNGIBLE_TOKEN_BYTES.to_vec())
         .function_call(
-            method.into(),
-            args.as_bytes().to_vec(),
+            "new".to_string(),
+            serde_json::to_vec(args).unwrap(),
             gas.into(),
-            attached_amount,
+            0,
         )
-        .sign(&sending_account.signer);
+        .sign(&signer.signer);
+    let res = runtime.resolve_tx(tx).unwrap();
+    runtime.process_all().unwrap();
+    outcome_into_result(res)
+}
 
-    let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
-    runtime.process_all().unwrap(); //proces until there's no more generated receipts
+pub fn deploy_clp(
+    runtime: &mut RuntimeStandalone,
+    signer: &ExternalUser,
+    gas: U64,
+    args: &NewClpArgs,
+) -> TxResult {
+    let tx = signer
+        .new_tx(runtime, &signer.account_id)
+        .transfer(ntoy(50))
+        .deploy_contract(CLP_WASM_BYTES.to_vec())
+        .function_call(
+            "new".to_string(),
+            serde_json::to_vec(args).unwrap(),
+            gas.into(),
+            0,
+        )
+        .sign(&signer.signer);
+    let res = runtime.resolve_tx(tx).unwrap();
+    runtime.process_all().unwrap();
+    outcome_into_result(res)
+}
 
-    /* THE ABOVE CODE REPLACED THIS: near_call(runtime, //runtime
-        sending_account, //sending account
-        contract, //contract
-        method,
-        args.as_bytes(),
-        U64(MAX_GAS),
-        attached_amount
-    )
-    .unwrap();
-    */
-
-    println!("--------------------------------");
-    println!("-- {}.{}() --", contract.account_id(), method);
-    println!("execution_outcome.status {:?}", execution_outcome.status);
-    println!("execution_outcome {:?}", execution_outcome);
-    match execution_outcome.status {
-        ExecutionStatus::Failure(msg) => panic!(msg),
-        ExecutionStatus::SuccessValue(value) => {
-            println!("execution_outcome.status => success {:?}", value)
-        }
-        ExecutionStatus::SuccessReceiptId(_) => {
-            panic!("thre are pending receipts! call runtime.process_all() to complete all txns")
-        }
-        ExecutionStatus::Unknown => unreachable!(),
-    }
-    println!(
-        "--------- RECEIPTS ({})",
-        execution_outcome.receipt_ids.len()
+fn check_nep21_bal(ctx: &Ctx, token: &AccountId, who: &AccountId, expected: Balance) {
+    let bal: U128 = near_view(
+        &ctx.r,
+        &token,
+        "get_balance",
+        &json!({
+            "owner_id": who,
+        }),
     );
-    let mut count_failed = 0;
-    let mut inx = 0;
-    for elem in execution_outcome.receipt_ids {
-        let outcome2 = runtime.outcome(&elem);
-        println!("---- Receipt {} outcome: {:?}", inx, outcome2);
-        match outcome2 {
-            Some(outcome2) => {
-                println!("receipt {} logs: {:?}", inx, outcome2.logs);
-                match outcome2.status {
-                    ExecutionStatus::Failure(txresult) => {
-                        println!("receipt {} failure: {:?}", inx, txresult);
-                        count_failed+=1;
-                    },
-                    ExecutionStatus::SuccessValue(value) => println!("receipt {} success {:?}",inx,value),
-                    ExecutionStatus::SuccessReceiptId(_) => panic!("there are pending receipts! call runtime.process_all() to complete all txns"),
-                    ExecutionStatus::Unknown => unreachable!(),
-                }
-            }
-            None => println!("None"),
-        }
-        inx += 1;
-    }
-    if count_failed > 0 {
-        panic!(format!("{} RECEIPT(S) FAILED", count_failed));
-    }
-    println!("--------------------------------");
+    assert_eq!(bal.0, expected);
 }

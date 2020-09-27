@@ -53,6 +53,8 @@ export default function SwapInputCards(props) {
   const [fromAmount, setFromAmount] = useState(inputs.state.swap.from.amount);
   const [toAmount, setToAmount] = useState(inputs.state.swap.to.amount);
 
+  let fromBalance = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance;
+
   // Handles updating button view and input information
   function handleFromTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
@@ -95,6 +97,9 @@ export default function SwapInputCards(props) {
 
   // Handle 'From' amount changes
   async function handleFromAmountChange(amount, isShallowUpdate) {
+    console.log("handleFromAmountChange")
+    console.log(["amount", amount])
+    console.log(["isShallowUpdate", isShallowUpdate])
     if (amount !== 0) {
       setFromAmount(amount); // Update local state
     } else {
@@ -112,14 +117,14 @@ export default function SwapInputCards(props) {
       newIsValid = isNonzeroNumber(amount);
     }
     let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
-    console.log(["newIsValid", newIsValid]);
-    console.log(["newStatus", newStatus]);
+    // console.log(["newIsValid", newIsValid]);
+    // console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_FROM_AMOUNT', payload: {
       amount: amount,
       isValid: newIsValid,
-      status: newStatus // possible values: notReadyToSwap, readyToSwap, swapping
+      status: newStatus // possible values: notReadyToSwap, readyToSwap
     }});
 
     // Calculate the value of the other input box (only called when the user types)
@@ -151,8 +156,8 @@ export default function SwapInputCards(props) {
       newIsValid = isNonzeroNumber(amount);
     }
     let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
-    console.log(["newIsValid", newIsValid]);
-    console.log(["newStatus", newStatus]);
+    // console.log(["newIsValid", newIsValid]);
+    // console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_TO_AMOUNT', payload: {
@@ -265,6 +270,24 @@ export default function SwapInputCards(props) {
           </Col>
           <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">
             <div className="text-right">
+
+              {/* Show max balance if any balance of selected token exists */}
+              {(fromBalance)
+                && <small className="mr-3 text-secondary">
+                  Max:{' '}
+                  <u
+                    onClick={(e) => handleFromAmountChange(
+                      (fromBalance - 0.04).toString(), // subtract 0.04 for call
+                      false) // not a shallow update
+                    }
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {Number(fromBalance).toFixed(2)}
+                  </u>
+                </small>
+              }
+
+              <br/>
               <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModalFrom}>
                 <img src={inputs.state.swap.from.logoUrl} width="15px" className="align-middle pb-1" />
                 {' '}{inputs.state.swap.from.symbol}
@@ -331,7 +354,7 @@ export default function SwapInputCards(props) {
           </small>
         }
         {/* Clear button */}
-        <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear inputs</Button>
+        <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear</Button>
       </div>
 
       {/* Display approve button if NEP-21 -> ____ swap */}
@@ -340,7 +363,7 @@ export default function SwapInputCards(props) {
              disabled={(inputs.state.swap.status !== "readyToSwap")}
              onClick={handleApprovalSubmission}
            >
-             Approve tokens (0.04 NEAR)
+             Approve tokens <small>+0.04 NEAR</small>
            </Button>}
       
       {/*<Button variant="primary" block

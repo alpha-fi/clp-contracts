@@ -31,16 +31,16 @@ export let change_methods_lib_contract = [
 	['remove_liquidity'],
 
 	// Swap near to token
-	['swap_near_to_reserve_exact_in'],
-	['swap_near_to_reserve_exact_in_xfr'],
-	['swap_near_to_reserve_exact_out'],
-	['swap_near_to_reserve_exact_out_xfr'],
+	['swap_near_to_token_exact_in'],
+	['swap_near_to_token_exact_in_xfr'],
+	['swap_near_to_token_exact_out'],
+	['swap_near_to_token_exact_out_xfr'],
 
 	// Swap token to near
-	['swap_reserve_to_near_exact_in'],
-	['swap_reserve_to_near_exact_in_xfr'],
-	['swap_reserve_to_near_exact_out'],
-	['swap_reserve_to_near_exact_out_xfr'],
+	['swap_token_to_near_exact_in'],
+	['swap_token_to_near_exact_in_xfr'],
+	['swap_token_to_near_exact_out'],
+	['swap_token_to_near_exact_out_xfr'],
 
 	// Swap token to token
 	['swap_tokens_exact_in'],

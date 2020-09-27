@@ -1,6 +1,6 @@
 import { Contract} from 'near-api-js'
 import getConfig from '../config'
-import BN from 'bn.js'
+
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 
 export async function getBalanceNEP( contractName ) {
@@ -53,8 +53,53 @@ export async function gasCheck() {
   return false;
 }
 
+function cleanString( str ) {
+  let ok = true;
+  let res = "";
+  for(var i = 0; i < str.length; ++i) {
+    if( str[i] === '0' && ok) {
+      
+    }
+    else {
+      ok = false;
+      res += str[i];
+    }
+  }
+  let last = res.length - 1;
+  while( res[last] === '0' ) {
+    res = res.slice(0, res.length - 1);
+    last--;
+  }
+  return res;
+
+}
+
+function setAmount( value ) {
+  let ok = false;
+  let val = 24;
+  let res = "";
+  const amount = cleanString( value );
+  console.log("AMT: ", amount);
+  for(var x of amount) {
+    if(x === '.') {
+      ok = true;
+    }
+    else if (x >= '0' && x <= '9') {
+      if(ok)
+        val--;
+      res += x;
+    } else {
+      console.error("Error: Wrong Input");
+      return -1;
+    }
+  }
+  res = res + '0'.repeat(val);
+  return res;
+}
+
 export async function calcPriceFromIn( token1, token2) {
-  const amount1 = Number(token1.amount);
+  const amount1 = setAmount( token1.amount );
+  
   if(amount1 < 1) {
     return 0;
   }
@@ -63,7 +108,7 @@ export async function calcPriceFromIn( token1, token2) {
     console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address, 
-      near_in: amount1});
+      ynear_in: amount1});
       console.log(price);
     return price;
   }
@@ -90,33 +135,33 @@ export async function calcPriceFromIn( token1, token2) {
 }
 
 export async function swapFromIn( token1, token2 ) {
-  const amount1 = Number(token1.amount);
-  const amount2 = Number(token2.amount);
+  const amount1 = setAmount( token1.amount );
+  const amount2 = setAmount( token2.amount );
   if(token1.type === "Native token") {
     // Native to NEP-21
-    const price = await window.contract.swap_near_to_reserve_exact_in( {
+    await window.contract.swap_near_to_token_exact_in( {
       token: token2.address, 
-      min_tokens: amount2 }, 
-      new BN('100000000000000000000').mul(new BN('600'))); 
-    return price;
+      min_tokens: amount2 
+    });
+    
   }
   else {
     if(token2.type === "NEP-21") {
       // NEP-21 to NEP-21
-      const price = await window.contract.swap_tokens_exact_in( {
+      await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        tokens_from: amount1, 
-        min_tokens_to: amount2 }); 
-      return price;
+        from_tokens: amount1, 
+        min_to_tokens: amount2 }); 
+    
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
-        const price = await window.contract.swap_reserve_to_near_exact_in( {
+        await window.contract.swap_token_to_near_exact_in( {
           token: token1.address,
           tokens_paid: amount1,
-          min_near: amount2 });
-        return price;
+          min_ynear: amount2 });
+    
       }
     else {
       console.error("Error: Token type error");
@@ -125,7 +170,8 @@ export async function swapFromIn( token1, token2 ) {
 }
 
 export async function calcPriceFromOut( token1, token2) {
-  const amount2 = Number(token2.amount);
+  let amount2 = setAmount( token2.amount );
+  console.log("amount_out ", amount2);
   if(amount2 < 1) {
     return 0;
   }
@@ -134,6 +180,7 @@ export async function calcPriceFromOut( token1, token2) {
     const price = await window.contract.price_near_to_token_out( {
       token: token2.address, 
       tokens_out: amount2});
+    console.log("expect_in ", price);
     return price;
   }
   else {
@@ -149,7 +196,7 @@ export async function calcPriceFromOut( token1, token2) {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_out( {
         token: token1.address, 
-        near_out: amount2});
+        ynear_out: amount2});
       return price;
     }
     else {
@@ -159,32 +206,36 @@ export async function calcPriceFromOut( token1, token2) {
 }
 
 export async function swapFromOut( token1, token2 ) {
-  const amount1 = Number(token1.amount);
-  const amount2 = Number(token2.amount);
+  const amount1 = setAmount( token1.amount );
+  const amount2 = setAmount( token2.amount );
   if(token1.type === "Native token") {
     // Native to NEP-21
-    const price = await window.contract.swap_near_to_reserve_exact_out( {
+    console.log("SWAP: amt", amount2);
+    await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
-      tokens_out: amount2 }); 
-    return price;
+      tokens_out: amount2 },
+      '300000000000000',
+      '60000000000000000000000'
+      ); 
+  
   }
   else {
     if(token2.type === "NEP-21") {
       // NEP-21 to NEP-21
-      const price = await window.contract.swap_tokens_exact_out( {
+      await window.contract.swap_tokens_exact_out( {
         from: token1.address,
         to: token2.address,
-        tokens_to: amount2, 
-        max_tokens_from: amount1 }); 
-      return price;
+        to_tokens: amount2, 
+        max_from_tokens: amount1 }); 
+      
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
-        const price = await window.contract.swap_reserve_to_near_exact_out( {
+        await window.contract.swap_token_to_near_exact_out( {
           token: token1.address,
-          near_out: amount2,
+          ynear_out: amount2,
           max_tokens: amount1 });
-        return price;
+      
       }
     else {
       console.error("Error: Token type error");
@@ -194,8 +245,8 @@ export async function swapFromOut( token1, token2 ) {
 
 export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
   await window.contract.add_liquidity( { token: tokenDetails.address, 
-    max_token_amount: maxTokenAmount,
-    min_shares_amount: minSharesAmount
+    max_tokens: maxTokenAmount,
+    min_shares: minSharesAmount
   } )
 }
 

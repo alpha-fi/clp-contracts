@@ -314,7 +314,7 @@ impl NearCLP {
     }
 
     /// Returns the owner balance of shares of a pool identified by token.
-    pub fn shares_balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
+    pub fn multi_balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
         return self
             .must_get_pool(&token)
             .shares

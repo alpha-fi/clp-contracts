@@ -242,6 +242,7 @@ impl NearCLP {
             amount = added_reserve
         )
         .into();
+
         Promise::new(token) //call the token contract
             .function_call(
                 "transfer_from".into(),
@@ -696,12 +697,12 @@ mod tests {
             };
         }
 
-        pub fn set_vmc_with_token_op_deposit(&mut self) {
-            let storage_price_per_byte: Balance = 100000000000000000000;
-            self.set_vmc_deposit(storage_price_per_byte * 670); // arbitrary number easy to recoginze)
+        pub fn set_deposit_for_token_op(&mut self) {
+            let storage_price_per_byte: Balance = NEP21_STORAGE_DEPOSIT;
+            self.set_deposit(storage_price_per_byte * 6); // arbitrary number easy to recoginze)
         }
 
-        pub fn set_vmc_deposit(&mut self, attached_deposit: Balance) {
+        pub fn set_deposit(&mut self, attached_deposit: Balance) {
             self.vm.attached_deposit = attached_deposit;
             testing_env!(self.vm.clone());
         }
@@ -786,7 +787,7 @@ mod tests {
         assert_eq!(pools, expected);
     }
 
-    // #[test] TODO
+    #[test]
     fn add_liquidity_happy_path() {
         let (mut ctx, mut c) = init();
         let a = ctx.accounts.predecessor.clone();
@@ -798,21 +799,16 @@ mod tests {
             "Token total supply must be correct"
         );
 
-        let ynear_deposit = 3000u128;
+        let ynear_deposit = NDENOM * 11;
         let token_deposit = 500u128;
-        ctx.set_vmc_with_token_op_deposit();
+        ctx.set_deposit_for_token_op();
         token1.inc_allowance(t.clone(), token_deposit.into());
 
-        ctx.set_vmc_deposit(ynear_deposit);
-        let max_token_deposit = token_deposit;
-        let min_shares_required = ynear_deposit;
-        c.add_liquidity(
-            t.clone(),
-            max_token_deposit.into(),
-            min_shares_required.into(),
-        );
+        ctx.set_deposit(ynear_deposit);
+        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 
         let p = c.pool_info(&t).expect("Pool should exist");
+        println!("Pool info: {}", p);
         assert_eq!(p.ynear, ynear_deposit, "Near balance should be correct");
         assert_eq!(p.reserve, token_deposit, "Token balance should be correct");
     }

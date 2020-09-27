@@ -16,6 +16,9 @@ export let view_methods_lib_contract = [
 	['calc_out_amount'],
 	['calc_in_amount']
 
+	//Liquiduty
+	['multi_balance_of']
+
 	];
 
 // TODO

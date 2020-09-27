@@ -30,6 +30,9 @@ const Theme = styled("div")`
 function isNonzeroNumber(num) {
   return (!isNaN(num) && (num > 0));
 }
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 // Test contract call function 
 async function testContractCall( token1, token2) {
   console.log("testContractCall called. [token1.amount, token2.amount]")
@@ -53,7 +56,61 @@ export default function SwapInputCards(props) {
   const [fromAmount, setFromAmount] = useState(inputs.state.swap.from.amount);
   const [toAmount, setToAmount] = useState(inputs.state.swap.to.amount);
 
+  // Used for rendering balance of "From" input
   let fromBalance = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance;
+
+  function checkStatuses() {
+    if (inputs.state.swap.status == "isApproving") {
+
+      // If approval is successful
+      if (true) {
+        // Notify user
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Approval complete",
+          message: "Your NEP-21 token is now approved to swap."
+        }});
+        // Reset needsApproval
+        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
+          needsApproval: false
+        }});
+      } else {
+        // Approval is not successful
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Approval unsuccessful",
+          message: "Please try again."
+        }});
+      }
+
+    } else if (inputs.state.swap.status == "isSwapping") {
+
+      console.log("isSwapping");
+
+      // If swap is successful
+      if (true) {
+        // Reset amounts
+        clearInputs();
+        // Reset needsApproval
+        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
+          needsApproval: (inputs.state.swap.to.type === "NEP-21")
+        }});
+        // Notify user
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Swap complete",
+          message: "Your swap has been submitted."
+        }});
+        // Update status
+        dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
+          status: "notReadyToSwap"
+        }});
+      } else {
+        // Swap is not successful
+        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+          heading: "Swap unsuccessful",
+          message: "Your swap has been failed."
+        }});
+      }
+    }
+  }
 
   // Handles updating button view and input information
   function handleFromTokenUpdate() {
@@ -83,6 +140,7 @@ export default function SwapInputCards(props) {
   useEffect(() => {
     handleFromTokenUpdate();
     handleToTokenUpdate();
+    checkStatuses();
   }, []);
 
   // Handle opening modal to select currency
@@ -177,56 +235,23 @@ export default function SwapInputCards(props) {
   }
 
   async function handleApprovalSubmission() {
-    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-    notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-      heading: "Creating allowance",
-      message: "Waiting to receive confirmation..."
-    }});
-    let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
-    // let isApproved = await testContractCall(inputs.state.swap.from, inputs.state.swap.to)
-    .then(function(result) {
-      alert(result);
-      dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { needsApproval: false }});
-      notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-        heading: "Token swap approved",
-        message: "You can now make a swap."
-      }});
+    dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { status: "isApproving" } });
+    await delay(1000).then(function() {
+      dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
     })
-    .catch(function(error) {
-      notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-        heading: "Failed to create allowance.",
-        message: error
-      }});
-    });
+    .then(async function() {
+      let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to);
+    })
   }
-  // might need to use useCallback to get result when window changes
-  //
-  // const handleApprovalSubmission = useCallback(async () => {
-  //   dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-  //   dispatch({ type: 'SUBMIT_ALLOWANCE' });
-  //   notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-  //     heading: "Creating allowance",
-  //     message: "Waiting to receive confirmation..."
-  //   }});
-  //   let isApproved = await incAllowance(inputs.state.swap.from, inputs.state.swap.to)
-  // }, []);
 
   async function handleSwap() {
     try {
-      dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-      let swap = await swapFromOut(inputs.state.swap.from, inputs.state.swap.to)
-        .then(function(result) {
-          // Reset amounts
-          clearInputs();
-          // Reset needsApproval
-          dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
-            needsApproval: (inputs.state.swap.to.type === "NEP-21")
-          }});
-          // Notify user
-          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-            heading: "Swap complete",
-            message: "Your swap has been submitted."
-          }});
+      dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { status: "isSwapping" } });
+      await delay(1000).then(function() {
+        dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+      })
+      .then(async function() {
+        let swap = await swapFromOut(inputs.state.swap.from, inputs.state.swap.to);
       });
     } catch (e) {
       console.error(e);
@@ -354,17 +379,21 @@ export default function SwapInputCards(props) {
           </small>
         }
         {/* Clear button */}
-        <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear</Button>
+        {((inputs.state.swap.status !== "isApproving") && (inputs.state.swap.status !== "isSwapping"))
+          && <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear</Button>}
       </div>
 
       {/* Display approve button if NEP-21 -> ____ swap */}
       {(inputs.state.swap.needsApproval)
-        && <Button variant="warning" block
-             disabled={(inputs.state.swap.status !== "readyToSwap")}
-             onClick={handleApprovalSubmission}
-           >
-             Approve tokens <small>+0.04 NEAR</small>
-           </Button>}
+         && <Button variant="warning" block
+              disabled={(inputs.state.swap.status !== "readyToSwap")}
+              onClick={handleApprovalSubmission}
+            >
+              {(inputs.state.swap.status != "isApproving")
+                ? <>Approve tokens <small>+0.04 NEAR</small></>
+                : "Approving..."
+              }
+            </Button>}
       
       {/*<Button variant="primary" block
        onClick={handleApprovalSubmission}
@@ -375,7 +404,10 @@ export default function SwapInputCards(props) {
         disabled={((inputs.state.swap.status !== "readyToSwap") || inputs.state.swap.needsApproval)}
         onClick={handleSwap}
       >
-        Swap
+        {(inputs.state.swap.status !== "isSwapping")
+          ? "Swap"
+          : "Swapping..."
+        }
       </Button>
     </>
   );

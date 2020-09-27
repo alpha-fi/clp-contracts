@@ -186,6 +186,8 @@ const InputsProvider = ( { children } ) => {
           selectedInput: state.currencySelectionModal.selectedInput } };
       case 'UPDATE_SWAP_APPROVAL':
         return { ...state, swap: { 
+          from: state.swap.from,
+          to: state.swap.to,
           needsApproval: action.payload.needsApproval,
           status: state.swap.status,
         to: state.swap.to, from: state.swap.from }}
@@ -220,6 +222,13 @@ const InputsProvider = ( { children } ) => {
           to: oldFrom,
           needsApproval: state.swap.needsApproval,      // leave needsApproval
           status: "notReadyToSwap",                     // UPDATE status
+        }};
+      case 'UPDATE_SWAP_STATUS':
+        return {...state, swap: {
+          from: state.swap.from,
+          to: state.swap.to,
+          needsApproval: state.swap.needsApproval,
+          status: action.payload.status
         }};
       case 'SET_CURRENCY_SELECTION_INPUT':
         return { ...state, currencySelectionModal: { selectedInput: action.payload.input, isVisible: !state.isVisible } };

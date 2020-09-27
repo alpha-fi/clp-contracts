@@ -38,3 +38,11 @@ export function login() {
   // the private key in localStorage.
   window.walletConnection.requestSignIn(nearConfig.contractName)
 }
+
+export function isNonzeroNumber(num) {
+  return (!isNaN(num) && (num > 0));
+}
+
+export function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

@@ -9,7 +9,8 @@ let initialState = {
       logoUrl: "",    // Address of token logo image
       tokenIndex: 1,  // Index of token within token list
       address: "",
-      isValid: false
+      isValid: false,
+      allowance: "",  // Required for NEP-21 -> ____ swap
     },
     to: {
       amount: "",
@@ -18,7 +19,7 @@ let initialState = {
       logoUrl: "",
       tokenIndex: 2,
       address: "",
-      isValid: false
+      isValid: false,
     },
     needsApproval: false,
     status: "notReadyToSwap"    // possible values: notReadyToSwap, readyToSwap, swapping
@@ -31,7 +32,7 @@ let initialState = {
       logoUrl: "",
       tokenIndex: 2,
       address: "",
-      isValid: false
+      isValid: false,
     },
     input2: {
       amount: "",
@@ -40,7 +41,7 @@ let initialState = {
       logoUrl: "",
       tokenIndex: 0,
       address: "",
-      isValid: false
+      isValid: false,
     }
   },
   currencySelectionModal: {
@@ -72,6 +73,7 @@ const InputsProvider = ( { children } ) => {
             tokenIndex: state.swap.from.tokenIndex,     // leave token index
             address: state.swap.from.address,           // leave address
             isValid: action.payload.isValid,            // UPDATE isValid
+            allowance: state.swap.from.allowance        // leave allowance
           },                                            //
           to: state.swap.to,                            // leave to input
           needsApproval: state.swap.needsApproval,      // leave needsApproval
@@ -125,6 +127,7 @@ const InputsProvider = ( { children } ) => {
             tokenIndex: action.payload.tokenIndex,        // UPDATE token index
             address: action.payload.address,              // UPDATE address
             isValid: state.swap.from.isValid,             // leave isValid alone (which just checks for a non-zero number)
+            allowance: ""                                 // RESET allowance (call UPDATE_FROM_ALLOWANCE to update)
           },                                              //
           to: state.swap.to,                              // leave the other input card alone
           needsApproval:                                  // NEP-21<>NEP-21 requires an extra approval, so check for
@@ -201,8 +204,9 @@ const InputsProvider = ( { children } ) => {
             tokenIndex: state.swap.from.tokenIndex,     // leave token index
             address: state.swap.from.address,           // leave address
             isValid: false,                             // RESET isValid
+            allowance: state.swap.from.allowance        // leave allowance
           },                                            //
-          to: { 
+          to: {                                         //
             amount: "",                                 // CLEAR amount
             symbol: state.swap.to.symbol,               // leave symbol
             type: state.swap.to.type,                   // leave type
@@ -214,6 +218,22 @@ const InputsProvider = ( { children } ) => {
           needsApproval: state.swap.needsApproval,      // leave needsApproval
           status: "notReadyToSwap",                     // UPDATE status
         }};
+      case 'UPDATE_FROM_ALLOWANCE':
+        return {...state, swap: { 
+          from: {
+            amount: state.swap.from.amount,               // leave amount
+            symbol: state.swap.from.symbol,               // leave symbol
+            type: state.swap.from.type,                   // leave type
+            logoUrl: state.swap.from.logoUrl,             // leave logo URL
+            tokenIndex: state.swap.from.tokenIndex,       // leave token index
+            address: state.swap.from.address,             // leave address
+            isValid: state.swap.from.isValid,             // leave isValid alone (which just checks for a non-zero number)
+            allowance: action.payload.allowance           // UPDATE allowance
+          },                                              //
+          to: state.swap.to,                              // leave the other input card alone
+          needsApproval: state.swap.needsApproval,        // leave needsApproval            
+          status: state.swap.status,                      // leave status to notReadyToSwap
+        }}
       case 'SWITCH_SWAP_INPUTS':
         let oldFrom = state.swap.from;
         let oldTo = state.swap.to;

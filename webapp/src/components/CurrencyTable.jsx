@@ -1,6 +1,8 @@
 import React, { useContext, useEffect } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
+import { getAllowance } from "../services/near-nep21-util";
+import { delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -46,6 +48,21 @@ export const CurrencyTable = () => {
             type: newType, 
             address: newAddress }
         });
+
+        // Update allowance of from token
+        (async function () { 
+          if (newType == "NEP-21") {
+            await delay(1000).then(async function() {
+              try {
+                let allowance = await getAllowance(inputs.state.swap.from);
+                dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+              } catch (e) {
+                console.error(e);
+              }
+            });
+          }
+        })();
+
         break;
       case 'to':
         dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY',

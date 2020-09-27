@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext, useCallback } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { calcPriceFromIn, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
+import { isNonzeroNumber, delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -27,12 +28,6 @@ const Theme = styled("div")`
   }
 `;
 
-function isNonzeroNumber(num) {
-  return (!isNaN(num) && (num > 0));
-}
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 // Test contract call function 
 async function testContractCall( token1, token2) {
   console.log("testContractCall called. [token1.amount, token2.amount]")
@@ -119,7 +114,7 @@ export default function SwapInputCards(props) {
   }
 
   // Handles updating button view and input information
-  async function handleFromTokenUpdate() {
+  function handleFromTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
       payload: { 
@@ -129,6 +124,20 @@ export default function SwapInputCards(props) {
         tokenIndex: inputs.state.swap.from.tokenIndex,
         address: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].address }
     });
+
+    // Update allowance of from token
+    (async function () { 
+      if (tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].type == "NEP-21") {
+        await delay(1000).then(async function() {
+          try {
+            let allowance = await getAllowance(inputs.state.swap.from);
+            dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      }
+    })();
   }
   function handleToTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
@@ -337,9 +346,9 @@ export default function SwapInputCards(props) {
         </Row>
       </Theme>
 
-      {(true) &&
+      {(inputs.state.swap.from.allowance) &&
         <div className="text-right pr-3">
-          <small>Current allowance: ___</small>
+          <small>Current {inputs.state.swap.from.symbol} allowance: {inputs.state.swap.from.allowance}</small>
         </div>}
 
       <div className="text-center my-2">

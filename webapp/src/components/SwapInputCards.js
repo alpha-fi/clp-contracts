@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { calcPriceFromIn, swapFromOut, incAllowance } from "../services/near-nep21-util";
+import { calcPriceFromIn, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -60,6 +60,14 @@ export default function SwapInputCards(props) {
   let fromBalance = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance;
 
   function checkStatuses() {
+
+    // TESTING
+    // Set allowance
+    (async function () {
+      console.log(await getAllowance(inputs.state.swap.from));
+    })();
+
+
     if (inputs.state.swap.status == "isApproving") {
 
       // If approval is successful
@@ -82,8 +90,6 @@ export default function SwapInputCards(props) {
       }
 
     } else if (inputs.state.swap.status == "isSwapping") {
-
-      console.log("isSwapping");
 
       // If swap is successful
       if (true) {
@@ -113,7 +119,7 @@ export default function SwapInputCards(props) {
   }
 
   // Handles updating button view and input information
-  function handleFromTokenUpdate() {
+  async function handleFromTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
       payload: { 
@@ -330,9 +336,16 @@ export default function SwapInputCards(props) {
           </Col>
         </Row>
       </Theme>
+
+      {(true) &&
+        <div className="text-right pr-3">
+          <small>Current allowance: ___</small>
+        </div>}
+
       <div className="text-center my-2">
         <span onClick={switchInputs} style={{ cursor: 'pointer' }}><BsArrowUpDown/></span>
       </div>
+
       <Theme className="py-2">
         <label className="ml-4 mb-1 mt-0">
           <small className="text-secondary">To</small>
@@ -370,7 +383,7 @@ export default function SwapInputCards(props) {
         </Row>
       </Theme>
 
-      <div className="text-center my-2">
+      <div className="text-right my-2 pr-3">
         {/* Display textual information before user swaps */}
         { ((inputs.state.swap.status === "readyToSwap")) &&
           <small className="text-secondary">

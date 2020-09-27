@@ -52,19 +52,6 @@ fn get_pool_info(r: &RuntimeStandalone, token: &str) -> PoolInfo {
     return near_view(r, &CLP_ACC.into(), "pool_info", &json!({ "token": token }));
 }
 
-//helper fn
-fn show_funtok_bal(r: &mut RuntimeStandalone, token: &ExternalUser, acc: &ExternalUser) -> u128 {
-    println!("let's see how many tokens {} has now", acc.account_id());
-    let fungt_balance: u128 = get_funtok_balance(r, token, &acc).into();
-    println!(
-        "{} has {} {} tokens ",
-        acc.account_id(),
-        token.account_id(),
-        fungt_balance
-    );
-    return fungt_balance;
-}
-
 //-------------------------
 fn create_pool_add_liquidity(
     r: &mut RuntimeStandalone,
@@ -117,7 +104,7 @@ fn create_pool_add_liquidity(
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    show_funtok_bal(r, &token, &owner);
+    show_nep21_bal(r, &token.account_id, &owner.account_id);
 
     //add_liquidity
     call(
@@ -184,7 +171,8 @@ fn test_clp_add_liquidity_and_swap() {
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    let carol_funt_balance_pre = show_funtok_bal(&mut ctx.r, &ctx.nep21_1, &ctx.carol);
+    let carol_funt_balance_pre =
+        show_nep21_bal(&mut ctx.r, &ctx.nep21_1.account_id, &ctx.carol.account_id);
 
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = 10 * NDENOM;
@@ -200,7 +188,8 @@ fn test_clp_add_liquidity_and_swap() {
     );
 
     println!("let's see how many token carol has after the swap");
-    let carol_funt_balance_post = show_funtok_bal(&mut ctx.r, &ctx.nep21_1, &ctx.carol);
+    let carol_funt_balance_post =
+        show_nep21_bal(&mut ctx.r, &ctx.nep21_1.account_id, &ctx.carol.account_id);
     let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
     assert!(
         carol_received >= min_token_expected,
@@ -271,22 +260,15 @@ fn test_clp_add_liquidity_and_swap() {
     //TODO check balances
 }
 
-//util fn
-fn get_funtok_balance(
-    r: &mut RuntimeStandalone,
-    token: &ExternalUser,
-    account: &ExternalUser,
-) -> U128 {
-    let result: U128 = near_view(
-        &r,
-        &token.account_id(),
-        "get_balance",
-        &json!({
-            "owner_id": &account.account_id()
-        }),
-    );
+fn get_nep21_balance(r: &mut RuntimeStandalone, token: &AccountId, account: &AccountId) -> U128 {
+    near_view(&r, &token, "get_balance", &json!({ "owner_id": account }))
+}
 
-    return result;
+fn show_nep21_bal(r: &mut RuntimeStandalone, token: &AccountId, acc: &AccountId) -> u128 {
+    println!("let's see how many tokens {} has now", acc);
+    let bal: u128 = get_nep21_balance(r, token, acc).into();
+    println!("{} has {} {} tokens ", acc, token, bal);
+    return bal;
 }
 
 pub const CLP_ACC: &str = "nearclp";

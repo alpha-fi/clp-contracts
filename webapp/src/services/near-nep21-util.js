@@ -241,9 +241,9 @@ export async function swapFromOut( token1, token2 ) {
     console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
-      tokens_out: token2.amount }
-     // attachNear1,
-      //attachNear2
+      tokens_out: token2.amount },
+      attachNear1,
+      attachNear2
       ); 
   
   }

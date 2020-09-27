@@ -37,7 +37,7 @@ export async function incAllowance( token ) {
   try {
     await window.nep21.inc_allowance({ 
       escrow_account_id: nearConfig.contractName, 
-      amount: token.amount},
+      amount: token.amount}
       //attachNear1,
       //attachNear2
       );

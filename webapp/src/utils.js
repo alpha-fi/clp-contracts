@@ -21,7 +21,7 @@ export async function initContract() {
     // View methods are read only. They don't modify the state, but usually return some value.
     viewMethods: view_methods_lib_contract,
     // Change methods can modify the state. But you don't receive the returned value when called.
-    changeMethods: change_methods_lib_contract,
+    changeMethods: change_methods_lib_contract
   })
 }
 

@@ -37,9 +37,9 @@ export async function incAllowance( token ) {
   try {
     await window.nep21.inc_allowance({ 
       escrow_account_id: nearConfig.contractName, 
-      amount: token.amount}
-      //attachNear1,
-      //attachNear2
+      amount: token.amount},
+      attachNear1,
+      attachNear2
       );
      console.log("DONE"); 
     return true;
@@ -50,6 +50,8 @@ export async function incAllowance( token ) {
 }
 
 export async function getAllowance( token ) {
+  const accountId = window.accountId;
+  console.log(accountId);
   window.nep21 = await new Contract(
     window.walletConnection.account(),
     token.address ,
@@ -60,11 +62,11 @@ export async function getAllowance( token ) {
       changeMethods: []
     }
   )
-  
   const allowance = await window.nep21.get_allowance({
-    owner_id: window.walletConnection.account(), 
-    escrow_account_id: nearConfig.contractName});
-  return allowance;
+    owner_id: accountId, 
+    escrow_account_id: nearConfig.contractName });
+  console.log('Allowance: ', allowance);
+  return allowance;  
 }
 
 export async function gasCheck() {
@@ -243,7 +245,7 @@ export async function swapFromOut( token1, token2 ) {
   const amount2 = setAmount( token2.amount );
   if(token1.type === "Native token") {
     // Native to NEP-21
-    console.log("SWAP: amt", amount2);
+    console.log("SWAP: amt", token2.amount);
     await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
       tokens_out: token2.amount },

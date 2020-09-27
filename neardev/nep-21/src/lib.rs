@@ -175,7 +175,7 @@ impl FungibleToken {
         // Retrieving the account from the state.
         let mut account = self.get_account(&owner_id);
 
-        env::log(format!("transfer_from {} to {}, {}",owner_id,new_owner_id,amount).as_bytes());
+        env::log(format!("transfer_from {} to {}, {}", owner_id, new_owner_id, amount).as_bytes());
 
         // Checking and updating unlocked balance
         if account.balance < amount {
@@ -242,14 +242,15 @@ impl FungibleToken {
             .into()
     }
 
-    // Mints 1000 tokens to the caller.
-    pub fn mint(&mut self) {
-        let amount: Balance = 1000;
+    // Mints 1_000_000 tokens to the caller and returns his balance after the minting.
+    pub fn mint(&mut self) -> U128 {
+        let amount: Balance = 1_000_000;
         self.total_supply += amount;
         let dest = env::predecessor_account_id();
         let mut a = self.get_account(&dest);
         a.balance += amount;
         self.set_account(&dest, &a);
+        return a.balance.into();
     }
 }
 

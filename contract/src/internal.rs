@@ -83,17 +83,13 @@ impl NearCLP {
             "User purchased {} {} for {} YoctoNEAR",
             reserve, token, near
         );
+        // TODO: this updated should be done after nep21 transfer
         p.reserve -= reserve;
         p.ynear += near;
         self.set_pool(token, p);
 
         //send the token from CLP account to buyer
-        self.schedule_nep21_tansfer(
-            token,
-            env::current_account_id(),
-            env::predecessor_account_id(),
-            reserve,
-        );
+        self.schedule_nep21_tansfer(token, env::current_account_id(), recipient, reserve);
         //TODO callbacks
     }
 
@@ -208,6 +204,7 @@ impl NearCLP {
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
+        // TODO: make updates after nep21 transfers
         p1.reserve += token1_in;
         p1.ynear -= near_swap;
         p2.reserve -= token2_out;
@@ -216,19 +213,11 @@ impl NearCLP {
         self.set_pool(&token2, p2);
 
         //get the token from buyer into CLP
-        let promise1 = self.schedule_nep21_tansfer(
-            token1,
-            buyer.clone(),
-            env::current_account_id(),
-            token1_in,
-        );
-        //send the buyer the bougth token
-        let promise2 = self.schedule_nep21_tansfer(
-            token2,
-            env::current_account_id(),
-            buyer.clone(),
-            token2_out,
-        );
+        let promise1 =
+            self.schedule_nep21_tansfer(token1, buyer, env::current_account_id(), token1_in);
+        //send token2 tokens to the recipient
+        let promise2 =
+            self.schedule_nep21_tansfer(token2, env::current_account_id(), recipient, token2_out);
         //do both in parallel
         promise1.and(promise2);
         //TODO COMPLEX ROLLBACKS

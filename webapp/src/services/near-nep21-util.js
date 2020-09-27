@@ -45,6 +45,23 @@ export async function incAllowance( token ) {
 
 }
 
+export async function getAllowance( token ) {
+  window.nep21 = await new Contract(
+    window.walletConnection.account(),
+    token.address ,
+    {
+      // View methods are read only
+      viewMethods: ['get_allowance'],
+      // Change methods modify state but don't receive updated data
+      changeMethods: []
+    }
+  )
+  
+  const allowance = await window.nep21.get_allowance({ 
+    escrow_account_id: nearConfig.contractName});
+  return allowance;
+}
+
 export async function gasCheck() {
   // Set default
   const near_limit = 0.6;
@@ -81,7 +98,6 @@ function setAmount( value ) {
   let val = 24;
   let res = "";
   const amount = cleanString( value );
-  console.log("AMT: ", amount);
   for(var x of amount) {
     if(x === '.') {
       ok = true;
@@ -120,14 +136,14 @@ export async function calcPriceFromIn( token1, token2) {
       const price = await window.contract.price_token_to_token_in( {
         from: token1.address,
         to: token2.address,
-        tokens_in: amount1});
+        tokens_in: token1.amount});
       return price;
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
         token: token1.address, 
-        tokens_in: amount1});
+        tokens_in: token1.amount});
       return price;
     }
     else {
@@ -143,7 +159,7 @@ export async function swapFromIn( token1, token2 ) {
     // Native to NEP-21
     await window.contract.swap_near_to_token_exact_in( {
       token: token2.address, 
-      min_tokens: amount2 
+      min_tokens: token2.amount 
     },
     attachNear1,
     attachNear2
@@ -156,8 +172,8 @@ export async function swapFromIn( token1, token2 ) {
       await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        from_tokens: amount1, 
-        min_to_tokens: amount2 },
+        from_tokens: token1.amount, 
+        min_to_tokens: token2.amount },
         attachNear1,
         attachNear2
         ); 
@@ -167,7 +183,7 @@ export async function swapFromIn( token1, token2 ) {
       // NEP-21 to Native
         await window.contract.swap_token_to_near_exact_in( {
           token: token1.address,
-          tokens_paid: amount1,
+          tokens_paid: token1.amount,
           min_ynear: amount2 },
           attachNear1,
           attachNear2
@@ -182,7 +198,7 @@ export async function swapFromIn( token1, token2 ) {
 
 export async function calcPriceFromOut( token1, token2) {
   let amount2 = setAmount( token2.amount );
-  console.log("amount_out ", amount2);
+  //console.log("amount_out ", amount2);
   if(amount2 < 1) {
     return 0;
   }
@@ -190,7 +206,7 @@ export async function calcPriceFromOut( token1, token2) {
     // Native to NEP-21
     const price = await window.contract.price_near_to_token_out( {
       token: token2.address, 
-      tokens_out: amount2});
+      tokens_out: token2.amount});
     console.log("expect_in ", price);
     return price;
   }
@@ -200,7 +216,8 @@ export async function calcPriceFromOut( token1, token2) {
       const price = await window.contract.price_token_to_token_out( {
         from: token1.address,
         to: token2.address,
-        tokens_out: amount2});
+        tokens_out: token2.amount});
+        console.log("expect_in ", price);
       return price;
     }
     else if(token2.type === "Native token") {
@@ -224,9 +241,9 @@ export async function swapFromOut( token1, token2 ) {
     console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
-      tokens_out: amount2 },
-      attachNear1,
-      attachNear2
+      tokens_out: token2.amount }
+     // attachNear1,
+      //attachNear2
       ); 
   
   }
@@ -236,8 +253,8 @@ export async function swapFromOut( token1, token2 ) {
       await window.contract.swap_tokens_exact_out( {
         from: token1.address,
         to: token2.address,
-        to_tokens: amount2, 
-        max_from_tokens: amount1 },
+        to_tokens: token2.amount, 
+        max_from_tokens: token1.amount },
         attachNear1,
         attachNear2
         ); 
@@ -248,7 +265,7 @@ export async function swapFromOut( token1, token2 ) {
         await window.contract.swap_token_to_near_exact_out( {
           token: token1.address,
           ynear_out: amount2,
-          max_tokens: amount1 },
+          max_tokens: token1.amount },
           attachNear1,
           attachNear2
           );
@@ -264,26 +281,38 @@ export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmoun
   await window.contract.add_liquidity( { token: tokenDetails.address, 
     max_tokens: maxTokenAmount,
     min_shares: minSharesAmount
-  } )
+  } );
 }
 
-export async function createPool( tokenDetails ) {
+// returns true if pool already exists
+export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount ) {
   const info = await window.contract.pool_info( { token: tokenDetails.address} );
   
-  if(poolexist) {  // todo:working
-    return false;
+  if(info !== null) {
+    // Pool already exists. 
+    return true;
   }
-
   await window.contract.create_pool( { token: tokenDetails.address });
 
   await addLiquiduty( tokenDetails.address, maxTokenAmount, minSharesAmount);
+
+  return false;
 }
 
 export async function browsePools() {
   try {
     const poolInfo = await window.contract.list_pools();
+    console.log(poolInfo);
     return poolInfo;
   } catch (error) {
     console.error('cannot fetch pool list');
   }
+}
+
+// eturns the owner balance of shares of a pool identified by token.
+export async function sharesBalance( token ) {
+  const bal = await window.contract.multi_balance_of ({ 
+    token: token.address, 
+    owner:  window.walletConnection.account() });
+  return bal;
 }

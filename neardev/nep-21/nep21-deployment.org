@@ -32,7 +32,7 @@ export MY_ACCOUNT=example.testnet
 Now we can do few additional operations Update the variables above to correctly use the examples below.
 
 #+BEGIN_SRC sh
-near call gold.$NEP21_BASE_ACCOUNT mint '{}' --accountId $MY_ACCOUNT
+near call gold.$NEP21_BASE_ACCOUNT mint_1e3 '{}' --accountId $MY_ACCOUNT
 near call gold.$NEP21_BASE_ACCOUNT get_balance "{\"owner_id\": \"$MY_ACCOUNT\"}" --accountId $MY_ACCOUNT
 # inc_allowance will create a new record, hence we need to deposit some near tokens using --amount parameter
 near call gold.$NEP21_BASE_ACCOUNT inc_allowance '{"escrow_account_id": "someone_else.testnet", "amount": "10"}' --accountId $MY_ACCOUNT --amount 0.01

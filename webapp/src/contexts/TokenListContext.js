@@ -13,17 +13,24 @@ const initialState = {
   tokenList: testTokenList
 }
 
-const updateBalances = (tokenList, w3, ethAccount) => {
+const updateNearBalances = (tokenList) => {
+  let tl = tokenList;
+  tl.tokens.map(async (token, index) => {
+    if (token.type === "Native token") {
+      token.balance = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000 ;
+    }
+    if (token.type === "NEP-21") {
+      token.balance = await getBalanceNEP( token.address );
+    }
+  });
+  return tl;
+}
+
+const updateEthBalances = (tokenList, w3, ethAccount) => {
   let tl = tokenList;
   tl.tokens.map(async (token, index) => {
     if (token.type === "ERC-20" && w3 && ethAccount && token.address !== "") {
       token.balance = await getERC20Balance(w3, ethAccount, token.address);
-    }
-    if (token.type === "Native token") {
-      token.balance = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000 ;
-    }
-    if(token.type === "NEP-21") {
-      token.balance = await getBalanceNEP( token.address );
     }
   });
   return tl;
@@ -36,9 +43,13 @@ const TokenListProvider = ( { children } ) => {
 
   const [state, dispatch] = useThunkReducer((state, action) => {
     switch(action.type) {
-      case 'FETCH_BALANCES':
-        let updatedTokenList = updateBalances(state.tokenList, action.payload.w3.web3, action.payload.ethAccount);
-        return { tokenList: updatedTokenList };
+      case 'FETCH_NEAR_BALANCES':
+        let updatedNearTokenList = updateNearBalances(state.tokenList);
+        return { tokenList: updatedNearTokenList };
+        break;
+      case 'FETCH_ETH_BALANCES':
+        let updatedEthTokenList = updateEthBalances(state.tokenList, action.payload.w3.web3, action.payload.ethAccount);
+        return { tokenList: updatedEthTokenList };
         break;
       default:
         throw new Error();
@@ -52,18 +63,34 @@ const TokenListProvider = ( { children } ) => {
   useEffect(() => {
 
     // Update balances of NEAR tokens
-    if (window.walletConnection.isSignedIn() || currentUser) {
+    if (window.walletConnection.isSignedIn()) {
       try {
         // Inject token balances in token list using wallet information
         dispatch({
-          type: 'FETCH_BALANCES',
+          type: 'FETCH_NEAR_BALANCES',
           payload: {
             w3: web3Modal,
             ethAccount: currentUser
           }
         });
       } catch (e) {
-        console.error(`Could not inject balances`);
+        console.error(`Could not inject NEAR balances`);
+      }
+    }
+
+    // Update balances of ETH tokens
+    if (currentUser) {
+      try {
+        // Inject token balances in token list using wallet information
+        dispatch({
+          type: 'FETCH_ETH_BALANCES',
+          payload: {
+            w3: web3Modal,
+            ethAccount: currentUser
+          }
+        });
+      } catch (e) {
+        console.error(`Could not inject ETH balances`);
       }
     }
 

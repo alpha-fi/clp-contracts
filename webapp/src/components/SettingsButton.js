@@ -27,7 +27,7 @@ export default function SettingsButton() {
     <>
       <p className="align-middle pr-3 mb-0">
       {window.walletConnection.isSignedIn()
-        ? "Connected"
+        ? window.accountId
         : "Not connected"}
       </p>
       <Dropdown alignRight>
@@ -39,6 +39,8 @@ export default function SettingsButton() {
           <Dropdown.Divider />
           {nearConnected}
           {ethConnected}
+          <Dropdown.Divider />
+          <Dropdown.Item className="text-secondary">Contract: {window.contract.contractId}</Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown>
     </>

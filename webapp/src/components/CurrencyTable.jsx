@@ -28,6 +28,20 @@ export const CurrencyTable = () => {
   // Token list state
   const tokenListState = useContext(TokenListContext);
 
+  // Updates allowance of from token
+  async function updateFromAllowance(token) {
+    await delay(500).then(async function() {
+      if (token.type == "NEP-21") {
+        try {
+          let allowance = await getAllowance(token);
+          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
   // Updates selected currency in global state and closes modal
   function handleCurrencyChange(newTokenIndex) {
 
@@ -36,63 +50,30 @@ export const CurrencyTable = () => {
     let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
     let newType = tokenListState.state.tokenList.tokens[newTokenIndex].type;
     let newAddress = tokenListState.state.tokenList.tokens[newTokenIndex].address;
+    let newBalance = tokenListState.state.tokenList.tokens[newTokenIndex].balance;
+    let newPayload = {
+      tokenIndex: newTokenIndex,
+      logoUrl: newImageUrl,
+      symbol: newSymbol,
+      type: newType,
+      address: newAddress,
+      balance: newBalance,
+    };
 
     // Find correct input to update
     switch (inputs.state.currencySelectionModal.selectedInput) {
       case 'from':
-        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY',
-          payload: { 
-            tokenIndex: newTokenIndex, 
-            logoUrl: newImageUrl, 
-            symbol: newSymbol, 
-            type: newType, 
-            address: newAddress }
-        });
-
-        // Update allowance of from token
-        (async function () { 
-          if (newType == "NEP-21") {
-            await delay(1000).then(async function() {
-              try {
-                let allowance = await getAllowance(inputs.state.swap.from);
-                dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
-              } catch (e) {
-                console.error(e);
-              }
-            });
-          }
-        })();
-
+        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
+        updateFromAllowance(newPayload);
         break;
       case 'to':
-        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY',
-          payload: { 
-            tokenIndex: newTokenIndex, 
-            logoUrl: newImageUrl, 
-            symbol: newSymbol, 
-            type: newType, 
-            address: newAddress }
-        });
+        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
         break;
       case 'input1':
-        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY',
-          payload: { 
-            tokenIndex: newTokenIndex, 
-            logoUrl: newImageUrl, 
-            symbol: newSymbol, 
-            type: newType, 
-            address: newAddress }
-        });
+        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });
         break;
       case 'input2':
-        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY',
-          payload: { 
-            tokenIndex: newTokenIndex, 
-            logoUrl: newImageUrl, 
-            symbol: newSymbol, 
-            type: newType, 
-            address: newAddress }
-        });
+        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', payload: newPayload });
     }
 
     // Save selection in local storage
@@ -125,7 +106,7 @@ export const CurrencyTable = () => {
           </td>
           <td className="text-right">
             {token.balance
-              ? <code className="text-secondary">{token.balance}</code>
+              ? <code className="text-secondary">{Number(token.balance).toFixed(2)}</code>
               : <code className="text-secondary">-</code>
             }
           </td>

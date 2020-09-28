@@ -47,21 +47,7 @@ export default function SwapInputCards(props) {
   // Notification state
   const notification = useContext(NotificationContext);
 
-  // Local state (amount values; needed for updating directly in inputs)
-  const [fromAmount, setFromAmount] = useState(inputs.state.swap.from.amount);
-  const [toAmount, setToAmount] = useState(inputs.state.swap.to.amount);
-
-  // Used for rendering balance of "From" input
-  let fromBalance = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance;
-
   function checkStatuses() {
-
-    // TESTING
-    // Set allowance
-    (async function () {
-      console.log(await getAllowance(inputs.state.swap.from));
-    })();
-
 
     if (inputs.state.swap.status == "isApproving") {
 
@@ -75,6 +61,10 @@ export default function SwapInputCards(props) {
         // Reset needsApproval
         dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
           needsApproval: false
+        }});
+        // Update status
+        dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
+          status: "readyToSwap"
         }});
       } else {
         // Approval is not successful
@@ -113,41 +103,48 @@ export default function SwapInputCards(props) {
     }
   }
 
+  // Updates allowance of from token
+  async function initializeFromAllowance() {
+    await delay(1000).then(async function() {
+      if (inputs.state.swap.from.type == "NEP-21") {
+        try {
+          let allowance = await getAllowance(inputs.state.swap.from);
+          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
   // Handles updating button view and input information
   function handleFromTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
+    let newToken = tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex];
     dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', 
       payload: { 
-        logoUrl: findCurrencyLogoUrl(inputs.state.swap.from.tokenIndex, tokenListState.state.tokenList), 
-        symbol: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].symbol, 
-        type: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].type, 
+        logoUrl: findCurrencyLogoUrl(inputs.state.swap.from.tokenIndex, tokenListState.state.tokenList),
+        symbol: newToken.symbol,
+        type: newToken.type,
         tokenIndex: inputs.state.swap.from.tokenIndex,
-        address: tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].address }
-    });
-
-    // Update allowance of from token
-    (async function () { 
-      if (tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].type == "NEP-21") {
-        await delay(1000).then(async function() {
-          try {
-            let allowance = await getAllowance(inputs.state.swap.from);
-            dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
-          } catch (e) {
-            console.error(e);
-          }
-        });
+        address: newToken.address,
+        balance: newToken.balance
       }
-    })();
+    });
+    initializeFromAllowance();
   }
   function handleToTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
+    let newToken = tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex];
     dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', 
       payload: { 
-        logoUrl: findCurrencyLogoUrl(inputs.state.swap.to.tokenIndex, tokenListState.state.tokenList), 
-        symbol: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].symbol, 
-        type: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].type, 
+        logoUrl: findCurrencyLogoUrl(inputs.state.swap.to.tokenIndex, tokenListState.state.tokenList),
+        symbol: newToken.symbol,
+        type: newToken.type,
         tokenIndex: inputs.state.swap.to.tokenIndex,
-        address: tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].address }
+        address: newToken.address,
+        balance: newToken.balance
+      }
     });
   }
 
@@ -161,37 +158,18 @@ export default function SwapInputCards(props) {
   // Handle opening modal to select currency
   function handleCurrencySelectionModalFrom() {
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "from" } });
-    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
   function handleCurrencySelectionModalTo() { 
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "to" } });
-    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
 
   // Handle 'From' amount changes
   async function handleFromAmountChange(amount, isShallowUpdate) {
-    console.log("handleFromAmountChange")
-    console.log(["amount", amount])
-    console.log(["isShallowUpdate", isShallowUpdate])
-    if (amount !== 0) {
-      setFromAmount(amount); // Update local state
-    } else {
-      setFromAmount("");
-    }
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
-    let newIsValid;
-    if (!isShallowUpdate) {
-      // Not a shallow update
-      newIsValid = isNonzeroNumber(amount) && (amount <= tokenListState.state.tokenList.tokens[inputs.state.swap.from.tokenIndex].balance);
-    } else {
-      // Shallow update (called by the other input)
-      newIsValid = isNonzeroNumber(amount);
-    }
+    let newIsValid = isNonzeroNumber(amount);
     let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
-    // console.log(["newIsValid", newIsValid]);
-    // console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_FROM_AMOUNT', payload: {
@@ -212,25 +190,11 @@ export default function SwapInputCards(props) {
 
   // Handle 'To' amount changes
   async function handleToAmountChange(amount, isShallowUpdate) {
-    if (amount !== 0) {
-      setToAmount(amount); // Update local state
-    } else {
-      setToAmount("");
-    }
 
     // If both inputs are valid non-zero numbers, set status to readyToSwap
     // Otherwise, set to notReadyToSwap
-    let newIsValid;
-    if (!isShallowUpdate) {
-      // Not a shallow update
-      newIsValid = isNonzeroNumber(amount) && (amount <= tokenListState.state.tokenList.tokens[inputs.state.swap.to.tokenIndex].balance);
-    } else {
-      // Shallow update (called by the other input)
-      newIsValid = isNonzeroNumber(amount);
-    }
+    let newIsValid = isNonzeroNumber(amount);
     let newStatus = (newIsValid ? "readyToSwap" : "notReadyToSwap" );
-    // console.log(["newIsValid", newIsValid]);
-    // console.log(["newStatus", newStatus]);
 
     // Update inputs state
     dispatch({ type: 'SET_TO_AMOUNT', payload: {
@@ -273,20 +237,23 @@ export default function SwapInputCards(props) {
     }
   }
 
+  async function updateFromAllowance() {
+
+  }
+
   // Clear inputs
   function clearInputs() {
-    setFromAmount("");
-    setToAmount("");
     dispatch({type: 'CLEAR_SWAP_INPUTS'});
     dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
 
+  // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
-    let oldTo = toAmount;
-    setToAmount("")
-    handleFromAmountChange(oldTo);
+    let oldToAmount = inputs.state.swap.to.amount;
     dispatch({type: 'SWITCH_SWAP_INPUTS'});
+    handleFromAmountChange(oldToAmount, false);
     dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+    updateFromAllowance();
   }
 
   return (
@@ -301,7 +268,7 @@ export default function SwapInputCards(props) {
               {/* FROM INPUT */}
               <input
                 type="text"
-                value={fromAmount}
+                value={inputs.state.swap.from.amount || ''}
                 className="form-control border-0 bg-transparent"
                 placeholder="0.0"
                 onChange={(e) => handleFromAmountChange(e.target.value, false)}
@@ -312,22 +279,24 @@ export default function SwapInputCards(props) {
             <div className="text-right">
 
               {/* Show max balance if any balance of selected token exists */}
-              {(fromBalance)
-                && <small className="mr-3 text-secondary">
-                  Max:{' '}
-                  <u
-                    onClick={(e) => handleFromAmountChange(
-                      (fromBalance - 0.04).toString(), // subtract 0.04 for call
-                      false) // not a shallow update
-                    }
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {Number(fromBalance).toFixed(2)}
-                  </u>
-                </small>
+              {(inputs.state.swap.from.balance && inputs.state.swap.from.balance !== 0)
+                && <>
+                    <small className="mr-3 text-secondary">
+                      Max:{' '}
+                      <u
+                        onClick={(e) => handleFromAmountChange(
+                          (inputs.state.swap.from.balance - 0.06).toString(), // subtract 0.06 for call
+                          false) // not a shallow update
+                        }
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {Number(inputs.state.swap.from.balance).toFixed(2)}
+                      </u>
+                    </small>
+                    <br/>
+                  </>
               }
 
-              <br/>
               <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModalFrom}>
                 <img src={inputs.state.swap.from.logoUrl} width="15px" className="align-middle pb-1" />
                 {' '}{inputs.state.swap.from.symbol}
@@ -365,7 +334,7 @@ export default function SwapInputCards(props) {
               {/* TO INPUT */}
               <input
                 type="text"
-                value={toAmount}
+                value={inputs.state.swap.to.amount || ''}
                 className="form-control border-0 bg-transparent"
                 placeholder="0.0"
                 onChange={(e) => handleToAmountChange(e.target.value, false)}
@@ -396,10 +365,11 @@ export default function SwapInputCards(props) {
         {/* Display textual information before user swaps */}
         { ((inputs.state.swap.status === "readyToSwap")) &&
           <small className="text-secondary">
-            You'll get at least <b className="text-black">{inputs.state.swap.to.amount}</b> {inputs.state.swap.to.symbol}{' '}
-            for <b className="text-black">{inputs.state.swap.from.amount}</b> {inputs.state.swap.from.symbol}.
+            You'll get at least <b className="text-black">{Number(inputs.state.swap.to.amount).toFixed(2)}</b> {inputs.state.swap.to.symbol}{' '}
+            for <b className="text-black">{Number(inputs.state.swap.from.amount).toFixed(2)}</b> {inputs.state.swap.from.symbol}.
           </small>
         }
+        <small className="mx-2 text-secondary">Slippage: 1%</small>
         {/* Clear button */}
         {((inputs.state.swap.status !== "isApproving") && (inputs.state.swap.status !== "isSwapping"))
           && <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear</Button>}
@@ -412,7 +382,7 @@ export default function SwapInputCards(props) {
               onClick={handleApprovalSubmission}
             >
               {(inputs.state.swap.status != "isApproving")
-                ? <>Approve tokens <small>+0.04 NEAR</small></>
+                ? <>Approve NEP-21 allowance <small>+0.06 NEAR</small></>
                 : "Approving..."
               }
             </Button>}

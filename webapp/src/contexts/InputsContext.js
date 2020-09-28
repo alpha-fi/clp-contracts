@@ -1,48 +1,37 @@
 import React, {createContext, useReducer} from 'react';
+import { produce } from 'immer';
+
+const initialInput = {
+  amount: "",       // Amount of tokens
+  symbol: "",       // Symbol of token
+  type: "",         // Native token (NEAR), ERC-20, NEP-21, ...
+  logoUrl: "",      // Address of token logo image
+  tokenIndex: 0,    // Index of currency within token list
+  address: "",      // Token address of selected currency
+  isValid: false,   // True if non-zero number, false otherwise
+  allowance: null,  // Required for NEP-21 swaps (null otherwise)
+  balance: "",      // Balance of selected currency
+}
 
 let initialState = { 
   swap: {
-    from: {
-      amount: "",     // Amount of tokens
-      symbol: "",     // Symbol of token
-      type: "",       // Native token (NEAR or ETH), ERC-20, NEP-21, ...
-      logoUrl: "",    // Address of token logo image
-      tokenIndex: 1,  // Index of token within token list
-      address: "",
-      isValid: false,
-      allowance: "",  // Required for NEP-21 -> ____ swap
-    },
-    to: {
-      amount: "",
-      symbol: "",
-      type: "",
-      logoUrl: "",
-      tokenIndex: 2,
-      address: "",
-      isValid: false,
-    },
-    needsApproval: false,
-    status: "notReadyToSwap"    // possible values: notReadyToSwap, readyToSwap, swapping
+    from: produce(initialInput, draft => {
+      draft.tokenIndex = 0;
+    }),
+    to: produce(initialInput, draft => {
+      draft.tokenIndex = 1;
+    }),
+    error: null,              // error string if error, null otherwise
+    needsApproval: false,     // required for NEP-21 swaps
+    status: "notReadyToSwap"  // possible values: notReadyToSwap, readyToSwap, isApproving, isSwapping
   },
   pool: {
-    input1: {
-      amount: "",
-      symbol: "",
-      type: "",
-      logoUrl: "",
-      tokenIndex: 2,
-      address: "",
-      isValid: false,
-    },
-    input2: {
-      amount: "",
-      symbol: "",
-      type: "",
-      logoUrl: "",
-      tokenIndex: 0,
-      address: "",
-      isValid: false,
-    }
+    input1: produce(initialInput, draft => {
+      draft.tokenIndex = 1;
+    }),
+    input2: produce(initialInput, draft => {
+      draft.tokenIndex = 2;
+    }),
   },
   currencySelectionModal: {
     isVisible: false,
@@ -64,194 +53,128 @@ const InputsProvider = ( { children } ) => {
   const [state, dispatch] = useReducer((state, action) => {
     switch(action.type) {
       case 'SET_FROM_AMOUNT':
-        return { ...state, swap: {
-          from: { 
-            amount: action.payload.amount,              // UPDATE amount
-            symbol: state.swap.from.symbol,             // leave symbol
-            type: state.swap.from.type,                 // leave type
-            logoUrl: state.swap.from.logoUrl,           // leave logo
-            tokenIndex: state.swap.from.tokenIndex,     // leave token index
-            address: state.swap.from.address,           // leave address
-            isValid: action.payload.isValid,            // UPDATE isValid
-            allowance: state.swap.from.allowance        // leave allowance
-          },                                            //
-          to: state.swap.to,                            // leave to input
-          needsApproval: state.swap.needsApproval,      // leave needsApproval
-          status: action.payload.status,                // UPDATE status
-        }};
+        return produce(state, draft => {
+          draft.swap.from.amount = action.payload.amount;
+          draft.swap.from.isValid = action.payload.isValid;
+          draft.swap.status = action.payload.status;
+        });
       case 'SET_TO_AMOUNT':
-        return { ...state, swap: {
-          to: { 
-            amount: action.payload.amount,              // UPDATE amount
-            symbol: state.swap.to.symbol,               // leave symbol
-            type: state.swap.to.type,                   // leave type
-            logoUrl: state.swap.to.logoUrl,             // leave logo
-            tokenIndex: state.swap.to.tokenIndex,       // leave token index
-            address: state.swap.to.address,             // leave address
-            isValid: action.payload.isValid,            // UPDATE isValid
-          },                                            //
-          from: state.swap.from,                        // leave from input
-          needsApproval: state.swap.needsApproval,      // leave needsApproval
-          status: action.payload.status,                // UPDATE status
-        }};
+        return produce(state, draft => {
+          draft.swap.to.amount = action.payload.amount;
+          draft.swap.to.isValid = action.payload.isValid;
+          draft.swap.status = action.payload.status;
+        });
       case 'SET_INPUT1_AMOUNT':
-        return { ...state, pool: { input1: { 
-          amount: action.payload.amount,
-          symbol: state.pool.input1.symbol,
-          type: state.pool.input1.type,
-          logoUrl: state.pool.input1.logoUrl,
-          tokenIndex: state.pool.input1.tokenIndex,
-          address: state.pool.input1.address,
-          isValid: action.payload.isValid,
-        }, input2: state.pool.input2 }};
+        return produce(state, draft => {
+          draft.pool.input1.amount = action.payload.amount;
+          draft.pool.input1.isValid = action.payload.isValid;
+          draft.pool.status = action.payload.status;
+        });
       case 'SET_INPUT2_AMOUNT':
-        return { ...state, pool: { input2: { 
-          amount: action.payload.amount,
-          symbol: state.pool.input2.symbol,
-          type: state.pool.input2.type,
-          logoUrl: state.pool.input2.logoUrl,
-          tokenIndex: state.pool.input2.tokenIndex,
-          address: state.pool.input2.address,
-          isValid: action.payload.isValid,
-        }, input1: state.pool.input1 }};
+        return produce(state, draft => {
+          draft.pool.input2.amount = action.payload.amount;
+          draft.pool.input2.isValid = action.payload.isValid;
+          draft.pool.status = action.payload.status;
+        });
 
       // Updates the currency in the 'From' input card on the swap tab usually when a user chooses from the
       // currency selection modal
       case 'UPDATE_FROM_SELECTED_CURRENCY':
-        return {...state, swap: { 
-          from: {
-            amount: state.swap.from.amount,               // leave amount
-            symbol: action.payload.symbol,                // UPDATE symbol
-            type: action.payload.type,                    // UPDATE type
-            logoUrl: action.payload.logoUrl,              // UPDATE logo URL
-            tokenIndex: action.payload.tokenIndex,        // UPDATE token index
-            address: action.payload.address,              // UPDATE address
-            isValid: state.swap.from.isValid,             // leave isValid alone (which just checks for a non-zero number)
-            allowance: ""                                 // RESET allowance (call UPDATE_FROM_ALLOWANCE to update)
-          },                                              //
-          to: state.swap.to,                              // leave the other input card alone
-          needsApproval:                                  // NEP-21<>NEP-21 requires an extra approval, so check for
-            action.payload.type === "NEP-21",             //    it and set it. It can be updated later if
-                                                          //    needed by dispatching UPDATE_SWAP_APPROVAL
-          status: "notReadyToSwap",                       // RESET status to notReadyToSwap
-        }, currencySelectionModal: { isVisible: false }}; // Close the currency selection modal
+        return produce(state, draft => {
+          draft.swap.from.symbol = action.payload.symbol;
+          draft.swap.from.type = action.payload.type;
+          draft.swap.from.logoUrl = action.payload.logoUrl;
+          draft.swap.from.tokenIndex = action.payload.tokenIndex;
+          draft.swap.from.address = action.payload.address;
+          draft.swap.from.allowance = "";
+          draft.swap.from.balance = action.payload.balance;
+          draft.swap.needsApproval = (action.payload.type === "NEP-21");
+          draft.swap.status = "notReadyToSwap";
+          draft.currencySelectionModal.isVisible = false;
+        });
 
       // Updates the currency in the 'To' input card on the swap tab usually when a user chooses from the
       // currency selection modal
       case 'UPDATE_TO_SELECTED_CURRENCY':
-        return { ...state, swap: { 
-          to: {
-            amount: state.swap.to.amount,                 // leave amount
-            symbol: action.payload.symbol,                // UPDATE symbol
-            type: action.payload.type,                    // UPDATE type
-            logoUrl: action.payload.logoUrl,              // UPDATE logo URL
-            tokenIndex: action.payload.tokenIndex,        // UPDATE token index
-            address: action.payload.address,              // UPDATE address
-            isValid: state.swap.to.isValid,               // leave isValid alone (which just checks for a non-zero number)
-          },                                              //
-          from: state.swap.from,                          // leave the other input card alone
-          needsApproval:                                  // NEP-21<>NEP-21 requires an extra approval, so check for
-            state.swap.from.type === "NEP-21",            //    it and set it. It can be updated later if
-                                                          //    needed by dispatching UPDATE_SWAP_APPROVAL
-          status: "notReadyToSwap",                       // RESET status to notReadyToSwap
-        }, currencySelectionModal: { isVisible: false }}; // close the currency selection modal
+        return produce(state, draft => {
+          draft.swap.to.symbol = action.payload.symbol;
+          draft.swap.to.type = action.payload.type;
+          draft.swap.to.logoUrl = action.payload.logoUrl;
+          draft.swap.to.tokenIndex = action.payload.tokenIndex;
+          draft.swap.to.address = action.payload.address;
+          draft.swap.to.allowance = null;
+          draft.swap.to.balance = action.payload.balance;
+          draft.swap.needsApproval = (state.swap.to.type === "NEP-21");
+          draft.swap.status = "notReadyToSwap";
+          draft.currencySelectionModal.isVisible = false;
+        });
 
       // Updates the currency in the first input card for providing liquidity on the pool tab
       // usually when a user chooses from the currency selection modal
       case 'UPDATE_INPUT1_SELECTED_CURRENCY':
-        return { ...state, pool: { input1: {
-          amount: state.pool.input1.amount,
-          symbol: action.payload.symbol,
-          type: action.payload.type,
-          logoUrl: action.payload.logoUrl,
-          tokenIndex: action.payload.tokenIndex,
-          address: action.payload.address,
-          isValid: state.pool.input1.isValid,
-        }, input2: state.pool.input2 }, currencySelectionModal: { isVisible: false }};
+        return produce(state, draft => {
+          draft.pool.input1.symbol = action.payload.symbol;
+          draft.pool.input1.type = action.payload.type;
+          draft.pool.input1.logoUrl = action.payload.logoUrl;
+          draft.pool.input1.tokenIndex = action.payload.tokenIndex;
+          draft.pool.input1.address = action.payload.address;
+          draft.pool.input1.allowance = null;
+          draft.pool.input1.balance = action.payload.balance;
+          draft.currencySelectionModal.isVisible = false;
+        });
 
       // Updates the currency in the second 'Input' input card for providing liquidity on the pool tab
       // usually when a user chooses from the currency selection modal
       // (always set to NEAR)
       case 'UPDATE_INPUT2_SELECTED_CURRENCY':
-        return { ...state, pool: { input2: {
-          amount: state.pool.input2.amount,
-          symbol: action.payload.symbol,
-          type: action.payload.type,
-          logoUrl: action.payload.logoUrl,
-          tokenIndex: action.payload.tokenIndex,
-          address: action.payload.address,
-          isValid: state.pool.input2.isValid,
-        }, input1: state.pool.input1 }, currencySelectionModal: { isVisible: false }};
+        return produce(state, draft => {
+          draft.pool.input2.symbol = action.payload.symbol;
+          draft.pool.input2.type = action.payload.type;
+          draft.pool.input2.logoUrl = action.payload.logoUrl;
+          draft.pool.input2.tokenIndex = action.payload.tokenIndex;
+          draft.pool.input2.address = action.payload.address;
+          draft.pool.input2.allowance = null;
+          draft.pool.input2.balance = action.payload.balance;
+          draft.currencySelectionModal.isVisible = false;
+        });
 
       case 'TOGGLE_CURRENCY_SELECTION_MODAL':
-        return { ...state, currencySelectionModal: { 
-          isVisible: !state.currencySelectionModal.isVisible, 
-          selectedInput: state.currencySelectionModal.selectedInput } };
+        return produce(state, draft => {
+          draft.currencySelectionModal.isVisible = !state.currencySelectionModal.isVisible;
+        });
       case 'UPDATE_SWAP_APPROVAL':
-        return { ...state, swap: { 
-          from: state.swap.from,
-          to: state.swap.to,
-          needsApproval: action.payload.needsApproval,
-          status: state.swap.status,
-        to: state.swap.to, from: state.swap.from }}
+        return produce(state, draft => {
+          draft.swap.needsApproval = action.payload.needsApproval;
+        });
       case 'CLEAR_SWAP_INPUTS':
-        return { ...state, swap: {
-          from: { 
-            amount: "",                                 // CLEAR amount
-            symbol: state.swap.from.symbol,             // leave symbol
-            type: state.swap.from.type,                 // leave type
-            logoUrl: state.swap.from.logoUrl,           // leave logo
-            tokenIndex: state.swap.from.tokenIndex,     // leave token index
-            address: state.swap.from.address,           // leave address
-            isValid: false,                             // RESET isValid
-            allowance: state.swap.from.allowance        // leave allowance
-          },                                            //
-          to: {                                         //
-            amount: "",                                 // CLEAR amount
-            symbol: state.swap.to.symbol,               // leave symbol
-            type: state.swap.to.type,                   // leave type
-            logoUrl: state.swap.to.logoUrl,             // leave logo
-            tokenIndex: state.swap.to.tokenIndex,       // leave token index
-            address: state.swap.to.address,             // leave address
-            isValid: false,                             // RESET isValid
-          },                                            //
-          needsApproval: state.swap.needsApproval,      // leave needsApproval
-          status: "notReadyToSwap",                     // UPDATE status
-        }};
+        return produce(state, draft => {
+          draft.swap.from.amount = "";
+          draft.swap.from.isValid = false;
+          draft.swap.to.amount = "";
+          draft.swap.to.isValid = false;
+          draft.swap.status = "notReadyToSwap";
+        });
       case 'UPDATE_FROM_ALLOWANCE':
-        return {...state, swap: { 
-          from: {
-            amount: state.swap.from.amount,               // leave amount
-            symbol: state.swap.from.symbol,               // leave symbol
-            type: state.swap.from.type,                   // leave type
-            logoUrl: state.swap.from.logoUrl,             // leave logo URL
-            tokenIndex: state.swap.from.tokenIndex,       // leave token index
-            address: state.swap.from.address,             // leave address
-            isValid: state.swap.from.isValid,             // leave isValid alone (which just checks for a non-zero number)
-            allowance: action.payload.allowance           // UPDATE allowance
-          },                                              //
-          to: state.swap.to,                              // leave the other input card alone
-          needsApproval: state.swap.needsApproval,        // leave needsApproval            
-          status: state.swap.status,                      // leave status to notReadyToSwap
-        }}
+        return produce(state, draft => {
+          draft.swap.from.allowance = action.payload.allowance;
+        });
       case 'SWITCH_SWAP_INPUTS':
-        let oldFrom = state.swap.from;
-        let oldTo = state.swap.to;
-        return { ...state, swap: {
-          from: oldTo,
-          to: oldFrom,
-          needsApproval: state.swap.needsApproval,      // leave needsApproval
-          status: "notReadyToSwap",                     // UPDATE status
-        }};
+        return produce(state, draft => {
+          draft.swap.from = state.to;
+          draft.swap.to = state.from;
+          draft.swap.to.amount = "";
+          draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
+          draft.swap.status = "notReadyToSwap";
+        });
       case 'UPDATE_SWAP_STATUS':
-        return {...state, swap: {
-          from: state.swap.from,
-          to: state.swap.to,
-          needsApproval: state.swap.needsApproval,
-          status: action.payload.status
-        }};
+        return produce(state, draft => {
+          draft.swap.status = action.payload.status;
+        });
       case 'SET_CURRENCY_SELECTION_INPUT':
-        return { ...state, currencySelectionModal: { selectedInput: action.payload.input, isVisible: !state.isVisible } };
+        return produce(state, draft => {
+          draft.currencySelectionModal.selectedInput = action.payload.input;
+          draft.currencySelectionModal.isVisible = !state.currencySelectionModal.isVisible;
+        });
       case 'SAVE_INPUTS_TO_LOCAL_STORAGE':
         localStorage.setItem("inputs", JSON.stringify(state));
         return state;

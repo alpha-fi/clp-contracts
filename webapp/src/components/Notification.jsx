@@ -8,10 +8,9 @@ export default function Notification(props) {
 
   // Notification state
   const notification = useContext(NotificationContext);
-  const { dispatch } = notification;
 
   function handleClose() {
-    dispatch({ type: 'HIDE_NOTIFICATION' });
+    notification.dispatch({ type: 'HIDE_NOTIFICATION' });
   }
 
   if (notification.state.show) {

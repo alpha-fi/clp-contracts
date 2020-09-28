@@ -96,7 +96,6 @@ function setAmount( value ) {
   let val = 24;
   let res = "";
   const amount = trimZeros( value );
-  console.log("Trimmed: ", amount);
   for(var x of amount) {
     if(x === '.') {
       ok = true;

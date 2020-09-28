@@ -103,7 +103,7 @@ impl NearCLP {
     #[init]
     pub fn new(owner: AccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
-        util::assert_account(&owner, "Owner");
+        util::assert_account_is_valid(&owner);
         Self {
             fee_dst: owner.clone(),
             owner,
@@ -112,14 +112,8 @@ impl NearCLP {
     }
 
     pub fn set_fee_dst(&mut self, fee_dst: AccountId) {
-        assert!(
-            env::predecessor_account_id() == self.owner,
-            "Only owner can change fee_dst"
-        );
-        assert!(
-            env::is_valid_account_id(fee_dst.as_bytes()),
-            "fee_dst account ID is invalid."
-        );
+        self.assert_owner();
+        util::assert_account_is_valid(&fee_dst);
         self.fee_dst = fee_dst;
     }
 
@@ -127,23 +121,14 @@ impl NearCLP {
     /// fee size.
     pub fn change_owner(&mut self, new_owner: AccountId) {
         self.assert_owner();
-        assert!(
-            env::is_valid_account_id(new_owner.as_bytes()),
-            "fee_dst account ID is invalid."
-        );
+        util::assert_account_is_valid(&new_owner);
         env_log!("Changing owner from {} to {}", self.owner, new_owner);
         self.owner = new_owner;
     }
 
     /**********************
-       POOL MANAGEMENT
+      POOL MANAGEMENT
     **********************/
-
-    #[payable]
-    pub fn check_number(&mut self, a: u128, aj: U128, b: Balance) {
-        let d = env::attached_deposit();
-        env_log!("u128: {}, U128: {:?}, Balance: {}, near: {}", a, aj, b, d);
-    }
 
     /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
     /// account - which we call the Pool Reserve Token.
@@ -185,6 +170,8 @@ impl NearCLP {
         let added_reserve;
         let max_tokens: Balance = max_tokens.into();
         assert!(ynear_amount > 0 && max_tokens > 0, "E2");
+
+        env_log!("adding liquidity for {} ynear", &ynear_amount);
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
@@ -625,7 +612,21 @@ impl NearCLP {
         /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
             Promise::new(env::current_account_id()).stake(0, self.stake_public_key.clone());
         }
-        */
+         */
+    }
+
+    // TODO: remove
+    pub fn remove_pool(&mut self, token: AccountId) {
+        self.assert_owner();
+        if let Some(p) = self.pools.remove(&token) {
+            env_log!(
+                "killing {} pool and transferring {} to {}",
+                token,
+                p.ynear,
+                &self.owner,
+            );
+            Promise::new(self.owner.to_string()).transfer(p.ynear);
+        }
     }
 }
 //-------------------------

@@ -22,10 +22,10 @@ construct_uint! {
 
 /** Ensures that an account `a` is valid and panics if it's not.
 `name`: printed name of the account */
-pub fn assert_account(a: &AccountId, name: &str) {
+pub fn assert_account_is_valid(a: &AccountId) {
     assert!(
         env::is_valid_account_id(a.as_bytes()),
-        format!("{} account ID is invalid", name)
+        format!("{} account ID is invalid", a)
     );
 }
 

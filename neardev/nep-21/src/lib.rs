@@ -20,6 +20,8 @@ use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
+const NDENOM: u128 = 1_000_000_000_000_000_000_000_000;
+
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -71,6 +73,7 @@ pub struct FungibleToken {
 
     /// Total supply of the all token.
     pub total_supply: Balance,
+    pub _decimals: u8,
 }
 
 impl Default for FungibleToken {
@@ -83,17 +86,22 @@ impl Default for FungibleToken {
 impl FungibleToken {
     /// Initializes the contract with the given total supply owned by the given `owner_id`.
     #[init]
-    pub fn new(owner_id: AccountId, total_supply: U128) -> Self {
+    pub fn new(owner_id: AccountId, total_supply: U128, decimals: u8) -> Self {
         let total_supply = total_supply.into();
         assert!(!env::state_exists(), "Already initialized");
         let mut ft = Self {
             accounts: UnorderedMap::new(b"a".to_vec()),
             total_supply,
+            _decimals: decimals,
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;
         ft.set_account(&owner_id, &account);
         ft
+    }
+
+    pub fn decimals(&self) -> u8 {
+        return self._decimals;
     }
 
     /// Increments the `allowance` for `escrow_account_id` by `amount` on the account of the caller of this contract
@@ -242,15 +250,20 @@ impl FungibleToken {
             .into()
     }
 
-    // Mints 1_000_000 tokens to the caller and returns his balance after the minting.
-    pub fn mint(&mut self) -> U128 {
-        let amount: Balance = 1_000_000;
+    /// Mints given amount to the smart contract caller
+    fn _mint(&mut self, amount: u128) -> U128 {
         self.total_supply += amount;
         let dest = env::predecessor_account_id();
         let mut a = self.get_account(&dest);
         a.balance += amount;
         self.set_account(&dest, &a);
         return a.balance.into();
+    }
+
+    /// Mints 1_000 decimal tokens (1e3 * 1e_token_decimals) to the smart-contract caller
+    ///  and returns his balance after the minting.
+    pub fn mint_1e3(&mut self) -> U128 {
+        self._mint(10u128.pow((self._decimals + 3).into()))
     }
 }
 

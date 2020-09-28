@@ -1,20 +1,23 @@
 
-** Gold
-
-Account id: =gold.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
-Transaction Id ESxwoV6yfXSSUunsTGLLD4BY1gnKWyujKTWeX2sYp3Qm
-
 To see the transaction in the transaction explorer, please open this url in your browser
-https://explorer.testnet.near.org/transactions/ESxwoV6yfXSSUunsTGLLD4BY1gnKWyujKTWeX2sYp3Qm
+https://explorer.testnet.near.org/transactions/
 
+
+** GOLD
+
+decimals: 6
+Account id: =gold.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
+Transaction Id FMxPw8huxd1bmvh2Zh1XEUiHTQBf4Fa9wjf1owgmDQht
+
+** BAT
+
+Account id: =bat.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: ./res/nep21_mintable.wasm
+Transaction Id 4dKotC8jSMY3X5Sc25tYerf3WmgwBjRoc2GgYxpwEF2V
 
 ** USD
 
 Account id: =usd.nearswap.testnet=, node: https://rpc.testnet.near.org, helper: https://helper.testnet.near.org, file: target/wasm32-unknown-unknown/release/nep21_mintable.wasm
-Transaction Id CquDAhdythUWr3WvwYe3zBqLPvp64ny9WWvoD8rhGQWi
-
-To see the transaction in the transaction explorer, please open this url in your browser
-https://explorer.testnet.near.org/transactions/CquDAhdythUWr3WvwYe3zBqLPvp64ny9WWvoD8rhGQWi
+Transaction Id 8eTtQPFdcC1mUp6TUpPRbhQmUS2WW4A31K9wqYcQciwj
 
 
 * Operations

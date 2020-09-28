@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { InputsProvider } from './contexts/InputsContext';
 import { Web3Provider } from './contexts/Web3Context';
 import { TokenListProvider } from './contexts/TokenListContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 window.nearInitPromise = initContract()
   .then(() => {
@@ -14,9 +15,11 @@ window.nearInitPromise = initContract()
       <InputsProvider>
         <Web3Provider>
           <TokenListProvider>
-            <ThemeProvider>
-              <App />
-            </ThemeProvider>
+            <NotificationProvider>
+              <ThemeProvider>
+                <App />
+              </ThemeProvider>
+            </NotificationProvider>
           </TokenListProvider>
         </Web3Provider>
       </InputsProvider>,

@@ -1,4 +1,4 @@
-const CONTRACT_NAME = process.env.CONTRACT_NAME ||'nearswap-interface'
+const CONTRACT_NAME = process.env.CONTRACT_NAME || "beta-1.nearswap.testnet"
 
 function getConfig(env) {
   switch (env) {

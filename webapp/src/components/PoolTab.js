@@ -1,8 +1,6 @@
 import React, { useContext } from "react";
 
-import { InputsContext } from "../contexts/InputsContext";
-
-import PriceInputCard from "./PriceInputCard"
+import PoolInputCards from "./PoolInputCards"
 import PoolInfoCard from "./PoolInfoCard"
 
 import Button from 'react-bootstrap/Button';
@@ -15,9 +13,6 @@ const Hr = styled("hr")`
 `;
 
 export default function PoolTab() {
-
-  const inputs = useContext(InputsContext);
-
   return (
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>
@@ -26,28 +21,7 @@ export default function PoolTab() {
       <p className="mt-4 text-center text-secondary"><small><i>Don't see a pair you're looking for? Create a new pool below.</i></small></p>
       <Hr className="mt-4"/>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>PROVIDE LIQUIDITY</small></p>
-      <PriceInputCard
-        label="Input"
-        name="input1"
-        logoUrl={inputs.state.pool.input1.logoUrl}
-        symbol={inputs.state.pool.input1.symbol}
-        type={inputs.state.pool.input1.type}
-        tokenIndex={inputs.state.pool.input1.tokenIndex}
-      />
-      <div className="text-center my-2">
-        <BsPlus/>
-      </div>
-      <PriceInputCard
-        label="Input"
-        name="input2"
-        logoUrl={inputs.state.pool.input2.logoUrl}
-        symbol={inputs.state.pool.input2.symbol}
-        type={inputs.state.pool.input2.type}
-        tokenIndex={inputs.state.pool.input2.tokenIndex}
-        currencySelectionDisabled
-      />
-      <br/>
-      <Button variant="warning" block disabled>Add Liquidity</Button>
+      <PoolInputCards/>
     </>
   );
 }

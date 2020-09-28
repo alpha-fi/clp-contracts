@@ -23,6 +23,7 @@ import NavigationBar from "./components/NavigationBar";
 import SwapTab from "./components/SwapTab";
 import PoolTab from "./components/PoolTab";
 import CurrencySelectionModal from "./components/CurrencySelectionModal";
+import Notification from "./components/Notification";
 
 import styled from "@emotion/styled";
 const Wrapper = styled("div")`
@@ -63,6 +64,7 @@ export default function App() {
           <Col md={8} lg={6}>
             <Card className="border-0 bg-transparent">
               <Card.Body>
+                <Notification/>
                 <Tab.Container defaultActiveKey="swap">
                   <Nav justify className="border-0 mb-3">
                     <Nav.Link eventKey="swap"><BsArrowLeftRight/>{' '}Swap</Nav.Link>

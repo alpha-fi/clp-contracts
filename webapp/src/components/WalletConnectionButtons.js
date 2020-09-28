@@ -4,9 +4,7 @@ import { login, logout } from '../utils'
 
 import { Web3Context, signInWithWeb3 } from '../contexts/Web3Context';
 
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 export default function WalletConnectionButtons() {
 
@@ -19,14 +17,14 @@ export default function WalletConnectionButtons() {
 
   // Set NEAR connection button with correct label and function call
   if (!window.walletConnection.isSignedIn()) {
-    nearConnectionBtn = <Button variant="warning" size="sm" onClick={login} className="h-100 w-100">Connect to NEAR wallet</Button>;
+    nearConnectionBtn = <Dropdown.Item onClick={login} className="h-100 w-100">Connect to NEAR wallet</Dropdown.Item>;
   } else {
-    nearConnectionBtn = <Button variant="warning" size="sm" onClick={logout} className="h-100 w-100">Disconnect NEAR wallet</Button>;
+    nearConnectionBtn = <Dropdown.Item onClick={logout} className="h-100 w-100">Disconnect NEAR wallet</Dropdown.Item>;
   }
 
   // Set Ethereum connection button with correct label and function call
   if (!currentUser) {
-    ethConnectionBtn = <Button variant="warning" size="sm" className="h-100 w-100" onClick={
+    ethConnectionBtn = <Dropdown.Item onClick={
       async () => {
         try {
           const w3c = await signInWithWeb3();
@@ -37,9 +35,9 @@ export default function WalletConnectionButtons() {
           console.log('web3Modal error', err);
         }
       }
-    }>Connect to Ethereum wallet</Button>
+    }>Connect to Ethereum wallet</Dropdown.Item>
   } else {
-    ethConnectionBtn = <Button variant="warning" size="sm" className="h-100 w-100" onClick={
+    ethConnectionBtn = <Dropdown.Item onClick={
       async () => {
         try {
           setWeb3Modal("");
@@ -49,19 +47,13 @@ export default function WalletConnectionButtons() {
           console.log('web3Modal error', err);
         }
       }
-    }>Disconnect Ethereum wallet</Button>
+    }>Disconnect Ethereum wallet</Dropdown.Item>
   }
 
   return (
-    <Row noGutters className="">
-      <div className="text-center">
-      <Col xs={12} className="mb-1 mr-1">
-        {nearConnectionBtn}
-      </Col>
-      <Col xs={12} className="mb-1 mr-1">
-        {ethConnectionBtn}
-      </Col>
-      </div>
-    </Row>
+    <>
+      {nearConnectionBtn}
+      {ethConnectionBtn}
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import React, { useContext, useEffect } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
+import { getAllowance } from "../services/near-nep21-util";
+import { delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
 import { TokenListContext } from "../contexts/TokenListContext";
@@ -26,36 +28,56 @@ export const CurrencyTable = () => {
   // Token list state
   const tokenListState = useContext(TokenListContext);
 
+  // Updates allowance of from token
+  async function updateFromAllowance(token) {
+    await delay(500).then(async function() {
+      if (token.type == "NEP-21") {
+        try {
+          let allowance = await getAllowance(token);
+          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
   // Updates selected currency in global state and closes modal
   function handleCurrencyChange(newTokenIndex) {
 
-    // Find URL of token logo, symbol, and type
+    // Find URL of token logo, symbol, type, and address
     let newImageUrl = findCurrencyLogoUrl(newTokenIndex, tokenListState.state.tokenList);
     let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
     let newType = tokenListState.state.tokenList.tokens[newTokenIndex].type;
+    let newAddress = tokenListState.state.tokenList.tokens[newTokenIndex].address;
+    let newBalance = tokenListState.state.tokenList.tokens[newTokenIndex].balance;
+    let newPayload = {
+      tokenIndex: newTokenIndex,
+      logoUrl: newImageUrl,
+      symbol: newSymbol,
+      type: newType,
+      address: newAddress,
+      balance: newBalance,
+    };
 
     // Find correct input to update
     switch (inputs.state.currencySelectionModal.selectedInput) {
       case 'from':
-        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
-        });
+        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
+        updateFromAllowance(newPayload);
         break;
       case 'to':
-        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
-        });
+        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
         break;
       case 'input1':
-        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
-        });
+        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });
         break;
       case 'input2':
-        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY',
-          payload: { tokenIndex: newTokenIndex, logoUrl: newImageUrl, symbol: newSymbol, type: newType }
-        });
+        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', payload: newPayload });
     }
+
+    // Save selection in local storage
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }    
 
   return (
@@ -84,7 +106,7 @@ export const CurrencyTable = () => {
           </td>
           <td className="text-right">
             {token.balance
-              ? <code className="text-secondary">{token.balance}</code>
+              ? <code className="text-secondary">{Number(token.balance).toFixed(2)}</code>
               : <code className="text-secondary">-</code>
             }
           </td>

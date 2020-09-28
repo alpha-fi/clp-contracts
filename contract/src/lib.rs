@@ -16,16 +16,16 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 mod internal;
 
 // Errors
-// "E1" - Pool for this token already exists
-// "E2" - all token arguments must be positive.
-// "E3" - required amount of tokens to transfer is bigger then specified max.
-// "E4" - computed amount of shares to receive is smaller the minimum required by the user.
-// "E5" - not enough shares to redeem.
-// "E6" - computed amount of near or reserve tokens is smaller than user required minimums for shares redeemption.
-// "E7" - computed amount of buying tokens is smaller than user required minimum.
-// "E8" - computed amount of selling tokens is bigger than user required maximum.
-// "E9" - assets (tokens) must be different in token to token swap.
-// "E10" - Pool is empty and can't make a swap.
+// E1: pool already exists
+// E2: all token arguments must be positive.
+// E3: required amount of tokens to transfer is bigger then specified max.
+// E4: computed amount of shares to receive is smaller then the minimum required by the user.
+// E5: can't withdraw more shares then currently owned
+// E6: computed amount of near or reserve tokens is smaller than user required minimums for shares redeemption.
+// E7: computed amount of buying tokens is smaller than user required minimum.
+// E8: computed amount of selling tokens is bigger than user required maximum.
+// E9: assets (tokens) must be different in token to token swap.
+// E10: Pool is empty and can't make a swap.
 
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -140,7 +140,7 @@ impl NearCLP {
             self.pools
                 .insert(&token, &Pool::new(token.as_bytes().to_vec()))
                 .is_none(),
-            "E1"
+            "E1: pool already exists"
         );
     }
 
@@ -168,7 +168,10 @@ impl NearCLP {
         let ynear_amount = env::attached_deposit();
         let added_reserve;
         let max_tokens: Balance = max_tokens.into();
-        assert!(ynear_amount > 0 && max_tokens > 0, "E2");
+        assert!(
+            ynear_amount > 0 && max_tokens > 0,
+            "E2: balance arguments must be >0"
+        );
 
         env_log!("adding liquidity for {} ynear", &ynear_amount);
 
@@ -183,8 +186,20 @@ impl NearCLP {
         } else {
             added_reserve = ynear_amount * p.reserve / p.ynear + 1;
             shares_minted = ynear_amount * p.total_shares / ynear_amount;
-            assert!(max_tokens >= added_reserve, "E3");
-            assert!(u128::from(min_shares) <= shares_minted, "E4");
+            assert!(
+                max_tokens >= added_reserve,
+                format!(
+                    "E3: needs to transfer {} of tokens and it's bigger then specified  maximum",
+                    added_reserve
+                )
+            );
+            assert!(
+                u128::from(min_shares) <= shares_minted,
+                format!(
+                    "E4: amount minted shares ({}) is smaller then the required minimum",
+                    shares_minted
+                )
+            );
 
             p.shares.insert(
                 &caller,
@@ -259,12 +274,21 @@ impl NearCLP {
         let shares_: u128 = shares.into();
         let min_ynear: u128 = min_ynear.into();
         let min_tokens: u128 = min_tokens.into();
-        assert!(shares_ > 0 && min_ynear > 0 && min_tokens > 0, "E2");
+        assert!(
+            shares_ > 0 && min_ynear > 0 && min_tokens > 0,
+            "E2: balance arguments must be >0"
+        );
 
         let caller = env::predecessor_account_id();
         let mut p = self.must_get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
-        assert!(current_shares >= shares_, "E5");
+        assert!(
+            current_shares >= shares_,
+            format!(
+                "E5: can't withdraw more shares then currently owned ({})",
+                current_shares
+            )
+        );
 
         let total_shares2 = u256::from(p.total_shares);
         let shares2 = u256::from(shares_);
@@ -272,7 +296,10 @@ impl NearCLP {
         let token_amount = (shares2 * u256::from(p.reserve) / total_shares2).as_u128();
         assert!(
             ynear_amount >= min_ynear && token_amount >= min_tokens,
-            "E6"
+            format!(
+                "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
+                ynear_amount, token_amount
+            )
         );
 
         env_log!(
@@ -538,7 +565,7 @@ impl NearCLP {
     /// assets
     pub fn price_near_to_token_in(&self, token: AccountId, ynear_in: U128) -> U128 {
         let ynear_in: u128 = ynear_in.into();
-        assert!(ynear_in > 0, "E2");
+        assert!(ynear_in > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
         return self.calc_out_amount(ynear_in, p.ynear, p.reserve).into();
     }
@@ -547,7 +574,7 @@ impl NearCLP {
     /// `tokens_out` of `token`
     pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: U128) -> U128 {
         let tokens_out: u128 = tokens_out.into();
-        assert!(tokens_out > 0, "E2");
+        assert!(tokens_out > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
         return self.calc_in_amount(tokens_out, p.reserve, p.ynear).into();
     }
@@ -555,7 +582,7 @@ impl NearCLP {
     /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
     pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: U128) -> U128 {
         let tokens_in: u128 = tokens_in.into();
-        assert!(tokens_in > 0, "E2");
+        assert!(tokens_in > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
         return self.calc_out_amount(tokens_in, p.reserve, p.ynear).into();
     }
@@ -564,7 +591,7 @@ impl NearCLP {
     /// `tokens_out` of `tokens`
     pub fn price_token_to_near_out(&self, token: AccountId, ynear_out: U128) -> U128 {
         let ynear_out: u128 = ynear_out.into();
-        assert!(ynear_out > 0, "E2");
+        assert!(ynear_out > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
         return self.calc_in_amount(ynear_out, p.ynear, p.reserve).into();
     }
@@ -572,7 +599,7 @@ impl NearCLP {
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
     pub fn price_token_to_token_in(&self, from: AccountId, to: AccountId, tokens_in: U128) -> U128 {
         let tokens_in: u128 = tokens_in.into();
-        assert!(tokens_in > 0, "E2");
+        assert!(tokens_in > 0, "E2: balance arguments must be >0");
         let p1 = self.must_get_pool(&from);
         let p2 = self.must_get_pool(&to);
         let (_, tokens_out) = self._price_swap_tokens_in(&p1, &p2, tokens_in);
@@ -588,7 +615,7 @@ impl NearCLP {
         tokens_out: U128,
     ) -> U128 {
         let tokens_out: u128 = tokens_out.into();
-        assert!(tokens_out > 0, "E2");
+        assert!(tokens_out > 0, "E2: balance arguments must be >0");
         let p1 = self.must_get_pool(&from);
         let p2 = self.must_get_pool(&to);
         let (_, tokens_in) = self._price_swap_tokens_out(&p1, &p2, tokens_out);
@@ -753,7 +780,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "E1")]
+    #[should_panic(expected = "E1: pool already exists")]
     fn create_twice_same_pool_fails() {
         let (ctx, mut c) = init();
         c.create_pool(ctx.accounts.token1.clone());

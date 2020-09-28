@@ -31,11 +31,11 @@ mod internal;
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
     /// balance in yoctoNEAR
-    pub ynear: Balance,
-    pub reserve: Balance,
+    pub ynear: U128,
+    pub reserve: U128,
     /// total amount of participation shares. Shares are represented using the same amount of
     /// tailing decimals as the NEAR token, which is 24
-    pub total_shares: Balance,
+    pub total_shares: U128,
 }
 
 use std::fmt;
@@ -45,7 +45,7 @@ impl fmt::Display for PoolInfo {
         return write!(
             f,
             "({}, {}, {})",
-            self.ynear, self.reserve, self.total_shares
+            self.ynear.0, self.reserve.0, self.total_shares.0
         );
     }
 }
@@ -71,9 +71,9 @@ impl Pool {
 
     pub fn pool_info(&self) -> PoolInfo {
         PoolInfo {
-            ynear: self.ynear,
-            reserve: self.reserve,
-            total_shares: self.total_shares,
+            ynear: self.ynear.into(),
+            reserve: self.reserve.into(),
+            total_shares: self.total_shares.into(),
         }
     }
 }
@@ -159,10 +159,9 @@ impl NearCLP {
 
     /// Increases Near and the Reserve token liquidity.
     /// The supplied funds must preserve current ratio of the liquidity pool.
+    /// Returns amount of LP Shares is minted for the user.
     #[payable]
-    pub fn add_liquidity(&mut self, token: AccountId, max_tokens: U128, min_shares: U128) {
-        println!(">> ADD LIQUIDITY ARGS, {:?}, {:?}", max_tokens, min_shares);
-
+    pub fn add_liquidity(&mut self, token: AccountId, max_tokens: U128, min_shares: U128) -> U128 {
         let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
         let shares_minted;
@@ -243,6 +242,8 @@ impl NearCLP {
         // Handling exception is work-in-progress in NEAR runtime
         // 1. rollback `p` on changes or move the pool update to a promise
         // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
+
+        return shares_minted.into();
     }
 
     /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
@@ -414,6 +415,7 @@ impl NearCLP {
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract.
     /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    #[payable]
     pub fn swap_token_to_near_exact_out(
         &mut self,
         token: AccountId,
@@ -426,6 +428,7 @@ impl NearCLP {
 
     /// Same as `swap_token_to_near_exact_out`, but user additionly specifies the `recipient`
     /// who will receive the tokens after the swap.
+    #[payable]
     pub fn swap_token_to_near_exact_out_xfr(
         &mut self,
         token: AccountId,
@@ -443,6 +446,7 @@ impl NearCLP {
     /// Preceeding to this transaction, caller has to create sufficient allowance of
     /// `from` token for this contract.
     //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    #[payable]
     pub fn swap_tokens_exact_in(
         &mut self,
         from: AccountId,
@@ -463,6 +467,7 @@ impl NearCLP {
 
     /// Same as `swap_tokens_exact_in`, but user additionly specifies the `recipient`
     /// who will receive the tokens after the swap.
+    #[payable]
     pub fn swap_tokens_exact_in_xfr(
         &mut self,
         from: AccountId,
@@ -488,6 +493,7 @@ impl NearCLP {
     /// Preceeding to this transaction, caller has to create sufficient allowance of
     /// `from` token for this contract.
     //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    #[payable]
     pub fn swap_tokens_exact_out(
         &mut self,
         from: AccountId,
@@ -508,6 +514,7 @@ impl NearCLP {
 
     /// Same as `swap_tokens_exact_out`, but user additionly specifies the `recipient`
     /// who will receive the tokens after the swap.
+    #[payable]
     pub fn swap_tokens_exact_out_xfr(
         &mut self,
         from: AccountId,
@@ -767,9 +774,9 @@ mod tests {
             Some(p) => assert_eq!(
                 p,
                 PoolInfo {
-                    ynear: 0,
-                    reserve: 0,
-                    total_shares: 0
+                    ynear: 0.into(),
+                    reserve: 0.into(),
+                    total_shares: 0.into()
                 }
             ),
         }
@@ -810,8 +817,16 @@ mod tests {
 
         let p = c.pool_info(&t).expect("Pool should exist");
         println!("Pool info: {}", p);
-        assert_eq!(p.ynear, ynear_deposit, "Near balance should be correct");
-        assert_eq!(p.reserve, token_deposit, "Token balance should be correct");
+        assert_eq!(
+            u128::from(p.ynear),
+            ynear_deposit,
+            "Near balance should be correct"
+        );
+        assert_eq!(
+            u128::from(p.reserve),
+            token_deposit,
+            "Token balance should be correct"
+        );
 
         // TODO tests
         // + add liquidity with max_balance > allowance

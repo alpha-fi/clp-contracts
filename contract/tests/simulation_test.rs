@@ -75,9 +75,9 @@ fn create_pool_add_liquidity(
     assert_eq!(
         get_pool_info(&r, &token.account_id()),
         PoolInfo {
-            ynear: 0,
-            reserve: 0,
-            total_shares: 0
+            ynear: 0.into(),
+            reserve: 0.into(),
+            total_shares: 0.into()
         },
         "new pool should be empty"
     );
@@ -149,9 +149,9 @@ fn test_clp_add_liquidity_and_swap() {
     //---------------
 
     //get pool state before swap
-    let pool_info_pre_swap = get_pool_info(&ctx.r, &NEP21_ACC);
+    let pooli_before = get_pool_info(&ctx.r, &NEP21_ACC);
     assert_eq!(
-        pool_info_pre_swap,
+        pooli_before,
         PoolInfo {
             ynear: near_deposit.into(),
             reserve: token_deposit.into(),
@@ -159,7 +159,7 @@ fn test_clp_add_liquidity_and_swap() {
         },
         "new pool balance should be from first deposit"
     );
-    println!("pool_info:{}", pool_info_pre_swap);
+    println!("pool_info:{}", pooli_before);
 
     println!("Sending nep21 to Carol");
     call(
@@ -199,9 +199,9 @@ fn test_clp_add_liquidity_and_swap() {
     assert_eq!(
         get_pool_info(&ctx.r, &NEP21_ACC),
         PoolInfo {
-            ynear: (pool_info_pre_swap.ynear + carol_deposit_yoctos).into(),
-            reserve: (pool_info_pre_swap.reserve - carol_received).into(),
-            total_shares: pool_info_pre_swap.total_shares,
+            ynear: (u128::from(pooli_before.ynear) + carol_deposit_yoctos).into(),
+            reserve: (u128::from(pooli_before.reserve) - carol_received).into(),
+            total_shares: pooli_before.total_shares,
         },
         "new pool balance after swap"
     );

@@ -42,7 +42,10 @@ let initialState = {
 // Initialize with previous input state if found in local storage
 let savedInputs = localStorage.getItem("inputs");
 if (savedInputs) {
-  initialState = JSON.parse(savedInputs);
+  // initialState = JSON.parse(savedInputs);
+  initialState = produce(JSON.parse(savedInputs), draft => {
+    draft.swap.error = null;
+  });
 }
 
 const InputsContext = createContext(initialState);
@@ -56,25 +59,21 @@ const InputsProvider = ( { children } ) => {
         return produce(state, draft => {
           draft.swap.from.amount = action.payload.amount;
           draft.swap.from.isValid = action.payload.isValid;
-          draft.swap.status = action.payload.status;
         });
       case 'SET_TO_AMOUNT':
         return produce(state, draft => {
           draft.swap.to.amount = action.payload.amount;
           draft.swap.to.isValid = action.payload.isValid;
-          draft.swap.status = action.payload.status;
         });
       case 'SET_INPUT1_AMOUNT':
         return produce(state, draft => {
           draft.pool.input1.amount = action.payload.amount;
           draft.pool.input1.isValid = action.payload.isValid;
-          draft.pool.status = action.payload.status;
         });
       case 'SET_INPUT2_AMOUNT':
         return produce(state, draft => {
           draft.pool.input2.amount = action.payload.amount;
           draft.pool.input2.isValid = action.payload.isValid;
-          draft.pool.status = action.payload.status;
         });
 
       // Updates the currency in the 'From' input card on the swap tab usually when a user chooses from the
@@ -91,6 +90,8 @@ const InputsProvider = ( { children } ) => {
           draft.swap.needsApproval = (action.payload.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.currencySelectionModal.isVisible = false;
+          draft.swap.from.amount = "";
+          draft.swap.to.amount = "";
         });
 
       // Updates the currency in the 'To' input card on the swap tab usually when a user chooses from the
@@ -107,6 +108,8 @@ const InputsProvider = ( { children } ) => {
           draft.swap.needsApproval = (state.swap.to.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.currencySelectionModal.isVisible = false;
+          draft.swap.from.amount = "";
+          draft.swap.to.amount = "";
         });
 
       // Updates the currency in the first input card for providing liquidity on the pool tab
@@ -154,6 +157,10 @@ const InputsProvider = ( { children } ) => {
           draft.swap.to.isValid = false;
           draft.swap.status = "notReadyToSwap";
         });
+      case 'UPDATE_SWAP_ERROR':
+        return produce(state, draft => {
+          draft.swap.error = action.payload.error;
+        });
       case 'UPDATE_FROM_ALLOWANCE':
         return produce(state, draft => {
           draft.swap.from.allowance = action.payload.allowance;
@@ -162,13 +169,14 @@ const InputsProvider = ( { children } ) => {
         return produce(state, draft => {
           draft.swap.from = state.to;
           draft.swap.to = state.from;
-          draft.swap.to.amount = "";
+          draft.swap.from.amount = "";
           draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
         });
       case 'UPDATE_SWAP_STATUS':
         return produce(state, draft => {
           draft.swap.status = action.payload.status;
+          draft.swap.error = action.payload.error;
         });
       case 'SET_CURRENCY_SELECTION_INPUT':
         return produce(state, draft => {

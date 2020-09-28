@@ -26,6 +26,14 @@
       "logoURI": ""
     },
     {
+      "name": "Basic Attention Token",
+      "type": "NEP-21",
+      "address": "bat.nearswap.testnet",
+      "symbol": "nBAT",
+      "decimals": 9,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0D8775F648430679A709E98d2b0Cb6250d2887EF/logo.png"
+    },
+    {
       "name": "Abundance Token",
       "type": "NEP-21",
       "address": "mint_with_json-workaround-for-mintablefuntoken.chad",

@@ -4,6 +4,7 @@ import getConfig from '../config'
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 const maxGas = '300000000000000';
 const attachedNear = '60000000000000000000000';
+const NDENOM = 1e24;
 
 export async function getBalanceNEP( contractName ) {
 
@@ -72,14 +73,14 @@ export async function getAllowance( token ) {
 export async function gasCheck() {
   // Set default
   const near_limit = 0.6;
-  const bal = (await window.walletConnection.account().getAccountBalance()).available / 1000000000000000000000000;
+  const bal = (await window.walletConnection.account().getAccountBalance()).available / NDENOM;
   if ( bal > near_limit ) {
     return true;
   }
   return false;
 }
 
-function trimZeros( str ) {
+export function trimZeros( str ) {
   let start = 0;
   for (; start< str.length; ++start) {
     if (str[start] !== '0')  break;
@@ -88,10 +89,13 @@ function trimZeros( str ) {
   for (; end> start; --end) {
     if (str[end] !== '0')  break;
   }
+  if(str.includes(".") === false) {
+    return str.slice(start, str.length);
+  }
   return str.slice(start,end+1)
 }
 
-function setAmount( value ) {
+export function normalizeAmount( value ) {
   let ok = false;
   let val = 24;
   let res = "";
@@ -114,7 +118,7 @@ function setAmount( value ) {
 }
 
 export async function calcPriceFromIn( token1, token2) {
-  const amount1 = setAmount( token1.amount );
+  const amount1 = normalizeAmount( token1.amount );
   
   if(amount1 < 1) {
     return 0;
@@ -151,8 +155,8 @@ export async function calcPriceFromIn( token1, token2) {
 }
 
 export async function swapFromIn( token1, token2 ) {
-  const amount1 = setAmount( token1.amount );
-  const amount2 = setAmount( token2.amount );
+  const amount1 = normalizeAmount( token1.amount );
+  const amount2 = normalizeAmount( token2.amount );
   if(token1.type === "Native token") {
     // Native to NEP-21
     await window.contract.swap_near_to_token_exact_in( {
@@ -195,7 +199,7 @@ export async function swapFromIn( token1, token2 ) {
 }
 
 export async function calcPriceFromOut( token1, token2) {
-  let amount2 = setAmount( token2.amount );
+  let amount2 = normalizeAmount( token2.amount );
   //console.log("amount_out ", amount2);
   if(amount2 < 1) {
     return 0;
@@ -232,8 +236,8 @@ export async function calcPriceFromOut( token1, token2) {
 }
 
 export async function swapFromOut( token1, token2 ) {
-  const amount1 = setAmount( token1.amount );
-  const amount2 = setAmount( token2.amount );
+  const amount1 = normalizeAmount( token1.amount );
+  const amount2 = normalizeAmount( token2.amount );
   if(token1.type === "Native token") {
     // Native to NEP-21
     console.log("SWAP: amt", token2.amount);

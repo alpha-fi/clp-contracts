@@ -12,7 +12,6 @@ export let view_methods_lib_contract = [
 	
 	// Pool Info
 	'pool_info',
-	'get_pool',
 	'calc_out_amount',
 	'calc_in_amount',
 
@@ -25,10 +24,9 @@ export let view_methods_lib_contract = [
 // Gas estimation
 // Approval transaction methods
 
-export let change_methods_lib_contract = [
+export let call_methods_lib_contract = [
 	// pool
 	'create_pool',
-	'set_pool',
 	
 	'add_liquidity',
 	'remove_liquidity',

@@ -2,8 +2,8 @@ import { Contract} from 'near-api-js'
 import getConfig from '../config'
 
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
-const attachNear1 = '300000000000000';
-const attachNear2 = '60000000000000000000000';
+const maxGas = '300000000000000';
+const attachedNear = '60000000000000000000000';
 
 export async function getBalanceNEP( contractName ) {
 
@@ -38,8 +38,8 @@ export async function incAllowance( token ) {
     await window.nep21.inc_allowance({ 
       escrow_account_id: nearConfig.contractName, 
       amount: token.amount},
-      attachNear1,
-      attachNear2
+      maxGas,
+      attachedNear
       );
      console.log("DONE"); 
     return true;
@@ -79,32 +79,24 @@ export async function gasCheck() {
   return false;
 }
 
-function cleanString( str ) {
-  let ok = true;
-  let res = "";
-  for(var i = 0; i < str.length; ++i) {
-    if( str[i] === '0' && ok) {
-      
-    }
-    else {
-      ok = false;
-      res += str[i];
-    }
+function trimZeros( str ) {
+  let start = 0;
+  for (; start< str.length; ++start) {
+    if (str[start] !== '0')  break;
   }
-  let last = res.length - 1;
-  while( res[last] === '0' ) {
-    res = res.slice(0, res.length - 1);
-    last--;
+  let end = str.length - 1;
+  for (; end> start; --end) {
+    if (str[end] !== '0')  break;
   }
-  return res;
-
+  return str.slice(start,end+1)
 }
 
 function setAmount( value ) {
   let ok = false;
   let val = 24;
   let res = "";
-  const amount = cleanString( value );
+  const amount = trimZeros( value );
+  console.log("Trimmed: ", amount);
   for(var x of amount) {
     if(x === '.') {
       ok = true;
@@ -168,8 +160,8 @@ export async function swapFromIn( token1, token2 ) {
       token: token2.address, 
       min_tokens: token2.amount 
     },
-    attachNear1,
-    attachNear2
+    maxGas,
+    attachedNear
     );
     
   }
@@ -181,8 +173,8 @@ export async function swapFromIn( token1, token2 ) {
         to: token2.address,
         from_tokens: token1.amount, 
         min_to_tokens: token2.amount },
-        attachNear1,
-        attachNear2
+        maxGas,
+        attachedNear
         ); 
     
     }
@@ -192,8 +184,8 @@ export async function swapFromIn( token1, token2 ) {
           token: token1.address,
           tokens_paid: token1.amount,
           min_ynear: amount2 },
-          attachNear1,
-          attachNear2
+          maxGas,
+          attachedNear
           );
     
       }
@@ -249,8 +241,8 @@ export async function swapFromOut( token1, token2 ) {
     await window.contract.swap_near_to_token_exact_out( {
       token: token2.address, 
       tokens_out: token2.amount },
-      attachNear1,
-      attachNear2
+      maxGas,
+      attachedNear
       ); 
   
   }
@@ -262,8 +254,8 @@ export async function swapFromOut( token1, token2 ) {
         to: token2.address,
         to_tokens: token2.amount, 
         max_from_tokens: token1.amount },
-        attachNear1,
-        attachNear2
+        maxGas,
+        attachedNear
         ); 
       
     }
@@ -273,8 +265,8 @@ export async function swapFromOut( token1, token2 ) {
           token: token1.address,
           ynear_out: amount2,
           max_tokens: token1.amount },
-          attachNear1,
-          attachNear2
+          maxGas,
+          attachedNear
           );
       
       }
@@ -287,8 +279,10 @@ export async function swapFromOut( token1, token2 ) {
 export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
   await window.contract.add_liquidity( { token: tokenDetails.address, 
     max_tokens: maxTokenAmount,
-    min_shares: minSharesAmount
-  } );
+    min_shares: minSharesAmount},
+    maxGas,
+    attachedNear 
+    );
 }
 
 // returns true if pool already exists

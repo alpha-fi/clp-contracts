@@ -1,6 +1,5 @@
 # NEARswap
 
-
 NEARswap is the first from the NEAR-CLP protocols family. It provides the following features:
 
 * Automated Market Maker. Arbitragers and exchanges can use the NEARswap Liquidity Pools.
@@ -15,28 +14,7 @@ NEARswap is the first from the NEAR-CLP protocols family. It provides the follow
 
 ## Usage
 
-
-Our smart contract are implemented in Rust. To investigate our API, please refer to the exported crate documentation. All public functions are exported through the blockchain interface and you can call them using RPC or the [near-cli](https://github.com/near/near-cli) tool. Example:
-
-```
-near view beta-1.nearswap.testnet price_near_to_token_out '{"token": "gold.nearswap.testnet", "tokens_out": "100000000000000000000"}' --accountId me.testnet
-```
-
-
-### Webapp
-
-TODO: describe
-* current functionality
-* limitation
-* wallet integration
-* ethereum integration
-
-
-### nearswap-cli
-
-We implemented a dedicated [CLI tool](https://github.com/luciotato/near-clp-beta-cli/) to directly interact with our smart contract. Please refer to the project page to see setup and usage instructions.
-
-
+Go to the [NEAR-CLP usage](/docs/nearclp-usage.md) page.
 
 
 ## Design Principles

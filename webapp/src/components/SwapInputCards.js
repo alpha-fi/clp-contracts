@@ -388,21 +388,24 @@ export default function SwapInputCards(props) {
 
       {/* Display approve button if NEP-21 -> ____ swap */}
       {(inputs.state.swap.needsApproval)
-         && <Button variant="warning" block
-              disabled={(inputs.state.swap.status !== "readyToSwap" && !inputs.state.swap.error)}
-              onClick={handleApprovalSubmission}
-            >
-              {(inputs.state.swap.status !== "isApproving")
-                ? <>
-                    Approve NEP-21 allowance {
-                      (inputs.state.swap.from.amount && inputs.state.swap.from.amount !== 0)
-                        ? <>of {inputs.state.swap.from.amount}</>
-                        : ""
-                      }
-                  </>
-                : "Approving..."
-              }
-            </Button>}
+         && <>
+              <small className="text-secondary">Step 1: </small>
+              <Button variant="warning" block
+                disabled={(inputs.state.swap.status !== "readyToSwap" && !inputs.state.swap.error)}
+                onClick={handleApprovalSubmission}
+              >
+                {(inputs.state.swap.status !== "isApproving")
+                  ? <>
+                      Approve NEP-21 allowance {
+                        (inputs.state.swap.from.amount && inputs.state.swap.from.amount !== 0)
+                          ? <>of {inputs.state.swap.from.amount}</>
+                          : ""
+                        }
+                    </>
+                  : "Approving..."
+                }
+              </Button>
+            </>}
       
       {/*<Button variant="primary" block
        onClick={handleApprovalSubmission}
@@ -410,15 +413,18 @@ export default function SwapInputCards(props) {
 
       {/* Enable submission only if inputs are valid */}
       {(inputs.state.swap.status !== "isApproving") &&
-        <Button variant="warning" block
-          disabled={((inputs.state.swap.status !== "readyToSwap") || inputs.state.swap.needsApproval)}
-          onClick={handleSwap}
-        >
-          {(inputs.state.swap.status !== "isSwapping")
-            ? "Swap"
-            : "Swapping..."
-          }
-        </Button>
+        <>
+          {(inputs.state.swap.needsApproval == true) && <small className="text-secondary">Step 2: </small>}
+          <Button variant="warning" block
+            disabled={((inputs.state.swap.status !== "readyToSwap") || inputs.state.swap.needsApproval)}
+            onClick={handleSwap}
+          >
+            {(inputs.state.swap.status !== "isSwapping")
+              ? "Swap"
+              : "Swapping..."
+            }
+          </Button>
+        </>
       }
     </>
   );

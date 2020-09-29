@@ -40,7 +40,7 @@ export default function SettingsButton() {
           {nearConnected}
           {ethConnected}
           <Dropdown.Divider />
-          <Dropdown.Item className="text-secondary" href="https://near-examples.github.io/erc20-to-nep21/">Convert ERC-20 to NEP-21 via Rainbow Bridge</Dropdown.Item>
+          <Dropdown.Item href="https://near-examples.github.io/erc20-to-nep21/">Convert ERC-20 to NEP-21 via Rainbow Bridge</Dropdown.Item>
           <Dropdown.Item className="text-secondary">Contract: {window.contract.contractId}</Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown>

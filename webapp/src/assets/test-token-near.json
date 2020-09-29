@@ -6,7 +6,7 @@
       "type": "Native token",
       "address": "",
       "symbol": "NEAR",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png"
     },
     {
@@ -14,7 +14,7 @@
       "type": "NEP-21",
       "address": "gold.nearswap.testnet",
       "symbol": "GOLD",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": ""
     },
     {
@@ -22,7 +22,7 @@
       "type": "NEP-21",
       "address": "usd.nearswap.testnet",
       "symbol": "USD",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": ""
     },
     {
@@ -30,7 +30,7 @@
       "type": "NEP-21",
       "address": "bat.nearswap.testnet",
       "symbol": "nBAT",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0D8775F648430679A709E98d2b0Cb6250d2887EF/logo.png"
     },
     {
@@ -38,7 +38,7 @@
       "type": "NEP-21",
       "address": "mint_with_json-workaround-for-mintablefuntoken.chad",
       "symbol": "nABND",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": ""
     },
     {
@@ -46,7 +46,7 @@
       "type": "NEP-21",
       "address": "usd24.nearswap.testnet",
       "symbol": "USD24",
-      "decimals": 9,
+      "decimals": 24,
       "logoURI": ""
     }
   ]

@@ -260,8 +260,9 @@ export default function SwapInputCards(props) {
 
   // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
+    let oldFromAmount = inputs.state.swap.from.amount;
     dispatch({type: 'SWITCH_SWAP_INPUTS'});
-    // dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+    handleToAmountChange(oldFromAmount);
     updateFromAllowance();
   }
 
@@ -396,7 +397,7 @@ export default function SwapInputCards(props) {
               >
                 {(inputs.state.swap.status !== "isApproving")
                   ? <>
-                      Approve NEP-21 allowance {
+                      Approve {inputs.state.swap.from.symbol} allowance {
                         (inputs.state.swap.from.amount && inputs.state.swap.from.amount !== 0)
                           ? <>of {inputs.state.swap.from.amount}</>
                           : ""

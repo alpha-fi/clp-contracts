@@ -166,10 +166,14 @@ const InputsProvider = ( { children } ) => {
           draft.swap.from.allowance = action.payload.allowance;
         });
       case 'SWITCH_SWAP_INPUTS':
+        let oldTo = state.swap.to;
+        let oldFrom = state.swap.from;
         return produce(state, draft => {
-          draft.swap.from = state.to;
-          draft.swap.to = state.from;
-          draft.swap.from.amount = "";
+          draft.swap.from = {
+            ...oldTo,
+            amount: 0,
+          }
+          draft.swap.to = oldFrom;
           draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
         });

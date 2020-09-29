@@ -1,4 +1,4 @@
-import { normalizeAmount, trimZeros } from '../src/services/near-nep21-util'
+import { normalizeAmount, trimZeros, convertToE24Base } from '../src/services/near-nep21-util'
 import { assert } from "chai";
 
 describe("Normalize Accounts ", () => {
@@ -21,6 +21,15 @@ describe("Normalize Accounts ", () => {
 
         res = trimZeros("0020");
         assert.equal(res, "20", 'mismatch');
+
+        res = trimZeros("0.0");
+        assert.equal(res, "0", 'mismatch');
+
+        res = trimZeros("000.00000");
+        assert.equal(res, "0", 'mismatch');
+
+        res = trimZeros("00");
+        assert.equal(res, "0", 'mismatch');
     });
 
     it("normalize accounts ", () => {
@@ -29,5 +38,37 @@ describe("Normalize Accounts ", () => {
 
         var res = normalizeAmount("42");
         assert.equal(res, "42000000000000000000000000", 'mismatch');
+    });
+});
+
+describe("Convert to real number", () => {
+
+    it("Division ",  () => {
+        var res = convertToE24Base("1000000000000000000000000");
+        assert.equal(res, "1", 'mismatch');
+        
+        var res = convertToE24Base("10000000000000000000000");
+        assert.equal(res, "0.01", 'mismatch');
+
+        var res = convertToE24Base("1234567891234567891234567");
+        assert.equal(res, "1.234567891234567891234567", 'mismatch');
+
+        var res = convertToE24Base("1234567891234567894567");
+        assert.equal(res, "0.001234567891234567894567", 'mismatch');
+
+        var res = convertToE24Base("1");
+        assert.equal(res, "0.000000000000000000000001", 'mismatch');
+
+        var res = convertToE24Base("0");
+        assert.equal(res, "0", 'mismatch');
+
+        var res = convertToE24Base("00");
+        assert.equal(res, "0", 'mismatch');
+
+        var res = convertToE24Base("0012340000000000000000000000000");
+        assert.equal(res, "12340", 'mismatch');
+
+        var res = convertToE24Base("0012340000000000000000000000001");
+        assert.equal(res, "12340.000000000000000000000001", 'mismatch');
     });
 });

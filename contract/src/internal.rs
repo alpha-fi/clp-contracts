@@ -102,10 +102,13 @@ impl NearCLP {
         min_tokens: Balance,
         recipient: AccountId,
     ) {
-        assert!(near_paid > 0 && min_tokens > 0, "E2");
+        assert!(
+            near_paid > 0 && min_tokens > 0,
+            "E2: balance arguments must be >0"
+        );
         let mut p = self.must_get_pool(&token);
         let tokens_out = self.calc_out_amount(near_paid, p.ynear, p.reserve);
-        assert!(tokens_out >= min_tokens, "E7");
+        assert_min_buy(tokens_out, min_tokens);
         self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
     }
 
@@ -119,7 +122,10 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(tokens_out > 0 && max_near_paid > 0, "E2");
+        assert!(
+            tokens_out > 0 && max_near_paid > 0,
+            "E2: balance arguments must be >0"
+        );
         let mut p = self.must_get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
         // panics if near_to_pay > max_near_paid
@@ -164,10 +170,13 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(tokens_paid > 0 && min_near > 0, "E2");
+        assert!(
+            tokens_paid > 0 && min_near > 0,
+            "E2: balance arguments must be >0"
+        );
         let mut p = self.must_get_pool(&token);
         let near_out = self.calc_out_amount(tokens_paid, p.reserve, p.ynear);
-        assert!(near_out >= min_near, "E7");
+        assert_min_buy(near_out, min_near);
         self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
     }
 
@@ -181,10 +190,13 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(near_out > 0 && max_tokens_paid > 0, "E2");
+        assert!(
+            near_out > 0 && max_tokens_paid > 0,
+            "E2: balance arguments must be >0"
+        );
         let mut p = self.must_get_pool(&token);
         let tokens_to_pay = self.calc_in_amount(near_out, p.ynear, p.reserve);
-        assert!(tokens_to_pay <= max_tokens_paid, "E8");
+        assert_max_pay(tokens_to_pay, max_tokens_paid);
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
 
@@ -254,13 +266,15 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(tokens1_paid > 0 && min_tokens2 > 0, "E2");
-        assert_ne!(token1, token2, "E9");
+        assert!(
+            tokens1_paid > 0 && min_tokens2 > 0,
+            "E2: balance arguments must be >0"
+        );
+        assert_ne!(token1, token2, "E9: can't swap same tokens");
         let mut p1 = self.must_get_pool(&token1);
         let mut p2 = self.must_get_pool(&token2);
         let (near_swap, tokens2_out) = self._price_swap_tokens_in(&p1, &p2, tokens1_paid);
-        assert!(tokens2_out >= min_tokens2, "E7");
-
+        assert_min_buy(tokens2_out, min_tokens2);
         self._swap_tokens(
             &mut p1,
             &mut p2,
@@ -283,13 +297,15 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(tokens2_out > 0 && max_tokens1_paid > 0, "E2");
-        assert_ne!(token1, token2, "E9");
+        assert!(
+            tokens2_out > 0 && max_tokens1_paid > 0,
+            "E2: balance arguments must be >0"
+        );
+        assert_ne!(token1, token2, "E9: can't swap same tokens");
         let mut p1 = self.must_get_pool(&token1);
         let mut p2 = self.must_get_pool(&token2);
         let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
-        //env_log!("tokens1_to_pay {} max_tokens1_paid {}",yton(tokens1_to_pay),yton(max_tokens1_paid));
-        assert!(tokens1_to_pay <= max_tokens1_paid, "E8"); //computed amount of selling tokens is bigger than user required maximum.
+        assert_max_pay(tokens1_to_pay, max_tokens1_paid);
 
         self._swap_tokens(
             &mut p1,
@@ -303,4 +319,24 @@ impl NearCLP {
             recipient,
         )
     }
+}
+
+fn assert_max_pay(to_pay: u128, max: u128) {
+    assert!(
+        to_pay <= max,
+        format!(
+            "E8: selling {} tokens is bigger than required maximum",
+            to_pay
+        )
+    );
+}
+
+fn assert_min_buy(to_buy: u128, min: u128) {
+    assert!(
+        to_buy >= min,
+        format!(
+            "E7: buying {} tokens is smaller than required minimum",
+            to_buy
+        )
+    );
 }

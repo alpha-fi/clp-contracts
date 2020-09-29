@@ -6,12 +6,10 @@ NEAR-CLP is a set of protocols for decentralized finance. With a ground research
 
 We are creating building blocks for the DeFi which are secure, reliable and sustainable.
 
-Our protocols:
+We use **Ethereum-NEAR Rainbow Bridge** to provide better service for Ethereum assets. Check the note [below](#why-bridging-with-ethereum) for more details.
 
 
-#### Bridging with Ethereum
-
-We use Rainbow bridge to provide better service for Ethereum assets. Check the note below for more details.
+### Our protocols
 
 
 #### NEARswap
@@ -38,7 +36,7 @@ We have few garage products which we will share later.
 
 ## Why and How?
 
-#### DeFi Background
+### DeFi Background
 
 The structure of global finance has remained largely the same since the start of the Industrial era, with a heavy reliance on financial intermediaries. Despite major advancements in software technology, huge parts of existing financial infrastructure remain archaic and burdensome. While many fintech products have sprouted into existence over the last decade to fill the gap, they all need to be plugged into the existing financial system to function, leaving a control of OUR funds and charging intermediation fees at the incumbents.
 
@@ -65,7 +63,7 @@ With blockchain we can move financial services to a new level - Decentralized Fi
 - Protocol level investments: own your funds while letting them working for you through DeFi protocols.
 - Direct payments: remove the market dependency from the huge tech unicorns (Google, Amazon, FB...) having an access to your wallet and getting intermediation fees, when in most cases it's not necessary.
 
-#### How
+### How
 
 We build `NEAR-CLP` to fulfill this goals in a very open and decentralized manner. Here are our **GOALS**:
 
@@ -115,3 +113,5 @@ The MPL fills a useful space in the spectrum of free and open source software li
 
 + Leave a note using github issues.
 + [Robert Zaremba](https://zaremba.ch/contact.html)
+
+[Contributors](https://github.com/robert-zaremba/near-clp/graphs/contributors)

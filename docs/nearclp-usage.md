@@ -10,14 +10,29 @@ near view beta-1.nearswap.testnet price_near_to_token_out '{"token": "gold.nears
 ```
 
 
-## Webapp
+## Web application
 
-TODO: describe:
-* current functionality
-* limitation
-* wallet integration
-* ethereum integration
+### Features
 
+The interface is hosted and maintained on [Skynet](https://siasky.net/) as to be a decentralized application (DApp), and currently supports swapping between and among NEAR and NEP-21 tokens. You can connect to your NEAR wallet and Ethereum wallet to view the available tokens and their balances. ERC-20 tokens on the Ethereum blockchain can be bridged to NEP-21 tokens on NEAR via the [Rainbow Bridge](https://near-examples.github.io/erc20-to-nep21/).
+
+#### Making a swap
+
+First, select the currencies you would like to trade to and from. In the input box labeled _I want_, enter your desired amount and the application will return the amount you need to put in. Ensure that the amount does not exceed your balance of the input currency or you will not be able to swap. Next, click the swap button and you will be redirected to a page to confirm the transfer, which will include a small fee in NEAR. Finally, you will be redirected back to the application and will be able to see your updated balance if the swap was successful.
+
+Note that when converting from a NEP-21 token, a small deposit of NEAR is required to allow the contract access to your funds. When a NEP-21 token is selected, it will display its allowance, and you will be prompted to approve access to your tokens before a swap can be made.
+
+### Limitations
+
+It is currently only recommended to use the interface for testing purposes until more error handling is added and edge cases are tested. The CLI tool can be used in conjunction with the web interface to add or remove liquidity to pools or to call methods directly.
+
+### Planned
+
+- Liquidity provision and withdrawal  via the _Pool_ page.
+- Integrated ERC-20 to NEP-21 conversion directly on our dapp (without going to the rainbow bridge web application).
+- More rigorous error handling.
+- Creating new pools (currently this is available through near-cli or nearswap-cli).
+- Price oracles.
 
 ## nearswap-cli
 

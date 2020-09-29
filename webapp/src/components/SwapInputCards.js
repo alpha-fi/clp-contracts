@@ -375,6 +375,8 @@ export default function SwapInputCards(props) {
           </small>
         }
         
+        <small className="text-danger mr-1">{inputs.state.swap.error}</small>
+
         {/* Clear button and clippage */}
         {((inputs.state.swap.status !== "isApproving") && (inputs.state.swap.status !== "isSwapping"))
           &&  <>
@@ -382,10 +384,6 @@ export default function SwapInputCards(props) {
                 <Button size="sm" variant="warning" onClick={clearInputs} className="ml-2">Clear</Button>
               </>
         }
-      </div>
-
-      <div className="text-center text-danger my-2">
-        {inputs.state.swap.error}
       </div>
 
       {/* Display approve button if NEP-21 -> ____ swap */}

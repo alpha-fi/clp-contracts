@@ -25,13 +25,26 @@ Status: Alpha. Basic functionality is implemented and tested. However there are 
 * Did you hear about ICO? Or Uniswap Offering? BCO is moving this to a next level.
 * An automated token release mechanism.
 
-Status: research & Development.
+Status: research & development.
 
 
 #### TBD...
 
 We have few garage products which we will share later.
 
+### Design Principles
+
+* Governance
+* ...
+
+
+## Usage
+
+Please refer to the specific protocol documentation page to see the available tools and webapp functionality. In principal, to use our protocols you can use:
+
+* our webapp (provides the integration for basic features)
+* [near-cli](https://github.com/near/near-cli) - a tool to make generic transactions and operations with NEAR blockchain runtime.
+* [near-clp-cli](https://github.com/luciotato/near-clp-beta-cli/) - a CLI crafted for NEARswap API.
 
 
 ## Why and How?
@@ -45,6 +58,7 @@ The benefits of DeFi will be major across both developed and emerging markets. I
 By transferring the trust layer from financial intermediaries to software and code on the blockchain, DeFi can provide universal access to financial services. This represents a paradigm shift where trust-minimized user experience is possible. In an era where control of users’ data and digital activity might be a liability, DeFi will be able to provide much better products and services at scale than traditional finance.
 
 (Source: The Defiant)
+
 
 ### Macro Economy
 
@@ -103,15 +117,21 @@ We build the Open Source software and knowledge base. All our work is licensed w
 The MPL is a simple copyleft license. The MPL's "file-level" copyleft is designed to encourage contributors to share modifications they make to your code, while still allowing them to combine your code with code under other licenses (open or proprietary) with minimal restrictions.
 Q2: Why yet another open source license?
 
-The MPL fills a useful space in the spectrum of free and open source software licenses, sitting between the Apache license, which does not require modifications to be shared, and the GNU family of licenses, which requires modifications to be shared under a much broader set of circumstances than the MPL.
-
-[FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
+The MPL fills a useful space in the spectrum of free and open source software licenses, sitting between the Apache license, which does not require modifications to be shared, and the GNU family of licenses, which requires modifications to be shared under a much broader set of circumstances than the MPL. [FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
 
 
 
 ## Contact
 
 + Leave a note using github issues.
-+ [Robert Zaremba](https://zaremba.ch/contact.html)
++ [Contributors](https://github.com/robert-zaremba/near-clp/graphs/contributors)
 
-[Contributors](https://github.com/robert-zaremba/near-clp/graphs/contributors)
+
+#### Hack the Rainbow team
+
+[Hack the Rainbow ](https://near.org/blog/hack-the-rainbow-%F0%9F%8C%88-nears-first-massive-open-online-hackathon-aka-mooh/) is the NEAR’s first Massive Open Online Hackathon.
+
++ [Robert Zaremba](https://zaremba.ch/contact.html)
++ [Lucio Tato](https://github.com/luciotato)
++ [Amit Yadav](https://github.com/amityadav0)
++ [Jameson Hodge](https://github.com/jamesondh)

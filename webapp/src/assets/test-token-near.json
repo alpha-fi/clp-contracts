@@ -37,7 +37,15 @@
       "name": "Abundance Token",
       "type": "NEP-21",
       "address": "mint_with_json-workaround-for-mintablefuntoken.chad",
-      "symbol": "nABD",
+      "symbol": "nABND",
+      "decimals": 9,
+      "logoURI": ""
+    },
+    {
+      "name": "USD24 Token",
+      "type": "NEP-21",
+      "address": "usd24.nearswap.testnet",
+      "symbol": "USD24",
       "decimals": 9,
       "logoURI": ""
     }

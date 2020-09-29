@@ -1,4 +1,4 @@
-import { normalizeAmount, trimZeros } from '../src/services/near-nep21-util'
+import { normalizeAmount, trimZeros, convertToReal } from '../src/services/near-nep21-util'
 import { assert } from "chai";
 
 describe("Normalize Accounts ", () => {
@@ -29,5 +29,22 @@ describe("Normalize Accounts ", () => {
 
         var res = normalizeAmount("42");
         assert.equal(res, "42000000000000000000000000", 'mismatch');
+    });
+});
+
+describe("Convert to real number", () => {
+
+    it("Division ",  () => {
+        var res = convertToReal("1000000000000000000000000");
+        assert.equal(res, "1", 'mismatch');
+        
+        var res = convertToReal("10000000000000000000000");
+        assert.equal(res, "0.01", 'mismatch');
+
+        var res = convertToReal("1234567891234567891234567");
+        assert.equal(res, "1.234567891234567891234567", 'mismatch');
+
+        var res = convertToReal("1234567891234567894567");
+        assert.equal(res, "0.001234567891234567894567", 'mismatch');
     });
 });

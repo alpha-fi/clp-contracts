@@ -29,5 +29,7 @@ yarn-debug.log*
 yarn-error.log*
 
 /.cache
+/.log
+
 
 /dist

@@ -1,4 +1,5 @@
-# NEAR-CLP
+![logo](/assets/logo-clp.png)
+
 
 NEAR-CLP is a set of protocols for decentralized finance. With a ground research and solid experience in smart-contract development we define our mission as:
 
@@ -12,7 +13,7 @@ We use **Ethereum-NEAR Rainbow Bridge** to provide better service for Ethereum a
 ### Our protocols
 
 
-#### NEARswap
+#### [NEARswap](/docs/nearswap.md)
 
 * Automated Market Maker
 * Continious Liquidity Provider

@@ -2,9 +2,10 @@ import { Contract} from 'near-api-js'
 import getConfig from '../config'
 
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
+const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
-const attachedNear = '60000000000000000000000';
-const attachedNearAllowance = '40000000000000000000000';
+const attachedNear = '6' + e22;
+const nep21AllowanceFee = '4' + e22;
 const NDENOM = 1e24;
 
 export async function getBalanceNEP( contractName ) {
@@ -19,8 +20,8 @@ export async function getBalanceNEP( contractName ) {
       changeMethods: []
     }
   )
-
-  return await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
+  const res = await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
+  return convertToE24Base(res);
 
 }
 
@@ -41,7 +42,7 @@ export async function incAllowance( token ) {
       escrow_account_id: nearConfig.contractName, 
       amount: token.amount},
       maxGas,
-      attachedNearAllowance
+      nep21AllowanceFee
       );
      console.log("DONE"); 
     return true;
@@ -68,7 +69,7 @@ export async function getAllowance( token ) {
     owner_id: accountId, 
     escrow_account_id: nearConfig.contractName });
   console.log('Allowance: ', allowance);
-  return convertToReal(allowance);  
+  return convertToE24Base(allowance);  
 }
 
 export async function gasCheck() {
@@ -81,7 +82,7 @@ export async function gasCheck() {
   return false;
 }
 
-export function convertToReal( str ) {
+export function convertToE24Base( str ) {
   const append = 25 - str.length;
   if(append > 0) {
     str = '0'.repeat(append) + str;
@@ -108,9 +109,15 @@ export function trimZeros( str ) {
     if (str[end] !== '0')  break;
   }
   if(str.includes(".") === false) {
-    return str.slice(start, str.length);
+    str = str.slice(start, str.length);
+    if(str === "")
+      return "0";
+    return str;
   }
-  return str.slice(start,end+1)
+  var res = str.slice(start,end+1);
+  if(res === "" || res === ".")
+    return "0";
+  return res;
 }
 
 export function normalizeAmount( value ) {
@@ -148,7 +155,7 @@ export async function calcPriceFromIn( token1, token2) {
       token: token2.address, 
       ynear_in: amount1});
       console.log(price);
-    return convertToReal(price);
+    return convertToE24Base(price);
   }
   else {
     if(token2.type === "NEP-21") {
@@ -157,14 +164,14 @@ export async function calcPriceFromIn( token1, token2) {
         from: token1.address,
         to: token2.address,
         tokens_in: amount1});
-      return convertToReal(price);
+      return convertToE24Base(price);
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
         token: token1.address, 
         tokens_in: amount1});
-      return convertToReal(price);
+      return convertToE24Base(price);
     }
     else {
       console.log("Error: Token type error");
@@ -228,7 +235,7 @@ export async function calcPriceFromOut( token1, token2) {
       token: token2.address, 
       tokens_out: amount2});
     console.log("expect_in ", price);
-    return convertToReal(price);
+    return convertToE24Base(price);
   }
   else {
     if(token2.type === "NEP-21") {
@@ -238,14 +245,14 @@ export async function calcPriceFromOut( token1, token2) {
         to: token2.address,
         tokens_out: amount2});
         console.log("expect_in ", price);
-      return convertToReal(price);
+      return convertToE24Base(price);
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_out( {
         token: token1.address, 
         ynear_out: amount2});
-      return convertToReal(price);
+      return convertToE24Base(price);
     }
     else {
       console.log("Error: Token type error");

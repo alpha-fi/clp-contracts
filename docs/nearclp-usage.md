@@ -1,8 +1,9 @@
 # NEAR-CLP Usage
 
-Our smart contract are implemented in Rust. To investigate our API, please refer to the exported crate documentation. Currently, it's checked in the github repository. To see it in a friendly way you need to clone this repository and open the `contract/target/doc/near_clp/index.html` file in your web browser.
+Our smart contracts are implemented in Rust. To investigate our API, please refer to the exported Rust crate documentation. All public functions are exported through a blockchain interface.
+Currently, the crate documentation it's checked-in the github repository. To see it in a friendly way you need to clone this repository and open the `contract/target/doc/near_clp/index.html` file in your web browser.
 
-All public functions are exported through a blockchain interface and you can call them using RPC or the [near-cli](https://github.com/near/near-cli) tool. Example:
+You can call any `NEARClp` public function using RPC or the [near-cli](https://github.com/near/near-cli) tool. Example:
 
 ```
 near view beta-1.nearswap.testnet price_near_to_token_out '{"token": "gold.nearswap.testnet", "tokens_out": "100000000000000000000"}' --accountId me.testnet
@@ -46,7 +47,7 @@ View call: beta-1.nearswap.testnet.pool_info({"token":"gold.nearswap.testnet"})
 }
 ```
 
-Call the NEP21 token contract
+Increase allowance on a NEP21 token contract
 ```
 > nearswap inc_allowance usd24.nearswap.testnet 500
 ```

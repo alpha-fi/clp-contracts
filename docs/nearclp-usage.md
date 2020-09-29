@@ -28,11 +28,11 @@ It is currently only recommended to use the interface for testing purposes until
 
 ### Planned
 
-- Liquidity provision and removal via the _Pool_ page
-- Integrated ERC-20 to NEP-21 conversion
-- More rigorous error handling
-- Adding custom tokens
-- Price oracles
+- Liquidity provision and withdrawal  via the _Pool_ page.
+- Integrated ERC-20 to NEP-21 conversion directly on our dapp (without going to the rainbow bridge web application).
+- More rigorous error handling.
+- Creating new pools (currently this is available through near-cli or nearswap-cli).
+- Price oracles.
 
 ## nearswap-cli
 

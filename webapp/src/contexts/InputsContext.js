@@ -156,6 +156,7 @@ const InputsProvider = ( { children } ) => {
           draft.swap.to.amount = "";
           draft.swap.to.isValid = false;
           draft.swap.status = "notReadyToSwap";
+          draft.swap.error = null;
         });
       case 'UPDATE_SWAP_ERROR':
         return produce(state, draft => {

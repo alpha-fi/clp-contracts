@@ -263,6 +263,7 @@ export default function SwapInputCards(props) {
     let oldFromAmount = inputs.state.swap.from.amount;
     dispatch({type: 'SWITCH_SWAP_INPUTS'});
     handleToAmountChange(oldFromAmount);
+    // handleFromTokenUpdate();
     updateFromAllowance();
   }
 
@@ -336,7 +337,7 @@ export default function SwapInputCards(props) {
               {(inputs.state.swap.from.balance && inputs.state.swap.from.balance !== 0)
                 && <>
                     <small className="mr-3 text-secondary">
-                      Max: {Number(inputs.state.swap.from.balance).toFixed(2)}
+                      Balance: {Number(inputs.state.swap.from.balance).toFixed(2)}
                     </small>
                     <br/>
                   </>
@@ -392,7 +393,7 @@ export default function SwapInputCards(props) {
          && <>
               <small className="text-secondary">Step 1: </small>
               <Button variant="warning" block
-                disabled={(inputs.state.swap.status !== "readyToSwap" && !inputs.state.swap.error)}
+                disabled={(inputs.state.swap.status !== "readyToSwap" || inputs.state.swap.error)}
                 onClick={handleApprovalSubmission}
               >
                 {(inputs.state.swap.status !== "isApproving")

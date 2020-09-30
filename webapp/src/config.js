@@ -2,7 +2,62 @@ const CONTRACT_NAME = "beta-1.nearswap.testnet"
 const ETH_WALLET_EXPLORER_PREFIX = "https://etherscan.io/address/";
 const IPFS_PREFIX = "https://ipfs.infura.io:5001/api/v0/cat/";
 
-export default function getConfig(env) {
+const DEFAULT_TOKEN_LIST = {
+  "name": "Default List",
+  "tokens": [
+    {
+      "name": "NEAR",
+      "type": "Native token",
+      "address": "",
+      "symbol": "NEAR",
+      "decimals": 24,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png"
+    },
+    {
+      "name": "GOLD",
+      "type": "NEP-21",
+      "address": "gold.nearswap.testnet",
+      "symbol": "GOLD",
+      "decimals": 24,
+      "logoURI": ""
+    },
+    {
+      "name": "USD",
+      "type": "NEP-21",
+      "address": "usd.nearswap.testnet",
+      "symbol": "USD",
+      "decimals": 24,
+      "logoURI": ""
+    },
+    {
+      "name": "Basic Attention Token",
+      "type": "NEP-21",
+      "address": "bat.nearswap.testnet",
+      "symbol": "nBAT",
+      "decimals": 24,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0D8775F648430679A709E98d2b0Cb6250d2887EF/logo.png"
+    },
+    {
+      "name": "Abundance Token",
+      "type": "NEP-21",
+      "address": "mint_with_json-workaround-for-mintablefuntoken.chad",
+      "symbol": "nABND",
+      "decimals": 24,
+      "logoURI": ""
+    },
+    {
+      "name": "USD24 Token",
+      "type": "NEP-21",
+      "address": "usd24.nearswap.testnet",
+      "symbol": "USD24",
+      "decimals": 24,
+      "logoURI": ""
+    }
+  ]
+};
+
+
+function getConfig(env) {
   switch (env) {
 
   case 'production':

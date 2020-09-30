@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useThunkReducer } from 'react-hook-thunk-reducer';
 
+const { defaultTokenList } = window.getConfig(process.env.NODE_ENV || 'development')
+
 import { Web3Context } from "../contexts/Web3Context";
 
 import { getERC20Balance } from "../services/web3utils";
 
-import { default as testTokenList } from '../assets/test-token-near.json';
-
 import { getBalanceNEP } from '../services/near-nep21-util'
 
 const initialState = {
-  tokenList: testTokenList
+  tokenList: defaultTokenList
 }
 
 const updateNearBalances = (tokenList) => {

@@ -7,7 +7,7 @@
     "build:web": "parcel build src/index.html --public-url ./",
     "deploy:pages": "gh-pages -d dist/",
     "prestart": "echo OK",
-    "start": "echo The app is starting! It will automatically open in your browser when ready && echo env-cmd -f ./neardev/dev-account.env && parcel src/index.html --open",
+    "start": "echo The app is starting! It will automatically open in your browser when ready && echo env-cmd -f ./neardev/dev-account.env && parcel serve src/index.html --open",
     "test": "jest test --runInBand"
   },
   "devDependencies": {

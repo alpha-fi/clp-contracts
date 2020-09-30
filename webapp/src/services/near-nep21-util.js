@@ -83,6 +83,11 @@ export async function gasCheck() {
 }
 
 export function convertToE24Base( str ) {
+
+  let result = (str +"").padStart(24,"0")
+  result = result.slice(0,-24)+"."+result.slice(-24)
+  return result
+/*
   const append = 25 - str.length;
   if(append > 0) {
     str = '0'.repeat(append) + str;
@@ -97,9 +102,11 @@ export function convertToE24Base( str ) {
   if(res[res.length - 1] === '.')
     res = res.slice(0, res.length - 1);
   return res;
+  */
 }
 
 export function trimZeros( str ) {
+  if (typeof str!=="string") return str;
   let start = 0;
   for (; start< str.length; ++start) {
     if (str[start] !== '0')  break;
@@ -142,10 +149,26 @@ export function normalizeAmount( value ) {
   return res;
 }
 
-export async function calcPriceFromIn( token1, token2) {
-  const amount1 = normalizeAmount( token1.amount );
+function toYoctosString(amount){
+  let result = amount + ""
+  let pos = result.indexOf(".");
+  let decimals=0;
+  if (pos>=0){
+    decimals = result.length-pos;
+  }
+  else    {
+    decimals = 24;
+  }
+  result = result + "0".repeat(decimals)
+  result = result.replace(".","")
+  return result
 
-  if(amount1 < 1) {
+}
+
+export async function calcPriceFromIn(token1, token2) {
+  //const amount1 = normalizeAmount( token1.amount );
+
+  if(token1.amount < 1) {
     return 0;
   }
   if(token1.type === "Native token") {
@@ -153,7 +176,7 @@ export async function calcPriceFromIn( token1, token2) {
     console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address,
-      ynear_in: amount1});
+      ynear_in: toYoctosString(token1.amount)});
       console.log(price);
     return convertToE24Base(price);
   }
@@ -163,14 +186,14 @@ export async function calcPriceFromIn( token1, token2) {
       const price = await window.contract.price_token_to_token_in( {
         from: token1.address,
         to: token2.address,
-        tokens_in: amount1});
+        tokens_in: toYoctosString(token1.amount)});
       return convertToE24Base(price);
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
         token: token1.address,
-        tokens_in: amount1});
+        tokens_in: toYoctosString(token1.amount)});
       return convertToE24Base(price);
     }
     else {

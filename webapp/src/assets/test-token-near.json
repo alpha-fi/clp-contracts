@@ -48,22 +48,6 @@
       "symbol": "USD24",
       "decimals": 24,
       "logoURI": ""
-    },
-    {
-      "name": "TETHER Token",
-      "type": "NEP-21",
-      "address": "tether.nearswap.testnet",
-      "symbol": "nUSDT",
-      "decimals": 24,
-      "logoURI": ""
-    },
-    {
-      "name": "Wrapped ETH Token",
-      "type": "NEP-21",
-      "address": "weth.nearswap.testnet",
-      "symbol": "wETH",
-      "decimals": 24,
-      "logoURI": ""
     }
   ]
 }

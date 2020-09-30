@@ -1,5 +1,4 @@
-import getConfig from '../config'
-const { ipfsPrefix } = getConfig(process.env.NODE_ENV || 'development')
+const { ipfsPrefix } = window.getConfig(process.env.NODE_ENV || 'development')
 
 export default function findCurrencyLogoUrl(newTokenIndex, tokenList) {
   let hasImage = tokenList.tokens[newTokenIndex].hasOwnProperty("logoURI");

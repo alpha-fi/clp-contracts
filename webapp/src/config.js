@@ -2,7 +2,7 @@ const CONTRACT_NAME = "beta-1.nearswap.testnet"
 const ETH_WALLET_EXPLORER_PREFIX = "https://etherscan.io/address/";
 const IPFS_PREFIX = "https://ipfs.infura.io:5001/api/v0/cat/";
 
-function getConfig(env) {
+export default function getConfig(env) {
   switch (env) {
 
   case 'production':

@@ -1,7 +1,6 @@
 import React, { useContext, useEffect } from "react";
 
-import getConfig from '../config'
-const { ipfsPrefix } = getConfig(process.env.NODE_ENV || 'development')
+const { ipfsPrefix } = window.getConfig(process.env.NODE_ENV || 'development')
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { getAllowance } from "../services/near-nep21-util";

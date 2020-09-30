@@ -1,8 +1,6 @@
 import React, {createContext, useState, useEffect} from 'react';
 
-// const getConfig = require('')
-import getConfig from "../config"
-const { ethChainId, infuraId } = getConfig(process.env.NODE_ENV || 'development')
+const { ethChainId, infuraId } = window.getConfig(process.env.NODE_ENV || 'development')
 
 import Web3Modal from 'web3modal';
 import Web3 from 'web3';

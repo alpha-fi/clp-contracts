@@ -1,5 +1,5 @@
 import 'regenerator-runtime/runtime'
-import React, { useContext, useEffect } from 'react'
+import React from 'react'
 import './global.css'
 
 import { Web3Context } from './contexts/Web3Context';
@@ -15,9 +15,6 @@ import Col from 'react-bootstrap/Col';
 
 import { BsArrowLeftRight } from "react-icons/bs";
 import { BsDropletFill } from "react-icons/bs";
-
-import getConfig from './config'
-const { networkId } = getConfig(process.env.NODE_ENV || 'development')
 
 import NavigationBar from "./components/NavigationBar";
 import SwapTab from "./components/SwapTab";

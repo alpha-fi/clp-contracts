@@ -2,8 +2,7 @@ import React, {useContext} from "react";
 
 import { Web3Context } from '../contexts/Web3Context';
 
-import getConfig from '../config'
-const { addressPrefix, ethWalletExplorerPrefix } = getConfig(process.env.NODE_ENV || 'development')
+const { addressPrefix, ethWalletExplorerPrefix } = window.getConfig(process.env.NODE_ENV || 'development')
 
 import WalletConnectionButtons from "./WalletConnectionButtons";
 

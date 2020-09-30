@@ -648,6 +648,12 @@ impl NearCLP {
      Multi Token standard: NEP-MFT
     **********************/
 
+    /// returns resource to more information about the token.
+    #[allow(unused)]
+    pub fn token_url(&self, token: AccountId) -> String {
+        "https://github.com/robert-zaremba/near-clp".to_string()
+    }
+
     /// granularity is the smallest amount of tokens (in the internal denomination) which
     /// may be minted, sent or burned at any time.
     #[allow(unused)]

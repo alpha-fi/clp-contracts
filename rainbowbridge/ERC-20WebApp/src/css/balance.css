@@ -1,0 +1,6 @@
+.balance {
+  color: var(--secondary);
+  border-bottom: 1px solid var(--secondary);
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}

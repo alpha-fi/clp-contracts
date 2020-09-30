@@ -1,5 +1,8 @@
 import React, { useContext, useEffect } from "react";
 
+import getConfig from '../config'
+const { ipfsPrefix } = getConfig(process.env.NODE_ENV || 'development')
+
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { getAllowance } from "../services/near-nep21-util";
 import { delay } from "../utils"
@@ -89,7 +92,7 @@ export const CurrencyTable = () => {
             {tokenListState.state.tokenList.tokens[index].logoURI.startsWith('ipfs://')
               ?
                 // Token image is served over IPFS
-                <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
+                <img src={ipfsPrefix + token.logoURI.substring(7)} width="25px" />
               :
                 // Token image is served over HTTP/HTTPS
                 <img src={token.logoURI} width="25px" />

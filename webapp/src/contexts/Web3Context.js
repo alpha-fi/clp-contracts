@@ -1,5 +1,9 @@
 import React, {createContext, useState, useEffect} from 'react';
 
+// const getConfig = require('')
+import getConfig from "../config"
+const { ethChainId, infuraId } = getConfig(process.env.NODE_ENV || 'development')
+
 import Web3Modal from 'web3modal';
 import Web3 from 'web3';
 import WalletConnectProvider from '@walletconnect/web3-provider';
@@ -11,7 +15,7 @@ const providerOptions = {
   walletconnect: {
     package: WalletConnectProvider, // required
     options: {
-      infuraId: +process.env.REACT_APP_IPFS_GATEWAY.split('/').pop(),
+      infuraId: infuraId,
     },
   },
 };
@@ -21,12 +25,12 @@ const w3connect = async (web3Modal) => {
   const web3 = new Web3(provider);
   const injectedChainId = await web3.eth.getChainId();
 
-  if (injectedChainId !== +process.env.REACT_APP_CHAIN_ID) {
+  if (injectedChainId !== ethChainId) {
     alert(
       `Please switch Web3 to the correct network and try signing in again. Detected network: ${
         injectedChainId
       }, Required network: ${
-        +process.env.REACT_APP_CHAIN_ID
+        ethChainId
       }`,
     );
   }
@@ -37,7 +41,7 @@ const w3connect = async (web3Modal) => {
 const signInWithWeb3 = async () => {
 
   const web3Modal = new Web3Modal({
-    network: +process.env.REACT_APP_CHAIN_ID, // optional
+    network: ethChainId, // optional
     providerOptions, // required
     cacheProvider: true,
   });
@@ -46,12 +50,12 @@ const signInWithWeb3 = async () => {
   const web3 = new Web3(provider);
   const injectedChainId = await web3.eth.getChainId();
 
-  if (injectedChainId !== +process.env.REACT_APP_CHAIN_ID) {
+  if (injectedChainId !== ethChainId) {
     alert(
       `Please switch Web3 to the correct network and try signing in again. Detected network: ${
         injectedChainId
       }, Required network: ${
-        +process.env.REACT_APP_CHAIN_ID
+        ethChainId
       }`,
     );
   }
@@ -64,7 +68,7 @@ const Web3Provider = ( { children } ) => {
   const [currentUser, setCurrentUser] = useState();
   const [web3Modal, setWeb3Modal] = useState(
     new Web3Modal({
-      network: +process.env.REACT_APP_CHAIN_ID, // optional
+      network: ethChainId, // optional
       providerOptions, // required
       cacheProvider: true,
     }),

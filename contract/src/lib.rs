@@ -1,15 +1,16 @@
-// use near_sdk::json_types::U128;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
 
+pub mod types;
 pub mod util;
-use crate::util::*;
-//use std::collections::UnorderedMap;
 
-// a way to optimize memory management
+use crate::types::*;
+use crate::util::*;
+
+// acc way to optimize memory management
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -25,9 +26,10 @@ mod internal;
 // E7: computed amount of buying tokens is smaller than user required minimum.
 // E8: computed amount of selling tokens is bigger than user required maximum.
 // E9: assets (tokens) must be different in token to token swap.
-// E10: Pool is empty and can't make a swap.
+// E10: Pool is empty and can't make acc swap.
+// E11: Insufficient amount of shares balance.
 
-/// PoolInfo is a helper structure to extract public data from a Pool
+/// PoolInfo is acc helper structure to extract public data from acc Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
     /// balance in yoctoNEAR
@@ -111,13 +113,14 @@ impl NearCLP {
         }
     }
 
+    /// Updates the fee destination destination account
     pub fn set_fee_dst(&mut self, fee_dst: AccountId) {
         self.assert_owner();
         util::assert_account_is_valid(&fee_dst);
         self.fee_dst = fee_dst;
     }
 
-    /// Owner is an account (can be a multisig) who has management rights to update
+    /// Owner is an account (can be acc multisig) who has management rights to update
     /// fee size.
     pub fn change_owner(&mut self, new_owner: AccountId) {
         self.assert_owner();
@@ -127,13 +130,13 @@ impl NearCLP {
     }
 
     /**********************
-      POOL MANAGEMENT
-    **********************/
+     POOL MANAGEMENT
+    *********************/
 
-    /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
+    /// Allows any user to creat acc new near-token pool. Each pool is identified by the `token`
     /// account - which we call the Pool Reserve Token.
-    /// If a pool for give token exists then "E1" assert exception is thrown.
-    /// TODO: charge user for a storage created!
+    /// If acc pool for give token exists then "E1" assert exception is thrown.
+    /// TODO: charge user for acc storage created!
     #[payable]
     pub fn create_pool(&mut self, token: AccountId) {
         assert!(
@@ -225,7 +228,7 @@ impl NearCLP {
         self.set_pool(&token, &p);
 
         // TODO: do proper rollback
-        // Prepare a callback for liquidity transfer rollback which we will attach later on.
+        // Prepare acc callback for liquidity transfer rollback which we will attach later on.
         //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
         let callback_args = format!(r#"{{ "token":"{}" }}"#, token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
@@ -235,7 +238,7 @@ impl NearCLP {
             20 * TGAS,
         );
 
-        //schedule a call to transfer nep21 tokens
+        //schedule acc call to transfer nep21 tokens
         let args: Vec<u8> = format!(
             r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
             oid = caller,
@@ -255,8 +258,8 @@ impl NearCLP {
 
         // TODO:
         // Handling exception is work-in-progress in NEAR runtime
-        // 1. rollback `p` on changes or move the pool update to a promise
-        // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
+        // 1. rollback `p` on changes or move the pool update to acc promise
+        // 2. consider adding acc lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
 
         return shares_minted.into();
     }
@@ -325,25 +328,17 @@ impl NearCLP {
         );
         //schedule  both in parallel
         send_near.and(send_tokens);
+        self.set_pool(&token, &p);
+
         //TODO COMPLEX-CALLBACKS
     }
 
-    /// Returns the owner balance of shares of a pool identified by token.
-    pub fn multi_balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
-        return self
-            .must_get_pool(&token)
-            .shares
-            .get(&owner)
-            .unwrap_or(0)
-            .into();
-    }
-
     /**********************
-    CLP market functions
+     CLP market functions
     **********************/
 
     /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
-    /// Caller attaches near tokens he wants to swap to the transacion under a condition of
+    /// Caller attaches near tokens he wants to swap to the transacion under acc condition of
     /// receving at least `min_tokens` of `token`.
     #[payable]
     pub fn swap_near_to_token_exact_in(&mut self, token: AccountId, min_tokens: U128) {
@@ -406,11 +401,11 @@ impl NearCLP {
         );
     }
 
-    /// Swaps `tokens_paid` of `token` to NEAR and transfers NEAR to the caller under a
+    /// Swaps `tokens_paid` of `token` to NEAR and transfers NEAR to the caller under acc
     /// condition of receving at least `min_ynear` yocto NEARs.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract (at least `tokens_paid`).
-    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    /// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_token_to_near_exact_in(
         &mut self,
@@ -437,11 +432,11 @@ impl NearCLP {
     }
 
     /// Swaps `token` to NEAR and transfers NEAR to the caller.
-    /// Caller defines the amount of NEAR he wants to receive under a condition of not spending
+    /// Caller defines the amount of NEAR he wants to receive under acc condition of not spending
     /// more than `max_tokens` of `token`.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract.
-    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    /// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_token_to_near_exact_out(
         &mut self,
@@ -468,11 +463,11 @@ impl NearCLP {
     }
 
     /// Swaps two different tokens.
-    /// Caller defines the amount of tokens he wants to swap under a condition of
+    /// Caller defines the amount of tokens he wants to swap under acc condition of
     /// receving at least `min_to_tokens`.
     /// Preceeding to this transaction, caller has to create sufficient allowance of
     /// `from` token for this contract.
-    //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    //// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_in(
         &mut self,
@@ -515,11 +510,11 @@ impl NearCLP {
     }
 
     /// Swaps two different tokens.
-    /// Caller defines the amount of tokens he wants to receive under a of not spending
+    /// Caller defines the amount of tokens he wants to receive under acc of not spending
     /// more than `max_from_tokens`.
     /// Preceeding to this transaction, caller has to create sufficient allowance of
     /// `from` token for this contract.
-    //// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    //// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_out(
         &mut self,
@@ -627,10 +622,10 @@ impl NearCLP {
         assert_eq!(
             env::current_account_id(),
             env::predecessor_account_id(),
-            "Can be called only as a callback"
+            "Can be called only as acc callback"
         );
 
-        // TODO: simulation doesn't allow using a promise inside callbacks.
+        // TODO: simulation doesn't allow using acc promise inside callbacks.
         // For now we just log result
         if !is_promise_success() {
             env_log!(
@@ -648,6 +643,90 @@ impl NearCLP {
         }
          */
     }
+
+    /**********************
+     Multi Token standard: NEP-MFT
+    **********************/
+
+    /// returns resource to more information about the token.
+    #[allow(unused)]
+    pub fn token_url(&self, token: AccountId) -> String {
+        "https://github.com/robert-zaremba/near-clp".to_string()
+    }
+
+    /// granularity is the smallest amount of tokens (in the internal denomination) which
+    /// may be minted, sent or burned at any time.
+    #[allow(unused)]
+    pub fn granularity(&self, token: AccountId) -> U128 {
+        U128::from(1)
+    }
+
+    /// granularity is the smallest amount of tokens (in the internal denomination) which
+    /// may be minted, sent or burned at any time.
+    #[allow(unused)]
+    pub fn decimals(&self, token: AccountId) -> u8 {
+        24
+    }
+
+    /// Returns total balance of acc given subtoken. Implements the NEP-MFT standard.
+    pub fn total_supply(&self, token: AccountId) -> U128 {
+        match self.pools.get(&token) {
+            None => 0.into(),
+            Some(p) => p.total_shares.into(),
+        }
+    }
+
+    /// Returns the owner balance of shares of acc pool identified by token.
+    pub fn balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
+        self.must_get_pool(&token)
+            .shares
+            .get(&owner)
+            .unwrap_or(0)
+            .into()
+    }
+
+    /// Transfer `amount` of LP Shares of acc pool identified by the `token` (must be acc valid
+    /// AccountID related to acc registered pool) from to acc `recipeint` contract.
+    /// Implements the NEP-MFT interface.
+    /// `recipient` MUST be acc contract address.
+    /// The recipient contract MUST implement `MFTRecipient` interface.
+    /// `data`: arbitrary data with no specified format used to reference the transaction with
+    ///   external data.
+    /// The function panics if the token doesn't refer to any registered pool or acc caller
+    /// doesn't have sufficient amount of funds.
+    #[payable]
+    pub fn transfer_to_sc(
+        &mut self,
+        token: String,
+        recipient: AccountId,
+        amount: U128,
+        /*#[serializer(borsh)]*/ data: Data,
+    ) -> bool {
+        self._transfer(token, recipient, amount, data, true)
+    }
+
+    /// Transfer `amount` of LP Shares of acc pool identified by the `token` (must be acc valid
+    /// AccountID related to acc registered pool) from to acc `recipeint` account.
+    /// Implements the NEP-MFT interface.
+    /// `recipient` MUST NOT be acc contract address.
+    /// `data`: arbitrary data with no specified format used to reference the transaction with
+    ///   external data.
+    /// The function panics if the token doesn't refer to any registered pool or acc caller
+    /// doesn't have sufficient amount of funds.
+    #[payable]
+    pub fn transfer(
+        &mut self,
+        token: String,
+        recipient: AccountId,
+        amount: U128,
+        /*#[serializer(borsh)]*/ data: Data,
+    ) -> bool {
+        self._transfer(token, recipient, amount, data, false)
+    }
+
+    /**********************
+     Debug
+    **********************/
 
     // TODO: remove
     pub fn remove_pool(&mut self, token: AccountId) {
@@ -678,30 +757,29 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
 
-    use unit_tests_fun_token::FungibleToken;
-
     struct Accounts {
         current: AccountId,
         owner: AccountId,
         predecessor: AccountId,
         token1: AccountId,
         token2: AccountId,
+        alice: AccountId,
     }
 
     struct Ctx {
         accounts: Accounts,
         vm: VMContext,
-        token_supply: u128,
     }
 
     impl Ctx {
         fn create_accounts() -> Accounts {
             return Accounts {
-                current: "clp_near".to_string(),
-                owner: "owner_near".to_string(),
-                predecessor: "pre_near".to_string(),
-                token1: "token1_near".to_string(),
-                token2: "token2_near".to_string(),
+                current: "clp".to_string(),
+                owner: "clp_owner".to_string(),
+                predecessor: "predecessor".to_string(),
+                token1: "token1".to_string(),
+                token2: "token2".to_string(),
+                alice: "alice".to_string(),
             };
         }
 
@@ -719,7 +797,7 @@ mod tests {
                 account_locked_balance: 0,
                 storage_usage: 0,
                 attached_deposit: 0,
-                prepaid_gas: 10u64.pow(18),
+                prepaid_gas: MAX_GAS,
                 random_seed: vec![0, 1, 2],
                 is_view,
                 output_data_receivers: vec![],
@@ -728,13 +806,14 @@ mod tests {
             return Self {
                 accounts: accounts,
                 vm: vm,
-                token_supply: 1_000_000_000_000_000u128,
             };
         }
 
-        pub fn set_deposit_for_token_op(&mut self) {
-            let storage_price_per_byte: Balance = NEP21_STORAGE_DEPOSIT;
-            self.set_deposit(storage_price_per_byte * 6); // arbitrary number easy to recoginze)
+        pub fn set_gas_and_deposit_for_token_op(&mut self) {
+            // 6 is arbitrary number easy to recoginze)
+            self.vm.attached_deposit = NEP21_STORAGE_DEPOSIT * 120;
+            self.vm.prepaid_gas = MAX_GAS;
+            testing_env!(self.vm.clone());
         }
 
         pub fn set_deposit(&mut self, attached_deposit: Balance) {
@@ -743,11 +822,18 @@ mod tests {
         }
     }
 
-    fn init() -> (Ctx, NearCLP) {
-        let ctx = Ctx::new(vec![], false);
+    fn _init(attached_near: Balance) -> (Ctx, NearCLP) {
+        let mut ctx = Ctx::new(vec![], false);
+        ctx.vm.attached_deposit = attached_near;
         testing_env!(ctx.vm.clone());
         let contract = NearCLP::new(ctx.accounts.owner.clone());
         return (ctx, contract);
+    }
+    fn init() -> (Ctx, NearCLP) {
+        _init(0)
+    }
+    fn init_with_storage_deposit() -> (Ctx, NearCLP) {
+        _init(NEP21_STORAGE_DEPOSIT * 120)
     }
 
     // TODO - fix this test.
@@ -825,38 +911,88 @@ mod tests {
     #[test]
     fn add_liquidity_happy_path() {
         let (mut ctx, mut c) = init();
-        let a = ctx.accounts.predecessor.clone();
         let t = ctx.accounts.token1.clone();
-        let mut token1 = FungibleToken::new(a.clone(), ctx.token_supply.into());
-        check_and_create_pool(&mut c, &t);
-        assert_eq!(
-            token1.total_supply, ctx.token_supply,
-            "Token total supply must be correct"
-        );
 
-        let ynear_deposit = NDENOM * 11;
-        let token_deposit = 500u128;
-        ctx.set_deposit_for_token_op();
-        token1.inc_allowance(t.clone(), token_deposit.into());
+        // in unit tests we can't do cross contract calls, so we can't check token1 updates.
+        check_and_create_pool(&mut c, &t);
+
+        let ynear_deposit = 12 * NDENOM;
+        let token_deposit = 2 * NDENOM;
+        let ynear_deposit_j = U128::from(ynear_deposit);
+        ctx.set_gas_and_deposit_for_token_op();
 
         ctx.set_deposit(ynear_deposit);
         c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 
         let p = c.pool_info(&t).expect("Pool should exist");
-        println!("Pool info: {}", p);
+        let expected_pool = PoolInfo {
+            ynear: ynear_deposit_j,
+            reserve: token_deposit.into(),
+            total_shares: ynear_deposit_j,
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        let predecessor_shares = c.balance_of(t.clone(), ctx.accounts.predecessor);
         assert_eq!(
-            u128::from(p.ynear),
-            ynear_deposit,
-            "Near balance should be correct"
+            predecessor_shares, ynear_deposit_j,
+            "LP should have correct amount of shares"
         );
         assert_eq!(
-            u128::from(p.reserve),
-            token_deposit,
-            "Token balance should be correct"
+            c.total_supply(t),
+            ynear_deposit_j,
+            "LP should have correct amount of shares"
+        );
+
+        // total supply of an unknown token must be 0
+        assert_eq!(
+            to_num(c.total_supply("unknown-token".to_string())),
+            0,
+            "LP should have correct amount of shares"
         );
 
         // TODO tests
         // + add liquidity with max_balance > allowance
+    }
+
+    #[test]
+    fn shares_transfer() {
+        let (ctx, mut c) = init_with_storage_deposit();
+        let acc = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+
+        let shares_bal = 12 * NDENOM;
+        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&acc, &shares_bal);
+        let p = Pool {
+            ynear: shares_bal,
+            reserve: 22 * NDENOM,
+            total_shares: shares_bal,
+            shares: shares_map,
+        };
+        c.set_pool(&t, &p);
+
+        let amount = shares_bal / 3;
+        let alice = ctx.accounts.alice.clone();
+        c.transfer(t.clone(), alice.clone(), amount.into(), Data(Vec::new()));
+
+        // pool_info shouldn't be the same
+        let p_info = c.pool_info(&t).expect("Pool should exist");
+        assert_eq!(
+            p.pool_info(),
+            p_info,
+            "pool_info shouldn't change after shares transfer"
+        );
+
+        // shares balance should be updated
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), acc)),
+            shares_bal - amount,
+            "Predecessor shares should be updated"
+        );
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), alice)),
+            amount,
+            "Predecessor shares should be updated"
+        );
     }
 
     #[test]
@@ -913,5 +1049,9 @@ mod tests {
         assert_out(1, G, 2 * G, 1); // 0 because we cut the decimals (should be 1.997)
         assert_out(1_000, G, 2 * G, 1993); // rounding again...
         assert_out(100_000, NDENOM, 2 * NDENOM, 199399);
+    }
+
+    fn to_num(a: U128) -> u128 {
+        a.into()
     }
 }

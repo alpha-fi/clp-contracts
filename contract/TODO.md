@@ -1,28 +1,34 @@
-### Checks
+# TODO
 
-+ For token->* swaps, validate token allowance before updating the contract state.
+## Review and fix exploits
+
+Our current implementation is targeted functionality, not a full security.
+We firstly want to test the behavior and validate the approach.
+
+Current code has few vulnerabilities due to asynchronous calls. We don't cover all edge cases. Also we should do local state changes only after a successful remote calls.
+
++ `token->* swaps`, `add_liquidity` functions.
   Currently the exception in the `transfer_from` function is not handled.
++ Validate the reception of the MultiToken transfers in `transfer_to_sc` before updating the local state.
 
+Handle exceptions in _foreign_ contracts. Example: [StackOverflow question](https://stackoverflow.com/questions/62987417).
 
-Handle exceptions in _foreign_ contracts (notably token contracts). Tips how to do it are in a [StackOverflow question](https://stackoverflow.com/questions/62987417).
-
-Places to change:
-+ add_liquidity
 
 Tips:
 + https://github.com/nearprotocol/NEPs/pull/26
 
-### CLP related functionality
+## CLP related functionality
 
 + add non integer type for balances to calculate expected amount. We can do it using [decimate](https://crates.io/crates/decimate)
-+ add weights
 + change fees calculation for token 2 token swaps
+
++ `set_pool` should remove the pool if it's empty (as it's done by nep21)
 
 ### Economics
 
-+ Add storage costs calculations (based on fungible token example)
-+ remove / limit Impermanent Loss problem
++ Review and add missing storage costs calculations.
 
-### UI / Explorer functionality
+### Multi Fungible Token standard
 
-+ Create and support multitoken standard. Each pool have their own share tokens. By using a multi-token standard, we can integrate the contract with future token explorer platforms.
++ Review the standard and finalize the implementation.
++ We want to add operator related functions, which could do some breaking changes.

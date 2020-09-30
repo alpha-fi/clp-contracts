@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wrapped ETH Token</title>
+  <meta property="og:title" content="🌳 Wrapped ETH Token">
+  <meta property="og:description" content="An Ethereum ERC20 token that you can mint to yourself">
+  <link rel="icon" href="img/favicon.ico" />
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="img/android-chrome-192x192.png" />
+  <link rel="stylesheet" href="css/global.css">
+  <meta property="og:image" content="img/social-preview.png">
+  <meta property="og:url" content="https://chadoh.com/abundance-token">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://chadoh.com/abundance-token/social-preview.png">
+</head>
+<body>
+  <nav style="position: absolute; right: 0.5em; top: 0.5em; z-index: 2">
+    <div id="menu" class="dropdown" aria-live="polite" style="font-size: 0.8em">
+      <button class="menu-icon" aria-controls="menu">
+        <div></div>
+        <span class="visually-hidden">menu</span>
+      </button>
+      <div class="right" style="width: 7em">
+        <div>
+          <a href="https://github.com/chadoh/abundance-token">View source</a>
+        </div>
+        <div data-behavior="signed-in" style="display: none; margin-top: 0.5em">
+          <button class="link" data-behavior="logout">
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main data-behavior="signed-out" style="text-align: center; margin: 0 auto; max-width: 25em">
+    <h1 class="title">Wrapped ETH Token</h1>
+    <p>
+      An non-scarce <a href="https://eips.ethereum.org/EIPS/eip-20" rel="nofollow">ERC20</a> token. Go ahead and take as much as you want!
+    </p>
+    <button data-behavior="authEthereum" style="margin-top: 2.5em">
+      Connect to Ethereum
+    </button>
+  </main>
+
+  <main data-behavior="eth-balance-zero" style="display: none; margin: 0 auto; max-width: 30em">
+    <h1 class="title">
+      Let's get you some ETH!
+    </h1>
+    <p>
+      You don't have any ETH on this account. To mint yourself
+      <span data-behavior="erc20Symbol">🤔</span> tokens, you'll need
+      to pay a small transaction fee with ETH.
+    </p>
+    <p>
+    Luckily, <span data-behavior="erc20Symbol">🤔</span> lives on
+    <a href="https://support.airswap.io/en/articles/2831385-what-is-rinkeby">Rinkeby</a>,
+    an Ethereum test network where ETH and other tokens have no real-world
+    value. You can go get yourself some test ETH at
+    <a href="https://faucet.rinkeby.io/">this handy faucet</a>.
+    </p>
+  </main>
+
+  <main data-behavior="eth-balance-positive" style="display: none">
+    <h1 class="title">
+      Your <span data-behavior="erc20Symbol">🤔</span> Balance:
+      <span class="balance" data-behavior="erc20Balance">🤔</span>
+    </h1>
+    <form style="margin: 0 auto; max-width: 15em">
+      <fieldset id="fieldset">
+        <label
+          for="amount"
+          style="display: block; margin: 2em 0 0.1em"
+        >
+          Want more?
+        </label>
+        <div style="display: flex">
+          <input
+            autocomplete="off"
+            id="amount"
+            type="number"
+          />
+          <button id="submit" disabled style="border-radius: 0 5px 5px 0">
+            OK
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </main>
+
+  <script src="./js/index.js"></script>
+</body>
+</html>

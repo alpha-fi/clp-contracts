@@ -15,6 +15,10 @@ pub const MAX_GAS: Gas = 200 * TGAS;
 /// nep21 may require NEAR deposit for storage to create a new balance
 pub const NEP21_STORAGE_DEPOSIT: u128 = 4 * NDENOM / 100; //0.04 NEAR
 
+// TODO: should we make it customizable?
+/// Price per 1 byte of storage from mainnet genesis config. 100e18
+pub const STORAGE_BYTE_PRICE: u128 = 100_000_000_000_000_000_000;
+
 construct_uint! {
     /// 256-bit unsigned integer.
     pub struct u256(4);
@@ -22,6 +26,7 @@ construct_uint! {
 
 /** Ensures that an account `a` is valid and panics if it's not.
 `name`: printed name of the account */
+#[inline]
 pub fn assert_account_is_valid(a: &AccountId) {
     assert!(
         env::is_valid_account_id(a.as_bytes()),
@@ -42,6 +47,7 @@ pub fn is_promise_success() -> bool {
 }
 
 /// yoctoNEAR to NEAR. Rounds to nearest.
+#[inline]
 pub fn yton(yocto_amount: u128) -> u128 {
     (yocto_amount + NDENOM_ROUNDING) / NDENOM
 }

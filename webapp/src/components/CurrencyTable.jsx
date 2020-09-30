@@ -106,7 +106,7 @@ export const CurrencyTable = () => {
           </td>
           <td className="text-right">
             {token.balance
-              ? <code className="text-secondary">{Number(token.balance).toFixed(2)}</code>
+              ? <code className="text-secondary">{Number(token.balance)}</code>
               : <code className="text-secondary">-</code>
             }
           </td>

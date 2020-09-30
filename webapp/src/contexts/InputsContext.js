@@ -21,9 +21,11 @@ let initialState = {
     to: produce(initialInput, draft => {
       draft.tokenIndex = 1;
     }),
-    error: null,              // error string if error, null otherwise
-    needsApproval: false,     // required for NEP-21 swaps
-    status: "notReadyToSwap"  // possible values: notReadyToSwap, readyToSwap, isApproving, isSwapping
+    error: null,               // error string if error, null otherwise
+    needsApproval: false,      // required for NEP-21 swaps
+    status: "notReadyToSwap",  // possible values: notReadyToSwap, readyToSwap, isApproving, isSwapping
+    previous: null             // when isSwapping or isApproving, we need to store a value to compare
+                               // to verify if the swap was successful
   },
   pool: {
     input1: produce(initialInput, draft => {
@@ -156,6 +158,7 @@ const InputsProvider = ( { children } ) => {
           draft.swap.to.amount = "";
           draft.swap.to.isValid = false;
           draft.swap.status = "notReadyToSwap";
+          draft.swap.error = null;
         });
       case 'UPDATE_SWAP_ERROR':
         return produce(state, draft => {
@@ -166,17 +169,23 @@ const InputsProvider = ( { children } ) => {
           draft.swap.from.allowance = action.payload.allowance;
         });
       case 'SWITCH_SWAP_INPUTS':
+        let oldTo = state.swap.to;
+        let oldFrom = state.swap.from;
         return produce(state, draft => {
-          draft.swap.from = state.to;
-          draft.swap.to = state.from;
-          draft.swap.from.amount = "";
+          draft.swap.from = {
+            ...oldTo,
+            amount: 0,
+          }
+          draft.swap.to = oldFrom;
           draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
+          draft.swap.error = null;
         });
       case 'UPDATE_SWAP_STATUS':
         return produce(state, draft => {
           draft.swap.status = action.payload.status;
           draft.swap.error = action.payload.error;
+          draft.swap.previous = action.payload.previous;
         });
       case 'SET_CURRENCY_SELECTION_INPUT':
         return produce(state, draft => {

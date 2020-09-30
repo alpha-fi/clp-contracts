@@ -265,6 +265,12 @@ impl FungibleToken {
     pub fn mint_1e3(&mut self) -> U128 {
         self._mint(10u128.pow((self._decimals + 3).into()))
     }
+
+    /// Mints 1_000_00 decimal tokens (1e6 * 1e_token_decimals) to the smart-contract caller
+    ///  and returns his balance after the minting.
+    pub fn mint_1e6(&mut self) -> U128 {
+        self._mint(10u128.pow((self._decimals + 6).into()))
+    }
 }
 
 impl FungibleToken {

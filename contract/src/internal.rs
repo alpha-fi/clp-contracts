@@ -1,7 +1,10 @@
 use crate::*;
 use near_sdk::StorageUsage;
 
+// use near_sdk::Gas;
+
 impl NearCLP {
+    #[inline]
     pub(crate) fn assert_owner(&self) {
         assert!(
             env::predecessor_account_id() == self.owner,
@@ -16,6 +19,7 @@ impl NearCLP {
         }
     }
 
+    #[inline]
     pub(crate) fn set_pool(&mut self, ref token: &AccountId, pool: &Pool) {
         self.pools.insert(token, pool);
     }
@@ -40,35 +44,25 @@ impl NearCLP {
         return r.as_u128() + 1;
     }
 
-    pub(crate) fn schedule_nep21_tansfer(
+    #[inline]
+    pub(crate) fn schedule_nep21_tx(
         &mut self,
         token: &AccountId,
-        from_account: AccountId,
-        to_account: AccountId,
+        from: AccountId,
+        to: AccountId,
         amount: u128,
+        // gas: Gas,
     ) -> Promise {
-        return Promise::new(token.clone()).function_call(
-            "transfer_from".into(),
-            format!(
-                r#"{{
-                        "owner_id": "{}",
-                        "new_owner_id": "{}",
-                        "amount": "{}"
-                        }}"#,
-                from_account, to_account, amount
-            )
-            .as_bytes()
-            .to_vec(),
-            util::NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
-            util::MAX_GAS / 3,
-        );
-        //TODO add rollback callback
-        // .then(ext_self::add_liquidity_transfer_callback(
-        //     env::current_account_id(),
-        //     token,
-        //     0,
-        //     MAX_GAS/3,
-        // ));
+        let gas = env::prepaid_gas();
+        assert!(gas >= 20 * TGAS, "Not enough gas");
+        ext_nep21::transfer_from(
+            from,
+            to,
+            amount.into(),
+            token,
+            util::NEP21_STORAGE_DEPOSIT,
+            env::prepaid_gas() / 3,
+        )
     }
 
     pub(crate) fn _swap_near(
@@ -79,19 +73,16 @@ impl NearCLP {
         reserve: Balance,
         recipient: AccountId,
     ) {
-        // TODO: remove this
         println!(
-            "User purchased {} {} for {} YoctoNEAR",
+            "User purchased {} {} for {} yoctoNEAR",
             reserve, token, near
         );
-        // TODO: this updated should be done after nep21 transfer
         p.reserve -= reserve;
         p.ynear += near;
-        self.set_pool(token, p);
 
-        //send the token from CLP account to buyer
-        self.schedule_nep21_tansfer(token, env::current_account_id(), recipient, reserve);
-        //TODO callbacks
+        self.schedule_nep21_tx(token, env::current_account_id(), recipient, reserve);
+        // TODO: this updated should be done after nep21 transfer
+        self.set_pool(token, p);
     }
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
@@ -152,14 +143,12 @@ impl NearCLP {
         );
         p.reserve += reserve;
         p.ynear -= near;
-        self.set_pool(&token, p);
 
-        //get the token from buyer into CLP
-        let promise = self.schedule_nep21_tansfer(token, buyer, env::current_account_id(), reserve);
-        //and in the same batch send NEAR to client
-        // TODO - recipient here is wrong.
-        promise.transfer(near);
-        //TODO COMPLEX ROLLBACKS
+        // firstly get tokens from the buyer, then send NEAR to recipient
+        self.schedule_nep21_tx(token, buyer, env::current_account_id(), reserve)
+            .then(Promise::new(recipient).transfer(near));
+        // TODO - this should be in a promise.
+        self.set_pool(&token, p);
     }
 
     /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
@@ -218,23 +207,18 @@ impl NearCLP {
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
-        // TODO: make updates after nep21 transfers
         p1.reserve += token1_in;
         p1.ynear -= near_swap;
         p2.reserve -= token2_out;
         p2.ynear += near_swap;
+
+        let caller = env::current_account_id();
+        // firstly get tokens from buyer, then send to to the recipient
+        self.schedule_nep21_tx(token1, buyer, caller.clone(), token1_in)
+            .then(self.schedule_nep21_tx(token2, caller, recipient, token2_out));
+        // TODO: make updates after nep21 transfers (together with promise2)
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p2);
-
-        //get the token from buyer into CLP
-        let promise1 =
-            self.schedule_nep21_tansfer(token1, buyer, env::current_account_id(), token1_in);
-        //send token2 tokens to the recipient
-        let promise2 =
-            self.schedule_nep21_tansfer(token2, env::current_account_id(), recipient, token2_out);
-        //do both in parallel
-        promise1.and(promise2);
-        //TODO COMPLEX ROLLBACKS
     }
 
     pub(crate) fn _price_swap_tokens_in(
@@ -352,7 +336,6 @@ impl NearCLP {
             &(p.shares.get(&recipient).unwrap_or(0) + amount_u),
         );
 
-        // TODO: enable storage refunds (fails in unit tests)
         self.refund_storage(initial_storage);
         if is_contract {
             // TODO: We should do it before modifiying local state to avoid exploits.
@@ -370,7 +353,6 @@ impl NearCLP {
         return true;
     }
 
-    // TODO: test and make it working with promises.
     pub(crate) fn refund_storage(&self, initial_storage: StorageUsage) {
         let current_storage = env::storage_usage();
         let attached_deposit = env::attached_deposit();
@@ -394,6 +376,7 @@ impl NearCLP {
     }
 }
 
+#[inline]
 fn assert_max_pay(to_pay: u128, max: u128) {
     assert!(
         to_pay <= max,
@@ -404,6 +387,7 @@ fn assert_max_pay(to_pay: u128, max: u128) {
     );
 }
 
+#[inline]
 fn assert_min_buy(to_buy: u128, min: u128) {
     assert!(
         to_buy >= min,

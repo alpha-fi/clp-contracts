@@ -36,15 +36,15 @@ export async function incAllowance( token ) {
       changeMethods: ['inc_allowance']
     }
   )
-  
+
   try {
-    await window.nep21.inc_allowance({ 
-      escrow_account_id: nearConfig.contractName, 
+    await window.nep21.inc_allowance({
+      escrow_account_id: nearConfig.contractName,
       amount: token.amount},
       maxGas,
       nep21AllowanceFee
       );
-     console.log("DONE"); 
+     console.log("DONE");
     return true;
   } catch(error) {
     return false;
@@ -66,10 +66,10 @@ export async function getAllowance( token ) {
     }
   )
   const allowance = await window.nep21.get_allowance({
-    owner_id: accountId, 
+    owner_id: accountId,
     escrow_account_id: nearConfig.contractName });
   console.log('Allowance: ', allowance);
-  return convertToE24Base(allowance);  
+  return convertToE24Base(allowance);
 }
 
 export async function gasCheck() {
@@ -90,8 +90,8 @@ export function convertToE24Base( str ) {
   const pos = str.length - 24;
   var res = [str.slice(0, pos), '.', str.slice(pos)].join('');
   res = trimZeros(res);
-  
-  if(res[0] === '.') 
+
+  if(res[0] === '.')
     res = '0' + res;
 
   if(res[res.length - 1] === '.')
@@ -144,7 +144,7 @@ export function normalizeAmount( value ) {
 
 export async function calcPriceFromIn( token1, token2) {
   const amount1 = normalizeAmount( token1.amount );
-  
+
   if(amount1 < 1) {
     return 0;
   }
@@ -152,7 +152,7 @@ export async function calcPriceFromIn( token1, token2) {
     // Native to NEP-21
     console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
-      token: token2.address, 
+      token: token2.address,
       ynear_in: amount1});
       console.log(price);
     return convertToE24Base(price);
@@ -169,14 +169,14 @@ export async function calcPriceFromIn( token1, token2) {
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
-        token: token1.address, 
+        token: token1.address,
         tokens_in: amount1});
       return convertToE24Base(price);
     }
     else {
       console.log("Error: Token type error");
     }
-  } 
+  }
 }
 
 export async function swapFromIn( token1, token2 ) {
@@ -185,13 +185,13 @@ export async function swapFromIn( token1, token2 ) {
   if(token1.type === "Native token") {
     // Native to NEP-21
     await window.contract.swap_near_to_token_exact_in( {
-      token: token2.address, 
-      min_tokens: amount2 
+      token: token2.address,
+      min_tokens: amount2
     },
     maxGas,
     attachedNear
     );
-    
+
   }
   else {
     if(token2.type === "NEP-21") {
@@ -199,12 +199,12 @@ export async function swapFromIn( token1, token2 ) {
       await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        from_tokens: amount1, 
+        from_tokens: amount1,
         min_to_tokens: amount2 },
         maxGas,
         attachedNear
-        ); 
-    
+        );
+
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
@@ -215,12 +215,12 @@ export async function swapFromIn( token1, token2 ) {
           maxGas,
           attachedNear
           );
-    
+
       }
     else {
       console.error("Error: Token type error");
     }
-  } 
+  }
 }
 
 export async function calcPriceFromOut( token1, token2) {
@@ -232,7 +232,7 @@ export async function calcPriceFromOut( token1, token2) {
   if(token1.type === "Native token") {
     // Native to NEP-21
     const price = await window.contract.price_near_to_token_out( {
-      token: token2.address, 
+      token: token2.address,
       tokens_out: amount2});
     console.log("expect_in ", price);
     return convertToE24Base(price);
@@ -250,14 +250,14 @@ export async function calcPriceFromOut( token1, token2) {
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_out( {
-        token: token1.address, 
+        token: token1.address,
         ynear_out: amount2});
       return convertToE24Base(price);
     }
     else {
       console.log("Error: Token type error");
     }
-  } 
+  }
 }
 
 export async function swapFromOut( token1, token2 ) {
@@ -267,12 +267,12 @@ export async function swapFromOut( token1, token2 ) {
     // Native to NEP-21
     console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
-      token: token2.address, 
+      token: token2.address,
       tokens_out: amount2 },
       maxGas,
       attachedNear
-      ); 
-  
+      );
+
   }
   else {
     if(token2.type === "NEP-21") {
@@ -280,12 +280,12 @@ export async function swapFromOut( token1, token2 ) {
       await window.contract.swap_tokens_exact_out( {
         from: token1.address,
         to: token2.address,
-        to_tokens: amount2, 
+        to_tokens: amount2,
         max_from_tokens: amount1 },
         maxGas,
         attachedNear
-        ); 
-      
+        );
+
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
@@ -296,29 +296,29 @@ export async function swapFromOut( token1, token2 ) {
           maxGas,
           attachedNear
           );
-      
+
       }
     else {
       console.error("Error: Token type error");
     }
-  } 
+  }
 }
 
 export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
-  await window.contract.add_liquidity( { token: tokenDetails.address, 
+  await window.contract.add_liquidity( { token: tokenDetails.address,
     max_tokens: maxTokenAmount,
     min_shares: minSharesAmount},
     maxGas,
-    attachedNear 
+    attachedNear
     );
 }
 
 // returns true if pool already exists
 export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount ) {
   const info = await window.contract.pool_info( { token: tokenDetails.address} );
-  
+
   if(info !== null) {
-    // Pool already exists. 
+    // Pool already exists.
     return true;
   }
   await window.contract.create_pool( { token: tokenDetails.address });
@@ -340,8 +340,8 @@ export async function browsePools() {
 
 // eturns the owner balance of shares of a pool identified by token.
 export async function sharesBalance( token ) {
-  const bal = await window.contract.multi_balance_of ({ 
-    token: token.address, 
-    owner:  window.walletConnection.account() });
+  const bal = await window.contract.balance_of ({
+    token: token.address,
+    owner:  window.walletConnection.account()});
   return bal;
 }

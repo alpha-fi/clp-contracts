@@ -1,4 +1,5 @@
 use crate::*;
+use near_sdk::StorageUsage;
 
 impl NearCLP {
     pub(crate) fn assert_owner(&self) {
@@ -146,8 +147,8 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         println!(
-            "User purchased {} NEAR tokens for {} reserve tokens",
-            near, reserve
+            "User {} purchased {} NEAR tokens for {} reserve tokens to {}",
+            buyer, near, reserve, recipient
         );
         p.reserve += reserve;
         p.ynear -= near;
@@ -156,6 +157,7 @@ impl NearCLP {
         //get the token from buyer into CLP
         let promise = self.schedule_nep21_tansfer(token, buyer, env::current_account_id(), reserve);
         //and in the same batch send NEAR to client
+        // TODO - recipient here is wrong.
         promise.transfer(near);
         //TODO COMPLEX ROLLBACKS
     }
@@ -318,6 +320,77 @@ impl NearCLP {
             buyer,
             recipient,
         )
+    }
+
+    /// Helper function of a transfer implementing NEP-MFT standard.
+    pub(crate) fn _transfer(
+        &mut self,
+        token: String,
+        recipient: AccountId,
+        amount: U128,
+        data: Data,
+        is_contract: bool,
+    ) -> bool {
+        let sender = env::predecessor_account_id();
+        util::assert_account_is_valid(&recipient);
+        let amount_u = u128::from(amount);
+        assert!(amount_u > 0, "E2: amount must be >0");
+        let mut p = self.must_get_pool(&token);
+        let shares = p.shares.get(&sender).unwrap_or(0);
+        assert!(
+            shares >= amount_u,
+            "E11: Insufficient amount of shares balance"
+        );
+        println!(
+            ">>>>> Transferring shares. Sender {}, shares: {}, amount: {}",
+            sender, shares, amount.0,
+        );
+        let initial_storage = env::storage_usage();
+        p.shares.insert(&sender, &(shares - amount_u));
+        p.shares.insert(
+            &recipient,
+            &(p.shares.get(&recipient).unwrap_or(0) + amount_u),
+        );
+
+        // TODO: enable storage refunds (fails in unit tests)
+        self.refund_storage(initial_storage);
+        if is_contract {
+            // TODO: We should do it before modifiying local state to avoid exploits.
+            ext_mft_rec::on_mft_receive(
+                token.clone(),
+                sender,
+                amount,
+                data,
+                &recipient,
+                0,
+                env::prepaid_gas() / 4,
+            );
+        }
+        self.set_pool(&token, &p);
+        return true;
+    }
+
+    // TODO: test and make it working with promises.
+    pub(crate) fn refund_storage(&self, initial_storage: StorageUsage) {
+        let current_storage = env::storage_usage();
+        let attached_deposit = env::attached_deposit();
+        let refund_amount = if current_storage > initial_storage {
+            let required_deposit =
+                Balance::from(current_storage - initial_storage) * STORAGE_BYTE_PRICE;
+            assert!(
+                required_deposit <= attached_deposit,
+                "The required attached deposit is {}, but the given attached deposit is is {}",
+                required_deposit,
+                attached_deposit,
+            );
+            attached_deposit - required_deposit
+        } else {
+            attached_deposit + Balance::from(initial_storage - current_storage) * STORAGE_BYTE_PRICE
+        };
+        if refund_amount > 0 {
+            env::log(format!("Refunding {} tokens for storage", refund_amount).as_bytes());
+            Promise::new(env::predecessor_account_id()).transfer(refund_amount);
+        }
     }
 }
 

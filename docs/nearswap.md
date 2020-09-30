@@ -79,13 +79,16 @@ Recently we've seen many protocols with governance yield farming tokens. So far 
 + Sushiswap created
 + Food named coins with a ponzi gov token distribution scheme: each one is offering a migration bounty in a form of 10x based on the parent protocol bounty. It's easy to see that this is a house of cards.
 
-Many of this tokens don't have a solid product-market match nor proven unique value proposition.
+Many of this tokens don't have a solid product-market fit nor proven unique value proposition.
 
 There is a very nice [article](https://www.tokendaily.co/newsletter/21371e5354) summarizing the investors landscape of DeFi market related to recently popular governance tokens:
 *"the major investors and backers of popular DeFi protocols are essentially the same small group of investors. Compare that to the list of top 10 shareholders of JPMorgan and BoA above: you’ll quickly see that the game is not that different. Governance tokens can open a door of re-centralization that many of us believed were shut. Ironically, initiatives that aim to distribute control can often lead to even more centralization."*
 
+Let's be aware that a governance token posses a power to adapt the protocol towards more trading profits. Gov tokens can become a playground for gamification and market manipulation. These activities, when done with a right precision, could be extremely hard to observe.
 
-In summary: DeFi projects didn't deliver a solid governance mechanism, instead they created an **augmented speculation scheme** in a form of _limited_ governance tokens.
+In summary: today DeFi projects didn't deliver a solid governance mechanism, instead they created an **augmented speculation scheme** in a form of _limited_ governance tokens. Instead of shared responsibility and shareholders principals, the gov tokens are mainly being used in trading venues, making the traders, rather than the users, to controlling the market
+
+Maybe in the future the space can mature. But we don't see that future yet.
 
 
 ### How about Yield Farming?

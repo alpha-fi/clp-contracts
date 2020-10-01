@@ -177,7 +177,7 @@ const InputsProvider = ( { children } ) => {
             amount: 0,
           }
           draft.swap.to = oldFrom;
-          draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
+          draft.swap.needsApproval = (state.swap.to.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.swap.error = null;
         });

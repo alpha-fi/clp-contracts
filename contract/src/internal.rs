@@ -130,9 +130,8 @@ impl NearCLP {
         let mut p = self.must_get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
         // panics if near_to_pay > max_near_paid
-        let near_refund = max_near_paid - near_to_pay;
-        if near_refund > 0 {
-            Promise::new(buyer).transfer(near_refund as u128);
+        if max_near_paid > near_to_pay {
+            Promise::new(buyer).transfer(max_near_paid - near_to_pay);
         }
         self._swap_near(&mut p, token, near_to_pay, tokens_out, recipient);
     }

@@ -123,6 +123,7 @@ impl NearCLP {
         // panics if near_to_pay > max_near_paid
         let near_refund = max_near_paid - near_to_pay;
         if near_refund > 0 {
+            env_log!("Refunding {} yNEAR to {}", near_refund, buyer); // TODO: remove this log
             Promise::new(buyer).transfer(near_refund as u128);
         }
         self._swap_near(&mut p, token, near_to_pay, tokens_out, recipient);

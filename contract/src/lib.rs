@@ -224,6 +224,7 @@ impl NearCLP {
             ynear_amount,
             p.pool_info()
         );
+        self.set_pool(&token, &p);
 
         // TODO: do proper rollback
         // Prepare acc callback for liquidity transfer rollback which we will attach later on.
@@ -242,7 +243,6 @@ impl NearCLP {
         // 1. rollback `p` on changes or move the pool update to acc promise
         // 2. consider adding acc lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
 
-        self.set_pool(&token, &p);
         return shares_minted.into();
     }
 

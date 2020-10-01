@@ -1,0 +1,17 @@
+{
+	"nearNetworkId": "testnet",
+	"nearNodeUrl": "https://rpc.testnet.near.org/",
+	"ethNodeUrl": "https://rinkeby.infura.io/v3/eb2f8572f71a4e4b9d9302456356f5d8",
+	"nearMasterAccount": "amit.testnet",
+	"nearMasterSk": "ed25519:ukFog3MAdYGTy8UaUYnCHoZmaqS4rY3NQiAKVRnhRsYXqWo7nFfcg2SHxknWwhJ7ViajV6nK7yYsQspWkvqBBKd",
+	"nearClientAccount": "ethonnearclient10",
+	"nearProverAccount": "ethonnearprover10",
+	"nearClientTrustedSigner": "eth2nearrelay10.testnet",
+	"ethMasterSk": "93c81911a434c0254eb3f034bf95e1f4daff88016fba765109a460cf372158ac",
+	"ethEd25519Address": "0x9003342d15B21b4C42e1702447fE2f39FfAF55C2",
+	"ethClientAddress": "0xF721c979db97413AA9D0F91ad531FaBF769bb09C",
+	"ethProverAddress": "0xc5D62d66B8650E6242D9936c7e50E959BA0F9E37",
+	"ethErc20Address": "0xaD588BA02D25867D60eD9871B84299993f418d76",
+	"ethLockerAddress": "0x708C4b4E671Cd5D953aa646d4450650A4A5a3463",
+	"nearFunTokenAccount": "tether29"
+}

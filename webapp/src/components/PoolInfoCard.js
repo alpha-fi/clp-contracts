@@ -1,5 +1,7 @@
 import React, { useContext, useEffect } from "react";
 
+import { convertToE24Base } from "../services/near-nep21-util";
+
 import { TokenListContext } from "../contexts/TokenListContext";
 
 import Row from 'react-bootstrap/Row';
@@ -47,14 +49,14 @@ export default function PoolInfoCard(props) {
                 <Table borderless size="sm" className="text-secondary mb-1" style={{ fontSize: '80%' }}>
                   <thead>
                     <tr>
-                      <th><ColoredThemeText>yNEAR</ColoredThemeText></th>
-                      <th><ColoredThemeText>{props.ynear}</ColoredThemeText></th>
+                      <th>NEAR Amount</th>
+                      <th>{convertToE24Base(props.ynear)}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>Reserve</td>
-                      <td>{props.reserve}</td>
+                      <td><ColoredThemeText>Reserve Amount</ColoredThemeText></td>
+                      <td><ColoredThemeText>{props.reserve}</ColoredThemeText></td>
                     </tr>
                     <tr>
                       <td>Total shares</td>

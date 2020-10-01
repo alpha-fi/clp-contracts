@@ -247,7 +247,6 @@ export default function SwapInputCards(props) {
       });
     } catch (e) {
       console.error(e);
-      alert(e.message);
     }
   }
 

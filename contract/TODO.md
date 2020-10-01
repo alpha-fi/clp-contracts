@@ -1,5 +1,7 @@
 # TODO
 
++ replace UnorderedMap with LookupMap!
+
 ## Review and fix exploits
 
 Our current implementation is targeted functionality, not a full security.
@@ -16,6 +18,12 @@ Handle exceptions in _foreign_ contracts. Example: [StackOverflow question](http
 
 Tips:
 + https://github.com/nearprotocol/NEPs/pull/26
+
+## Tests
+
++ inspect near balances using `runtime.view_account`
++ more more more tests
+
 
 ## CLP related functionality
 

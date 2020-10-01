@@ -224,36 +224,18 @@ impl NearCLP {
             ynear_amount,
             p.pool_info()
         );
-
         self.set_pool(&token, &p);
 
         // TODO: do proper rollback
         // Prepare acc callback for liquidity transfer rollback which we will attach later on.
-        //prepare the callback so we can rollback if the transfer fails (for example: panic_msg: "Not enough balance" })
         let callback_args = format!(r#"{{ "token":"{}" }}"#, token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
             "add_liquidity_transfer_callback".into(),
             callback_args,
             0,
-            20 * TGAS,
+            5 * TGAS,
         );
-
-        //schedule acc call to transfer nep21 tokens
-        let args: Vec<u8> = format!(
-            r#"{{ "owner_id":"{oid}","new_owner_id":"{noid}","amount":"{amount}" }}"#,
-            oid = caller,
-            noid = env::current_account_id(),
-            amount = added_reserve
-        )
-        .into();
-
-        Promise::new(token) //call the token contract
-            .function_call(
-                "transfer_from".into(),
-                args,
-                NEP21_STORAGE_DEPOSIT,
-                20 * TGAS,
-            )
+        self.schedule_nep21_tx(&token, caller, env::current_account_id(), added_reserve)
             .then(callback); //after that, the callback will check success/failure
 
         // TODO:
@@ -316,21 +298,17 @@ impl NearCLP {
         p.reserve -= token_amount;
         p.ynear -= ynear_amount;
 
-        //send near to caller
-        let send_near = Promise::new(caller.clone()) // caller is clone because it has to be used later
-            .transfer(ynear_amount);
-        //send token to caller
-        let send_tokens = self.schedule_nep21_tansfer(
+        // let prepaid_gas = env::prepaid_gas();
+        self.schedule_nep21_tx(
             &token,
             env::current_account_id(),
-            env::predecessor_account_id(),
+            caller.clone(),
             token_amount,
-        );
-        //schedule  both in parallel
-        send_near.and(send_tokens);
-        self.set_pool(&token, &p);
+        )
+        .then(Promise::new(caller).transfer(ynear_amount));
 
         //TODO COMPLEX-CALLBACKS
+        self.set_pool(&token, &p);
     }
 
     /**********************
@@ -748,10 +726,6 @@ impl NearCLP {
 
 //#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
-mod unit_tests_fun_token;
-
-//#[cfg(not(target_arch = "wasm32"))]
-#[cfg(test)]
 mod tests {
     use super::*;
     use near_sdk::MockedBlockchain;
@@ -920,8 +894,8 @@ mod tests {
         let token_deposit = 2 * NDENOM;
         let ynear_deposit_j = U128::from(ynear_deposit);
         ctx.set_gas_and_deposit_for_token_op();
-
         ctx.set_deposit(ynear_deposit);
+
         c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 
         let p = c.pool_info(&t).expect("Pool should exist");
@@ -951,6 +925,46 @@ mod tests {
 
         // TODO tests
         // + add liquidity with max_balance > allowance
+    }
+    #[test]
+    fn withdraw_happy_path() {
+        let (ctx, mut c) = init_with_storage_deposit();
+        let acc = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+
+        let shares_bal = 12 * NDENOM;
+        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&acc, &shares_bal);
+        let p = Pool {
+            ynear: shares_bal,
+            reserve: 3 * NDENOM,
+            total_shares: shares_bal,
+            shares: shares_map,
+        };
+        c.set_pool(&t, &p);
+
+        let amount = shares_bal / 3;
+        let min_v = U128::from(1);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_v, min_v);
+
+        let pi = c.pool_info(&t).expect("Pool should exist");
+        let expected_pool = PoolInfo {
+            ynear: U128::from(shares_bal - amount),
+            reserve: U128::from(2 * NDENOM),
+            total_shares: U128::from(shares_bal - amount),
+        };
+        assert_eq!(pi, expected_pool, "pool_info should be correct");
+        let acc_shares = c.balance_of(t.clone(), acc);
+        assert_eq!(
+            to_num(acc_shares),
+            shares_bal - amount,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t)),
+            shares_bal - amount,
+            "LP should have correct amount of shares"
+        );
     }
 
     #[test]

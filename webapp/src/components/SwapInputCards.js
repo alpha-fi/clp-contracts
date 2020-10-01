@@ -250,9 +250,11 @@ export default function SwapInputCards(props) {
     }
   }
 
-  // async function updateFromAllowance() {
-  //   dispatch({ type:'UPDATE_SWAP_APPROVAL', payload: { needsApproval: (inputs.state.swap.to.type === "NEP-21") }})
-  // }
+  // Clear inputs
+  function clearInputs() {
+    dispatch({type: 'CLEAR_SWAP_INPUTS'});
+    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+  }
 
   // Updates allowance of from token
   async function updateFromAllowance(token) {
@@ -268,19 +270,13 @@ export default function SwapInputCards(props) {
     });
   }
 
-  // Clear inputs
-  function clearInputs() {
-    dispatch({type: 'CLEAR_SWAP_INPUTS'});
-    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-  }
-
   // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
     let oldFromAmount = inputs.state.swap.from.amount;
     let oldTo = inputs.state.swap.to;
     dispatch({type: 'SWITCH_SWAP_INPUTS'});
     handleToAmountChange(oldFromAmount);
-    updateFromAllowance(oldTo)
+    updateFromAllowance(oldTo);
   }
 
   return (

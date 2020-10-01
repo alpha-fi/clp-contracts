@@ -21,8 +21,9 @@ Go to the [NEAR-CLP usage](/docs/nearclp-usage.md) page.
 
 1. NEARswap is a common good. Open and accessible for everyone. Hence we want to make it as predictable and as safe as possible.
 1. We start with Uniswap v2 market model as a solid and proven base. Each trade will incur fees which will be shared with liquidity providers.
-1. NEAR is the base currency for each pool, which increases the utility function of the NEAR tokens.
-   NEAR is the most liquid asset in the pool. It's possible to easily move NEAR between pools, which opens few interesting features which we will discuss later.
+   1. Each pool is based only on two different tokens, one of the tokens must be NEAR.
+   1. NEAR is the base currency for each pool, which increases the utility function of the NEAR tokens.
+      NEAR is the most liquid asset in the pool. It's possible to easily move NEAR between pools, which opens few interesting features which we will discuss later.
 
 1. We keep all pools under the same smart contract, which brings many advantages:
    * simplifies implementation
@@ -32,6 +33,8 @@ Go to the [NEAR-CLP usage](/docs/nearclp-usage.md) page.
    Note: This design will limit the a capabilities of the contract (all pools will stay in the same shard). However we don't see it as a problem. Each token contract will already be evenly distributed. And our implementation design provides better efficiency for the protocols we are designing.
 
 1. We are aware about the [Impermanent Loss](https://medium.com/@pintail/uniswap-a-good-deal-for-liquidity-providers-104c0b6816f2) problems and we are working on new trading models for AMM. In a volatile market, the basic fee model (as the one defined by Uniswap) is not enough to cover the Impermanent Losses. Through investigation of many approaches drafted the evolution of the protocol and will probably implement the Thorchain CLP trading model.
+
+We will iterate on the above model, and we are already designing new mechanism for pool management and balancing which will not depend on a fixed fee and Uniswap v2.
 
 
 #### Future design goals

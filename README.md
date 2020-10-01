@@ -33,10 +33,9 @@ Status: research & development.
 
 We have few garage products which we will share later.
 
-### Design Principles
+### Research
 
-* Governance
-* ...
+We analyze different approaches (slowly releasing a content there) in the [research](/docs/research.md) document.
 
 
 ## Usage
@@ -85,6 +84,7 @@ We build `NEAR-CLP` to fulfill this goals in a very open and decentralized manne
 - Focus on liquidity pools and AMM
 - Eliminate side markets incentives. Side market is an entity which could change a behavior of the CLP / AMM protocol and shift the benefits or potentially manipulate the whole market.
 - Highly predictable behavior designed with the main blockchain principles: trustless smart-contracts without susceptible governance.
+
 
 
 ## Why NEAR

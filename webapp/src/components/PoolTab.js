@@ -1,4 +1,6 @@
-import React, { useContext } from "react";
+import React, { useEffect } from "react";
+
+import { browsePools, poolInfo } from "../services/near-nep21-util";
 
 import PoolInputCards from "./PoolInputCards"
 import PoolInfoCard from "./PoolInfoCard"
@@ -13,6 +15,20 @@ const Hr = styled("hr")`
 `;
 
 export default function PoolTab() {
+
+  async function fetchPools() {
+    browsePools()
+    .then(function(pools) {
+      pools.map((pool, index) => {
+        console.log(poolInfo(pool[index]))
+      });
+    });
+  }
+
+  useEffect(function() {
+    fetchPools();
+  }, []);
+
   return (
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>

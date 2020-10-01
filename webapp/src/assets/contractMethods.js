@@ -12,6 +12,7 @@ export let view_methods_lib_contract = [
 
 	// Pool Info
 	'pool_info',
+	'list_pools',
 	'calc_out_amount',
 	'calc_in_amount',
 

@@ -50,7 +50,7 @@ export default function PoolInfoCard(props) {
                   <thead>
                     <tr>
                       <th>NEAR Amount</th>
-                      <th>{convertToE24Base(props.ynear)}</th>
+                      <th>{Number(convertToE24Base(props.ynear)).toFixed(5)}</th>
                     </tr>
                   </thead>
                   <tbody>

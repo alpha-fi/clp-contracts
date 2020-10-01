@@ -4,7 +4,7 @@ import getConfig from '../config'
 const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
-const attachedNear = '6' + e22;
+const attach60NearCents = '6' + e22;
 const nep21AllowanceFee = '4' + e22;
 const NDENOM = 1e24;
 
@@ -212,7 +212,7 @@ export async function swapFromIn( token1, token2 ) {
       min_tokens: amount2
     },
     maxGas,
-    attachedNear
+    attach60NearCents
     );
 
   }
@@ -225,7 +225,7 @@ export async function swapFromIn( token1, token2 ) {
         from_tokens: amount1,
         min_to_tokens: amount2 },
         maxGas,
-        attachedNear
+        attach60NearCents
         );
 
     }
@@ -236,7 +236,7 @@ export async function swapFromIn( token1, token2 ) {
           tokens_paid: amount1,
           min_ynear: amount2 },
           maxGas,
-          attachedNear
+          attach60NearCents
           );
 
       }
@@ -283,41 +283,42 @@ export async function calcPriceFromOut( token1, token2) {
   }
 }
 
-export async function swapFromOut( token1, token2 ) {
-  const amount1 = normalizeAmount( token1.amount );
-  const amount2 = normalizeAmount( token2.amount );
-  if(token1.type === "Native token") {
+export async function swapFromOut( tokenIN, tokenOUT ) {
+  const amountIN = normalizeAmount( tokenIN.amount );
+  const amountOUT = normalizeAmount( tokenOUT.amount );
+  if(tokenIN.type === "Native token") {
     // Native to NEP-21
-    console.log("SWAP: amt", amount2);
+    //NEARs IN / Tokens out
+    //console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
-      token: token2.address,
-      tokens_out: amount2 },
+      token: tokenOUT.address,
+      tokens_out: amountOUT },
       maxGas,
-      attachedNear
+      amountIN //near-in
       );
 
   }
   else {
-    if(token2.type === "NEP-21") {
+    if(tokenOUT.type === "NEP-21") {
       // NEP-21 to NEP-21
       await window.contract.swap_tokens_exact_out( {
-        from: token1.address,
-        to: token2.address,
-        to_tokens: amount2,
-        max_from_tokens: amount1 },
+        from: tokenIN.address,
+        to: tokenOUT.address,
+        to_tokens: amountOUT,
+        max_from_tokens: amountIN },
         maxGas,
-        attachedNear
+        attach60NearCents
         );
 
     }
-    else if(token2.type === "Native token") {
+    else if(tokenOUT.type === "Native token") {
       // NEP-21 to Native
         await window.contract.swap_token_to_near_exact_out( {
-          token: token1.address,
-          ynear_out: amount2,
-          max_tokens: amount1 },
+          token: tokenIN.address,
+          ynear_out: amountOUT,
+          max_tokens: amountIN },
           maxGas,
-          attachedNear
+          attach60NearCents
           );
 
       }
@@ -332,7 +333,7 @@ export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmoun
     max_tokens: maxTokenAmount,
     min_shares: minSharesAmount},
     maxGas,
-    attachedNear
+    attach60NearCents
     );
 }
 

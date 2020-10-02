@@ -54,7 +54,6 @@ export async function incAllowance( token ) {
 
 export async function getAllowance( token ) {
   const accountId = window.accountId;
-  console.log(accountId);
   window.nep21 = await new Contract(
     window.walletConnection.account(),
     token.address ,
@@ -173,7 +172,6 @@ export async function calcPriceFromIn(token1, token2) {
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
-    console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address,
       ynear_in: toYoctosString(token1.amount)});
@@ -248,7 +246,6 @@ export async function swapFromIn( token1, token2 ) {
 
 export async function calcPriceFromOut( token1, token2) {
   let amount2 = normalizeAmount( token2.amount );
-  //console.log("amount_out ", amount2);
   if(amount2 < 1) {
     return 0;
   }
@@ -289,7 +286,6 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
   if(tokenIN.type === "Native token") {
     // Native to NEP-21
     //NEARs IN / Tokens out
-    //console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
       token: tokenOUT.address,
       tokens_out: amountOUT },

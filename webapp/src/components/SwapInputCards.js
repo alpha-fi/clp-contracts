@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { calcPriceFromIn, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
+import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 import { isNonzeroNumber, delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
@@ -201,8 +201,13 @@ export default function SwapInputCards(props) {
     }});
 
     // Calculate the value of the other input box (only called when the user types)
+<<<<<<< HEAD
     let updatedToken = { ...inputs.state.swap.out, amount: amount };
     let calculatedFromPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.in)
+=======
+    let updatedToken = { ...inputs.state.swap.to, amount: amount };
+    let calculatedFromPrice = await calcPriceFromOut(inputs.state.swap.from, updatedToken)
+>>>>>>> master
     .then(function(result) {
       dispatch({ type: 'SET_IN_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) }});
       updateStatus(result, amount); // Update status and/or error message

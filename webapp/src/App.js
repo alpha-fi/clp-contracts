@@ -62,7 +62,7 @@ export default function App() {
       <Container className="pb-2">
         <Row className="d-flex justify-content-center">
           <Col md={8} lg={6}>
-            <Card className="border-0 bg-transparent">
+            <Card className="border-0 bg-transparent mb-4">
               <Card.Body>
                 <Notification/>
                 <Tab.Container defaultActiveKey="swap">

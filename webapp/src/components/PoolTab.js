@@ -38,7 +38,7 @@ export default function PoolTab() {
 
   return (
     <>
-      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>TOP POOLS</small></p>
+      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOLS</small></p>
       {pools.map((pool, index) => (
         <PoolInfoCard key={index} ynear={pool.ynear} reserve={pool.reserve} total_shares={pool.total_shares} name={pool.name} />
       ))}

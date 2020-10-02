@@ -42,71 +42,65 @@ export default function SwapInputCards(props) {
 
   // Runs only in useEffect(). Looks for isApproving or isSwapping = true
   // and then updates state and shows notifications based on result
-  function checkStatuses() {
+  async function checkStatuses() {
+    await delay(1200).then(async function() { // delay to wait for balances update
+      if (inputs.state.swap.status == "isApproving") {
 
-    if (inputs.state.swap.status == "isApproving") {
+        // If approval is successful
+        if (inputs.state.swap.previous < inputs.state.swap.in.allowance) {
+          // Notify user
+          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+            heading: "Approval complete",
+            message: "Your NEP-21 token is now approved to swap."
+          }});
+          // Reset needsApproval
+          dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
+            needsApproval: false
+          }});
+          // Update status
+          dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
+            status: "readyToSwap"
+          }});
+        } else {
+          // Approval is not successful
+          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+            heading: "Approval unsuccessful",
+            message: "Please try again."
+          }});
+        }
 
-      // If approval is successful
-      if (inputs.state.swap.previous < inputs.state.swap.in.allowance) {
-        // Notify user
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Approval complete",
-          message: "Your NEP-21 token is now approved to swap."
-        }});
-        // Reset needsApproval
-        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
-          needsApproval: false
-        }});
-        // Update status
-        dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
-          status: "readyToSwap"
-        }});
-      } else {
-        // Approval is not successful
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Approval unsuccessful",
-          message: "Please try again."
-        }});
-      }
+      } else if (inputs.state.swap.status == "isSwapping") {
 
-    } else if (inputs.state.swap.status == "isSwapping") {
+        // inputs.state.swap.in.balance has not updated at this point, so we have to pull from tokenListState
+        let newBalance = tokenListState.state.tokenList.tokens[inputs.state.swap.in.tokenIndex].balance;
 
-      // If swap is successful
-      if (inputs.state.swap.previous < inputs.state.swap.in.balance) {
-        // Reset amounts
-        clearInputs();
-        // Reset needsApproval
-        dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
-          needsApproval: (inputs.state.swap.out.type === "NEP-21")
-        }});
-        // Notify user
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Swap complete",
-          message: "Your swap has been submitted."
-        }});
-        // Update status
-        dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
-          status: "notReadyToSwap"
-        }});
-      } else {
-        // Swap is not successful
-        notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
-          heading: "Swap unsuccessful",
-          message: "Your swap has been failed."
-        }});
-      }
-    }
-  }
-
-  // Initializes allowance of from token
-  async function initializeFromAllowance() {
-    await delay(500).then(async function() {
-      if (inputs.state.swap.in.type == "NEP-21") {
-        try {
-          let allowance = await getAllowance(inputs.state.swap.in);
-          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
-        } catch (e) {
-          console.error(e);
+        // If swap is successful
+        if (inputs.state.swap.previous > newBalance) {
+          // Reset amounts
+          clearInputs();
+          // Reset needsApproval
+          dispatch({ type: 'UPDATE_SWAP_APPROVAL', payload: { 
+            needsApproval: (inputs.state.swap.out.type === "NEP-21")
+          }});
+          // Notify user
+          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+            heading: "Swap complete",
+            message: "Your swap has been submitted."
+          }});
+          // Update status
+          dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
+            status: "notReadyToSwap"
+          }});
+        } else {
+          // Swap is not successful
+          notification.dispatch({ type: 'SHOW_NOTIFICATION', payload: { 
+            heading: "Swap unsuccessful",
+            message: "Your swap has failed."
+          }});
+          // Update status
+          dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { 
+            status: "readyToSwap"
+          }});
         }
       }
     });
@@ -121,6 +115,8 @@ export default function SwapInputCards(props) {
     // Look for errors in order of most critical to least critical
     if (inputs.state.swap.in.tokenIndex === inputs.state.swap.out.tokenIndex) {
       newError = "Cannot swap to same currency.";
+    } else if (!window.accountId) {
+      newError = "Not signed in.";
     } else if (Number(fromAmount) > Number(inputs.state.swap.in.balance)) {
       newError = "Input exceeds balance.";
     } else if (Number(fromAmount) === 0 && Number(outAmount) !== 0) {
@@ -171,7 +167,7 @@ export default function SwapInputCards(props) {
           balance: newToken.balance
         }
       });
-    });
+    })
   }
 
   // Load icons and symbol for the current selected currency/token

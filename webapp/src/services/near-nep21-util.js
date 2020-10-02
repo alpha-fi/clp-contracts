@@ -354,11 +354,21 @@ export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount 
 
 export async function browsePools() {
   try {
-    const poolInfo = await window.contract.list_pools();
+    const pools = await window.contract.list_pools();
+    console.log(pools);
+    return pools;
+  } catch (error) {
+    console.error('cannot fetch pool list');
+  }
+}
+
+export async function poolInfo(pool) {
+  try {
+    const poolInfo = await window.contract.pool_info({token: pool});
     console.log(poolInfo);
     return poolInfo;
   } catch (error) {
-    console.error('cannot fetch pool list');
+    console.error('cannot fetch pool info');
   }
 }
 

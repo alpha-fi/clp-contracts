@@ -107,7 +107,7 @@ const InputsProvider = ( { children } ) => {
           draft.swap.to.address = action.payload.address;
           draft.swap.to.allowance = null;
           draft.swap.to.balance = action.payload.balance;
-          draft.swap.needsApproval = (state.swap.to.type === "NEP-21");
+          draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.currencySelectionModal.isVisible = false;
           draft.swap.from.amount = "";

@@ -250,22 +250,33 @@ export default function SwapInputCards(props) {
     }
   }
 
-  async function updateFromAllowance() {
-
-  }
-
   // Clear inputs
   function clearInputs() {
     dispatch({type: 'CLEAR_SWAP_INPUTS'});
     dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
   }
 
+  // Updates allowance of from token
+  async function updateFromAllowance(token) {
+    await delay(500).then(async function() {
+      if (token.type == "NEP-21") {
+        try {
+          let allowance = await getAllowance(token);
+          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
   // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
     let oldFromAmount = inputs.state.swap.from.amount;
+    let oldTo = inputs.state.swap.to;
     dispatch({type: 'SWITCH_SWAP_INPUTS'});
     handleToAmountChange(oldFromAmount);
-    updateFromAllowance();
+    updateFromAllowance(oldTo);
   }
 
   return (

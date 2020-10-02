@@ -89,7 +89,7 @@ export const CurrencyTable = () => {
             {tokenListState.state.tokenList.tokens[index].logoURI.startsWith('ipfs://')
               ?
                 // Token image is served over IPFS
-                <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
+                <img src={window.config.ipfsPrefix + token.logoURI.substring(7)} width="25px" />
               :
                 // Token image is served over HTTP/HTTPS
                 <img src={token.logoURI} width="25px" />

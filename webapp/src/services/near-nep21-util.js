@@ -1,7 +1,6 @@
 import { Contract} from 'near-api-js'
 import getConfig from '../config'
 
-const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
 const attach60NearCents = '6' + e22;
@@ -39,7 +38,7 @@ export async function incAllowance( token ) {
 
   try {
     await window.nep21.inc_allowance({
-      escrow_account_id: nearConfig.contractName,
+      escrow_account_id: window.config.contractName,
       amount: token.amount},
       maxGas,
       nep21AllowanceFee
@@ -66,7 +65,7 @@ export async function getAllowance( token ) {
   )
   const allowance = await window.nep21.get_allowance({
     owner_id: accountId,
-    escrow_account_id: nearConfig.contractName });
+    escrow_account_id: window.config.contractName });
   console.log('Allowance: ', allowance);
   return convertToE24Base(allowance);
 }

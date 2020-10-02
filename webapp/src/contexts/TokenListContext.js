@@ -10,7 +10,7 @@ import { default as testTokenList } from '../assets/test-token-near.json';
 import { getBalanceNEP } from '../services/near-nep21-util'
 
 const initialState = {
-  tokenList: testTokenList
+  tokenList: window.config.defaultTokenList,
 }
 
 const updateNearBalances = (tokenList) => {

@@ -24,8 +24,8 @@ export default function PoolTab() {
       fetchedPools.map((fetchedPoolInfo, index) => {
         poolInfo(fetchedPoolInfo)
         .then(function(poolInfo) {
-          console.log(poolInfo);
-          // setPools(pools.concat({...poolInfo, name: fetchedPools[index]}));
+          // Set state to an array of pools and include the name of the pool
+          // @TODO: find token within TokenListContext and include images, symbol name. etc.
           setPools(pools => [...pools, {...poolInfo, name: fetchedPools[index]}]);
         });
       });

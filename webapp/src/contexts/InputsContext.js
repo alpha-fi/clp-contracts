@@ -15,10 +15,10 @@ const initialInput = {
 
 let initialState = { 
   swap: {
-    from: produce(initialInput, draft => {
+    in: produce(initialInput, draft => {
       draft.tokenIndex = 0;
     }),
-    to: produce(initialInput, draft => {
+    out: produce(initialInput, draft => {
       draft.tokenIndex = 1;
     }),
     error: null,               // error string if error, null otherwise
@@ -57,15 +57,15 @@ const InputsProvider = ( { children } ) => {
 
   const [state, dispatch] = useReducer((state, action) => {
     switch(action.type) {
-      case 'SET_FROM_AMOUNT':
+      case 'SET_IN_AMOUNT':
         return produce(state, draft => {
-          draft.swap.from.amount = action.payload.amount;
-          draft.swap.from.isValid = action.payload.isValid;
+          draft.swap.in.amount = action.payload.amount;
+          draft.swap.in.isValid = action.payload.isValid;
         });
-      case 'SET_TO_AMOUNT':
+      case 'SET_OUT_AMOUNT':
         return produce(state, draft => {
-          draft.swap.to.amount = action.payload.amount;
-          draft.swap.to.isValid = action.payload.isValid;
+          draft.swap.out.amount = action.payload.amount;
+          draft.swap.out.isValid = action.payload.isValid;
         });
       case 'SET_INPUT1_AMOUNT':
         return produce(state, draft => {
@@ -80,38 +80,38 @@ const InputsProvider = ( { children } ) => {
 
       // Updates the currency in the 'From' input card on the swap tab usually when a user chooses from the
       // currency selection modal
-      case 'UPDATE_FROM_SELECTED_CURRENCY':
+      case 'UPDATE_IN_SELECTED_CURRENCY':
         return produce(state, draft => {
-          draft.swap.from.symbol = action.payload.symbol;
-          draft.swap.from.type = action.payload.type;
-          draft.swap.from.logoUrl = action.payload.logoUrl;
-          draft.swap.from.tokenIndex = action.payload.tokenIndex;
-          draft.swap.from.address = action.payload.address;
-          draft.swap.from.allowance = "";
-          draft.swap.from.balance = action.payload.balance;
+          draft.swap.in.symbol = action.payload.symbol;
+          draft.swap.in.type = action.payload.type;
+          draft.swap.in.logoUrl = action.payload.logoUrl;
+          draft.swap.in.tokenIndex = action.payload.tokenIndex;
+          draft.swap.in.address = action.payload.address;
+          draft.swap.in.allowance = "";
+          draft.swap.in.balance = action.payload.balance;
           draft.swap.needsApproval = (action.payload.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.currencySelectionModal.isVisible = false;
-          draft.swap.from.amount = "";
-          draft.swap.to.amount = "";
+          draft.swap.in.amount = "";
+          draft.swap.out.amount = "";
         });
 
       // Updates the currency in the 'To' input card on the swap tab usually when a user chooses from the
       // currency selection modal
-      case 'UPDATE_TO_SELECTED_CURRENCY':
+      case 'UPDATE_OUT_SELECTED_CURRENCY':
         return produce(state, draft => {
-          draft.swap.to.symbol = action.payload.symbol;
-          draft.swap.to.type = action.payload.type;
-          draft.swap.to.logoUrl = action.payload.logoUrl;
-          draft.swap.to.tokenIndex = action.payload.tokenIndex;
-          draft.swap.to.address = action.payload.address;
-          draft.swap.to.allowance = null;
-          draft.swap.to.balance = action.payload.balance;
-          draft.swap.needsApproval = (state.swap.from.type === "NEP-21");
+          draft.swap.out.symbol = action.payload.symbol;
+          draft.swap.out.type = action.payload.type;
+          draft.swap.out.logoUrl = action.payload.logoUrl;
+          draft.swap.out.tokenIndex = action.payload.tokenIndex;
+          draft.swap.out.address = action.payload.address;
+          draft.swap.out.allowance = null;
+          draft.swap.out.balance = action.payload.balance;
+          draft.swap.needsApproval = (state.swap.in.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.currencySelectionModal.isVisible = false;
-          draft.swap.from.amount = "";
-          draft.swap.to.amount = "";
+          draft.swap.in.amount = "";
+          draft.swap.out.amount = "";
         });
 
       // Updates the currency in the first input card for providing liquidity on the pool tab
@@ -153,10 +153,10 @@ const InputsProvider = ( { children } ) => {
         });
       case 'CLEAR_SWAP_INPUTS':
         return produce(state, draft => {
-          draft.swap.from.amount = "";
-          draft.swap.from.isValid = false;
-          draft.swap.to.amount = "";
-          draft.swap.to.isValid = false;
+          draft.swap.in.amount = "";
+          draft.swap.in.isValid = false;
+          draft.swap.out.amount = "";
+          draft.swap.out.isValid = false;
           draft.swap.status = "notReadyToSwap";
           draft.swap.error = null;
         });
@@ -164,20 +164,20 @@ const InputsProvider = ( { children } ) => {
         return produce(state, draft => {
           draft.swap.error = action.payload.error;
         });
-      case 'UPDATE_FROM_ALLOWANCE':
+      case 'UPDATE_IN_ALLOWANCE':
         return produce(state, draft => {
-          draft.swap.from.allowance = action.payload.allowance;
+          draft.swap.in.allowance = action.payload.allowance;
         });
       case 'SWITCH_SWAP_INPUTS':
-        let oldTo = state.swap.to;
-        let oldFrom = state.swap.from;
+        let oldOut = state.swap.out;
+        let oldIn = state.swap.in;
         return produce(state, draft => {
-          draft.swap.from = {
-            ...oldTo,
+          draft.swap.in = {
+            ...oldOut,
             amount: 0,
           }
-          draft.swap.to = oldFrom;
-          draft.swap.needsApproval = (state.swap.to.type === "NEP-21");
+          draft.swap.out = oldIn;
+          draft.swap.needsApproval = (state.swap.out.type === "NEP-21");
           draft.swap.status = "notReadyToSwap";
           draft.swap.error = null;
         });

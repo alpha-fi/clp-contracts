@@ -29,12 +29,12 @@ export const CurrencyTable = () => {
   const tokenListState = useContext(TokenListContext);
 
   // Updates allowance of from token
-  async function updateFromAllowance(token) {
+  async function updateInAllowance(token) {
     await delay(500).then(async function() {
       if (token.type == "NEP-21") {
         try {
           let allowance = await getAllowance(token);
-          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
         } catch (e) {
           console.error(e);
         }
@@ -62,12 +62,12 @@ export const CurrencyTable = () => {
 
     // Find correct input to update
     switch (inputs.state.currencySelectionModal.selectedInput) {
-      case 'from':
-        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
-        updateFromAllowance(newPayload);
+      case 'in':
+        dispatch({ type: 'UPDATE_IN_SELECTED_CURRENCY', payload: newPayload });
+        updateInAllowance(newPayload);
         break;
-      case 'to':
-        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
+      case 'out':
+        dispatch({ type: 'UPDATE_OUT_SELECTED_CURRENCY', payload: newPayload });
         break;
       case 'input1':
         dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });

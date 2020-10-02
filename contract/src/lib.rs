@@ -28,6 +28,7 @@ mod internal;
 // E9: assets (tokens) must be different in token to token swap.
 // E10: Pool is empty and can't make acc swap.
 // E11: Insufficient amount of shares balance.
+// E12: Insufficient amount of NEAR attached
 
 /// PoolInfo is acc helper structure to extract public data from acc Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]

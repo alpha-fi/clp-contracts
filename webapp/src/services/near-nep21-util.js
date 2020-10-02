@@ -222,8 +222,8 @@ export async function swapFromIn( token1, token2 ) {
       await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        from_tokens: amount1,
-        min_to_tokens: amount2 },
+        tokens_in: amount1,
+        min_tokens_out: amount2 },
         maxGas,
         attach60NearCents
         );
@@ -304,8 +304,8 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
       await window.contract.swap_tokens_exact_out( {
         from: tokenIN.address,
         to: tokenOUT.address,
-        to_tokens: amountOUT,
-        max_from_tokens: amountIN },
+        tokens_out: amountOUT,
+        max_tokens_in: amountIN },
         maxGas,
         attach60NearCents
         );

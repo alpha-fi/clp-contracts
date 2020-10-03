@@ -331,7 +331,14 @@ export default function SwapInputCards(props) {
       })
   }
 
+  //---------------------------------------------------------------
+  //---------------------------------------------------------------
+  // APP after mounted / recovery after SDE --------------------------------
+  //---------------------------------------------------------------
   // Load icons and symbol for the current selected currency/token
+  // TODO - async load info for the token list --------------------
+  //---------------------------------------------------------------
+  //---------------------------------------------------------------
   useEffect(() => {
     updateSwapBalances(tokenListState, inputs) //get balances from the 2 selected currencies
     //handleFromTokenUpdate();

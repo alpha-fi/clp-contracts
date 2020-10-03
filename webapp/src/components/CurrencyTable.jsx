@@ -1,9 +1,8 @@
 import React, { useContext, useEffect } from "react";
 
-import { getBalanceNEP, convertToE24Base5Dec } from '../services/near-nep21-util'
+import { getBalanceNEP, convertToE24Base5Dec, getAllowance } from '../services/near-nep21-util'
 
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { getAllowance } from "../services/near-nep21-util";
 import { delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
@@ -118,6 +117,7 @@ export const CurrencyTable = () => {
   function handleCurrencyChange(newTokenIndex) {
     //update active input
     const name = inputs.state.currencySelectionModal.selectedInput
+    let newPayload = tokenListState.state.tokenList.tokens[newTokenIndex];
     setCurrencyIndex(name, newTokenIndex, inputs, tokenListState)
     if (name=="in") updateInAllowance(newPayload);
 

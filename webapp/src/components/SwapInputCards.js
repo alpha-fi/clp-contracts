@@ -150,8 +150,8 @@ export default function SwapInputCards(props) {
       } });
   }
 
-  // Updates swap status (usually readyToSwap, notReadyToSwap) and error message. Called by handleToAmountChange() 
-  function updateStatus(fromAmount, toAmount) {
+  // Updates swap status (usually readyToSwap, notReadyToSwap) and error message. Called by handleOutAmountChange() 
+  function updateStatus(inAmount, outAmount) {
 
     let newError;
     let newStatus = "notReadyToSwap";
@@ -161,9 +161,9 @@ export default function SwapInputCards(props) {
       newError = "Cannot swap to same currency.";
     } else if (!window.accountId) {
       newError = "Not signed in.";
-    } else if (Number(fromAmount) > Number(inputs.state.swap.in.balance)) {
+    } else if (Number(inAmount) > Number(inputs.state.swap.in.balance)) {
       newError = "Input exceeds balance.";
-    } else if (Number(fromAmount) === 0 && Number(outAmount) !== 0) {
+    } else if (Number(inAmount) === 0 && Number(outAmount) !== 0) {
       newError = "Insufficient liquidity for trade."
     } else if (!isNonzeroNumber(outAmount)) {
       newError = "Enter a non-zero number.";
@@ -316,13 +316,13 @@ export default function SwapInputCards(props) {
     //first leg
     let Promise1 = updateSwapBal(inputs, inputs.state.swap.out, tokenListState)
       .then((newBalance)=>{
-        setCurrencyIndex("to", inputs.state.swap.out.tokenIndex, inputs, tokenListState);
+        setCurrencyIndex("out", inputs.state.swap.out.tokenIndex, inputs, tokenListState);
         newUserBalanceReceived(newBalance)
       })
 
     //second leg
     let Promise2 = updateSwapBal(inputs, inputs.state.swap.in, tokenListState)
-      .then(setCurrencyIndex("from", inputs.state.swap.in.tokenIndex, inputs, tokenListState))
+      .then(setCurrencyIndex("in", inputs.state.swap.in.tokenIndex, inputs, tokenListState))
 
     //when both resolve
     Promise.all([Promise1, Promise2])
@@ -351,7 +351,7 @@ export default function SwapInputCards(props) {
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "in" } });
   }
   function handleCurrencySelectionModalTo() {
-    dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "to" } });
+    dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "out" } });
   }
 
   // Handle 'I want' amount changes
@@ -429,11 +429,11 @@ export default function SwapInputCards(props) {
   }
 
   // Updates allowance of from token
-  async function updateFromAllowance(token) {
+  async function updateInAllowance(token) {
     await delay(500).then(async function () {
       if (token.type == "NEP-21") {
         try {
-          let allowance = await getAllowance(tokenPayload);
+          let allowance = await getAllowance(token);
           dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
         } catch (e) {
           console.error(e);
@@ -447,8 +447,8 @@ export default function SwapInputCards(props) {
     let oldFromAmount = inputs.state.swap.in.amount;
     let oldTo = inputs.state.swap.out;
     dispatch({ type: 'SWITCH_SWAP_INPUTS' });
-    handleToAmountChange(oldFromAmount);
-    updateFromAllowance(oldTo);
+    handleOutAmountChange(oldFromAmount);
+    updateInAllowance(oldTo);
   }
 
   function readyToSwap() { 

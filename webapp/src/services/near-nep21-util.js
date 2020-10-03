@@ -20,9 +20,7 @@ export async function getBalanceNEP( contractName ) {
       changeMethods: []
     }
   )
-  const res = await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
-  return convertToE24Base(res);
-
+  return await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
 }
 
 export async function incAllowance( token ) {
@@ -82,9 +80,13 @@ export async function gasCheck() {
   return false;
 }
 
-export function convertToE24Base( str ) {
+export function convertToE24Base5Dec( str ) {
+  let result = convertToE24Base(str)
+  return result.slice(0,-19)
+}
 
-  let result = (str +"").padStart(24,"0")
+export function convertToE24Base( str ) {
+  let result = (str +"").padStart(25,"0")
   result = result.slice(0,-24)+"."+result.slice(-24)
   return result
 /*
@@ -178,7 +180,7 @@ export async function calcPriceFromIn(token1, token2) {
       token: token2.address,
       ynear_in: toYoctosString(token1.amount)});
       console.log(price);
-    return convertToE24Base(price);
+    return price;
   }
   else {
     if(token2.type === "NEP-21") {
@@ -187,14 +189,14 @@ export async function calcPriceFromIn(token1, token2) {
         from: token1.address,
         to: token2.address,
         tokens_in: toYoctosString(token1.amount)});
-      return convertToE24Base(price);
+      return price;
     }
     else if(token2.type === "Native token") {
       // NEP-21 to Native
       const price = await window.contract.price_token_to_near_in( {
         token: token1.address,
         tokens_in: toYoctosString(token1.amount)});
-      return convertToE24Base(price);
+      return price;
     }
     else {
       console.log("Error: Token type error");
@@ -284,8 +286,11 @@ export async function calcPriceFromOut( token1, token2) {
 }
 
 export async function swapFromOut( tokenIN, tokenOUT ) {
-  const amountIN = normalizeAmount( tokenIN.amount );
-  const amountOUT = normalizeAmount( tokenOUT.amount );
+  
+  const amountOUT = toYoctosString(tokenOUT.amount) ; //user input: I want 2 tokens out from the pool -> convert "2" to yoctos
+  
+  const amountIN =  tokenIN.amount; //computed amount he has to send into the pool, already in yoctos 
+  
   if(tokenIN.type === "Native token") {
     // Native to NEP-21
     //NEARs IN / Tokens out

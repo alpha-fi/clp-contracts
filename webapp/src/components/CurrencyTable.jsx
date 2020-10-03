@@ -9,7 +9,7 @@ import { TokenListContext } from "../contexts/TokenListContext";
 
 import Badge from 'react-bootstrap/Badge';
 
-import { FaEthereum } from "react-icons/fa"; 
+import { FaEthereum } from "react-icons/fa";
 
 import styled from "@emotion/styled";
 const Tr = styled("tr")`
@@ -18,19 +18,59 @@ const Tr = styled("tr")`
   }
 `;
 
+
+//set the currency of one of the 4 fields
+export function setCurrencyIndex(inputName, newTokenIndex, inputs, tokenListState ) {
+
+  // Find URL of token logo, symbol, type, and address
+  let newImageUrl = findCurrencyLogoUrl(newTokenIndex, tokenListState.state.tokenList);
+  let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
+  let newType = tokenListState.state.tokenList.tokens[newTokenIndex].type;
+  let newAddress = tokenListState.state.tokenList.tokens[newTokenIndex].address;
+//  let newBalance = tokenListState.state.tokenList.tokens[newTokenIndex].balance;
+  let newPayload = {
+    tokenIndex: newTokenIndex,
+    logoUrl: newImageUrl,
+    symbol: newSymbol,
+    type: newType,
+    address: newAddress,
+//    balance: newBalance,
+  };
+
+  // Find correct input to update
+  switch (inputName) {
+    case 'from':
+      inputs.dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
+      break;
+    case 'to':
+      inputs.dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
+      break;
+    case 'input1':
+      inputs.dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });
+      break;
+    case 'input2':
+      inputs.dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', payload: newPayload });
+  }
+}
+
+export function saveInputsLocalStorage(inputs) {
+  localStorage.setItem("inputs", JSON.stringify(inputs.state));
+}
+
 // Parses token list to table
 export const CurrencyTable = () => {
-  
-  // Inputs state
+
+
   const inputs = useContext(InputsContext);
   const { dispatch } = inputs;
-
+  
   // Token list state
   const tokenListState = useContext(TokenListContext);
 
+  // Inputs state
   // Updates allowance of from token
   async function updateFromAllowance(token) {
-    await delay(500).then(async function() {
+    await delay(500).then(async function () {
       if (token.type == "NEP-21") {
         try {
           let allowance = await getAllowance(token);
@@ -42,43 +82,17 @@ export const CurrencyTable = () => {
     });
   }
 
+
   // Updates selected currency in global state and closes modal
   function handleCurrencyChange(newTokenIndex) {
-
-    // Find URL of token logo, symbol, type, and address
-    let newImageUrl = findCurrencyLogoUrl(newTokenIndex, tokenListState.state.tokenList);
-    let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
-    let newType = tokenListState.state.tokenList.tokens[newTokenIndex].type;
-    let newAddress = tokenListState.state.tokenList.tokens[newTokenIndex].address;
-    let newBalance = tokenListState.state.tokenList.tokens[newTokenIndex].balance;
-    let newPayload = {
-      tokenIndex: newTokenIndex,
-      logoUrl: newImageUrl,
-      symbol: newSymbol,
-      type: newType,
-      address: newAddress,
-      balance: newBalance,
-    };
-
-    // Find correct input to update
-    switch (inputs.state.currencySelectionModal.selectedInput) {
-      case 'from':
-        dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
-        updateFromAllowance(newPayload);
-        break;
-      case 'to':
-        dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
-        break;
-      case 'input1':
-        dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });
-        break;
-      case 'input2':
-        dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', payload: newPayload });
-    }
+    //update active input
+    const name = inputs.state.currencySelectionModal.selectedInput
+    setCurrencyIndex(name, newTokenIndex, inputs, tokenListState)
+    if (name=="from") updateFromAllowance(newPayload);
 
     // Save selection in local storage
-    dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-  }    
+    saveInputsLocalStorage(inputs);
+  }
 
   return (
     <>
@@ -88,11 +102,11 @@ export const CurrencyTable = () => {
             {/* Determine whether each token logo is served over HTTP/HTTPS or IPFS */}
             {tokenListState.state.tokenList.tokens[index].logoURI.startsWith('ipfs://')
               ?
-                // Token image is served over IPFS
-                <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
+              // Token image is served over IPFS
+              <img src={process.env.REACT_APP_IPFS_GATEWAY + token.logoURI.substring(7)} width="25px" />
               :
-                // Token image is served over HTTP/HTTPS
-                <img src={token.logoURI} width="25px" />
+              // Token image is served over HTTP/HTTPS
+              <img src={token.logoURI} width="25px" />
             }
           </td>
           <td>
@@ -100,7 +114,7 @@ export const CurrencyTable = () => {
             {' '}
             <Badge variant="secondary" className="ml-1">{
               token.type === "ERC-20"
-                ? <><FaEthereum/>{' '}ERC-20</>
+                ? <><FaEthereum />{' '}ERC-20</>
                 : token.type
             }</Badge>
           </td>

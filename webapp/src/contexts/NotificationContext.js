@@ -27,6 +27,7 @@ const NotificationProvider = ({ children }) => {
         }
         localStorage.setItem("notifs", JSON.stringify(newNotif));
         return newNotif;
+        
       case 'HIDE_NOTIFICATION':
         localStorage.setItem("notifs", JSON.stringify({ show: false }));
         return { 

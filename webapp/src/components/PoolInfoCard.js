@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from "react";
 
-import { convertToE24Base } from "../services/near-nep21-util";
+import { convertToE24Base5Dec } from "../services/near-nep21-util";
 
 import { TokenListContext } from "../contexts/TokenListContext";
 
@@ -50,17 +50,17 @@ export default function PoolInfoCard(props) {
                   <thead>
                     <tr>
                       <th>NEAR Amount</th>
-                      <th>{Number(convertToE24Base(props.ynear)).toFixed(5)}</th>
+                      <th className="amount">{convertToE24Base5Dec(props.ynear)}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td><ColoredThemeText>Reserve Amount</ColoredThemeText></td>
-                      <td><ColoredThemeText>{props.reserve}</ColoredThemeText></td>
+                      <td className="amount"><ColoredThemeText>{convertToE24Base5Dec(props.reserve)}</ColoredThemeText></td>
                     </tr>
                     <tr>
                       <td>Total shares</td>
-                      <td>{props.total_shares}</td>
+                      <td className="amount">{convertToE24Base5Dec(props.total_shares)}</td>
                     </tr>
                   </tbody>
                 </Table>

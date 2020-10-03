@@ -64,10 +64,10 @@ export default function PoolInputCards(props) {
   }
 
   // Load icons and symbol for the current selected currency/token
-  useEffect(() => {
-    handleInput1TokenUpdate();
-    handleInput2TokenUpdate();
-  }, []);
+  // useEffect(() => {
+  //   handleInput1TokenUpdate();
+  //   handleInput2TokenUpdate();
+  // }, []);
 
   // Handle opening modal to select currency
   function handleCurrencySelectionModalInput1() {
@@ -104,7 +104,8 @@ export default function PoolInputCards(props) {
           </Col>
           <Col xl={2} lg={3} md={4} sm={4} xs={12} className="d-flex flex-row-reverse align-items-center mr-2">
             <div className="text-right">
-              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} onClick={handleCurrencySelectionModalInput1}>
+              <Button size="sm" variant="outline-secondary" className="mr-1" style={{'whiteSpace': 'nowrap'}} 
+                    onClick={handleCurrencySelectionModalInput1}>
                 <img src={inputs.state.pool.input1.logoUrl} width="15px" className="align-middle pb-1" />
                 {' '}{inputs.state.pool.input1.symbol}
                 {' '}

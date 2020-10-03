@@ -79,3 +79,18 @@ aside footer *:last-child {
   95% { transform: translateY(0) }
   100% { transform: translateY(10em) }
 }
+
+.amount {
+  text-align: right;
+  padding-right: 16px !important;
+}
+
+.spinner {
+  padding: 12px;
+  float:left;
+}
+.alert.status {
+  width: 100%;
+  text-align: center;
+  vertical-align: center;
+}

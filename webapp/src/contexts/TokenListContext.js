@@ -8,7 +8,7 @@ import { getERC20Balance } from "../services/web3utils";
 import { default as testTokenList } from '../assets/test-token-near.json';
 
 const initialState = {
-  tokenList: testTokenList
+  tokenList: window.config.defaultTokenList,
 }
 const TokenListContext = createContext(initialState);
 

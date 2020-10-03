@@ -444,23 +444,23 @@ impl NearCLP {
     /// Swaps two different tokens.
     /// Caller defines the amount of tokens he wants to swap under acc condition of
     /// receving at least `min_to_tokens`.
-    /// Preceeding to this transaction, caller has to create sufficient allowance of
+    /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
-    //// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
+    /// Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_in(
         &mut self,
         from: AccountId,
         to: AccountId,
-        from_tokens: U128,
-        min_to_tokens: U128,
+        tokens_in: U128,
+        min_tokens_out: U128,
     ) {
         let b = env::predecessor_account_id();
         self._swap_tokens_exact_in(
             &from,
             &to,
-            from_tokens.into(),
-            min_to_tokens.into(),
+            tokens_in.into(),
+            min_tokens_out.into(),
             b.clone(),
             b,
         );
@@ -473,16 +473,16 @@ impl NearCLP {
         &mut self,
         from: AccountId,
         to: AccountId,
-        from_tokens: U128,
-        min_to_tokens: U128,
+        tokens_in: U128,
+        min_tokens_out: U128,
         recipient: AccountId,
     ) {
         let b = env::predecessor_account_id();
         self._swap_tokens_exact_in(
             &from,
             &to,
-            from_tokens.into(),
-            min_to_tokens.into(),
+            tokens_in.into(),
+            min_tokens_out.into(),
             b,
             recipient,
         );
@@ -491,23 +491,23 @@ impl NearCLP {
     /// Swaps two different tokens.
     /// Caller defines the amount of tokens he wants to receive under acc of not spending
     /// more than `max_from_tokens`.
-    /// Preceeding to this transaction, caller has to create sufficient allowance of
+    /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
-    //// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
+    /// Transaction will panic if acc caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_out(
         &mut self,
         from: AccountId,
         to: AccountId,
-        to_tokens: U128,
-        max_from_tokens: U128,
+        tokens_out: U128,
+        max_tokens_in: U128,
     ) {
         let b = env::predecessor_account_id();
         self._swap_tokens_exact_out(
             &from,
             &to,
-            to_tokens.into(),
-            max_from_tokens.into(),
+            tokens_out.into(),
+            max_tokens_in.into(),
             b.clone(),
             b,
         );
@@ -520,16 +520,16 @@ impl NearCLP {
         &mut self,
         from: AccountId,
         to: AccountId,
-        to_tokens: U128,
-        max_from_tokens: U128,
+        tokens_out: U128,
+        max_tokens_in: U128,
         recipient: AccountId,
     ) {
         let b = env::predecessor_account_id();
         self._swap_tokens_exact_out(
             &from,
             &to,
-            to_tokens.into(),
-            max_from_tokens.into(),
+            tokens_out.into(),
+            max_tokens_in.into(),
             b,
             recipient,
         );
@@ -538,19 +538,17 @@ impl NearCLP {
     /// Calculates amount of tokens user will recieve when swapping `ynear_in` for `token`
     /// assets
     pub fn price_near_to_token_in(&self, token: AccountId, ynear_in: U128) -> U128 {
-        let ynear_in: u128 = ynear_in.into();
-        assert!(ynear_in > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
-        return self.calc_out_amount(ynear_in, p.ynear, p.reserve).into();
+        self._price_near_to_token_in(&token, ynear_in.into())
+            .1
+            .into()
     }
 
     /// Calculates amount of NEAR user will need to swap if he wants to receive
     /// `tokens_out` of `token`
     pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: U128) -> U128 {
-        let tokens_out: u128 = tokens_out.into();
-        assert!(tokens_out > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
-        return self.calc_in_amount(tokens_out, p.reserve, p.ynear).into();
+        self._price_near_to_token_out(&token, tokens_out.into())
+            .1
+            .into()
     }
 
     /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
@@ -567,17 +565,14 @@ impl NearCLP {
         let ynear_out: u128 = ynear_out.into();
         assert!(ynear_out > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
-        return self.calc_in_amount(ynear_out, p.ynear, p.reserve).into();
+        return self.calc_in_amount(ynear_out, p.reserve, p.ynear).into();
     }
 
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
     pub fn price_token_to_token_in(&self, from: AccountId, to: AccountId, tokens_in: U128) -> U128 {
-        let tokens_in: u128 = tokens_in.into();
-        assert!(tokens_in > 0, "E2: balance arguments must be >0");
-        let p1 = self.must_get_pool(&from);
-        let p2 = self.must_get_pool(&to);
-        let (_, tokens_out) = self._price_swap_tokens_in(&p1, &p2, tokens_in);
-        return tokens_out.into();
+        self._price_swap_tokens_in(&from, &to, tokens_in.into())
+            .3
+            .into()
     }
 
     /// Calculates amount of tokens `from` user will need to swap if he wants to receive
@@ -588,12 +583,9 @@ impl NearCLP {
         to: AccountId,
         tokens_out: U128,
     ) -> U128 {
-        let tokens_out: u128 = tokens_out.into();
-        assert!(tokens_out > 0, "E2: balance arguments must be >0");
-        let p1 = self.must_get_pool(&from);
-        let p2 = self.must_get_pool(&to);
-        let (_, tokens_in) = self._price_swap_tokens_out(&p1, &p2, tokens_out);
-        return tokens_in.into();
+        self._price_swap_tokens_out(&from, &to, tokens_out.into())
+            .3
+            .into()
     }
 
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {

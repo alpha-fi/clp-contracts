@@ -74,7 +74,7 @@ export const CurrencyTable = () => {
       if (token.type == "NEP-21") {
         try {
           let allowance = await getAllowance(token);
-          dispatch({ type: 'UPDATE_FROM_ALLOWANCE', payload: { allowance: allowance } });
+          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
         } catch (e) {
           console.error(e);
         }

@@ -1,7 +1,5 @@
 import { Contract} from 'near-api-js'
-import getConfig from '../config'
 
-const nearConfig = getConfig(process.env.NODE_ENV || 'development')
 const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
 const attach60NearCents = '6' + e22;
@@ -24,6 +22,7 @@ export async function getBalanceNEP( contractName ) {
 }
 
 export async function incAllowance( token ) {
+  const AMOUNT = normalizeAmount( token.amount )
   window.nep21 = await new Contract(
     window.walletConnection.account(),
     token.address ,
@@ -37,8 +36,8 @@ export async function incAllowance( token ) {
 
   try {
     await window.nep21.inc_allowance({
-      escrow_account_id: nearConfig.contractName,
-      amount: token.amount},
+      escrow_account_id: window.config.contractName,
+      amount: AMOUNT},
       maxGas,
       nep21AllowanceFee
       );
@@ -52,7 +51,6 @@ export async function incAllowance( token ) {
 
 export async function getAllowance( token ) {
   const accountId = window.accountId;
-  console.log(accountId);
   window.nep21 = await new Contract(
     window.walletConnection.account(),
     token.address ,
@@ -65,7 +63,7 @@ export async function getAllowance( token ) {
   )
   const allowance = await window.nep21.get_allowance({
     owner_id: accountId,
-    escrow_account_id: nearConfig.contractName });
+    escrow_account_id: window.config.contractName });
   console.log('Allowance: ', allowance);
   return convertToE24Base(allowance);
 }
@@ -175,7 +173,6 @@ export async function calcPriceFromIn(token1, token2) {
   }
   if(token1.type === "Native token") {
     // Native to NEP-21
-    console.log("AMM ", amount1);
     const price = await window.contract.price_near_to_token_in( {
       token: token2.address,
       ynear_in: toYoctosString(token1.amount)});
@@ -224,8 +221,8 @@ export async function swapFromIn( token1, token2 ) {
       await window.contract.swap_tokens_exact_in( {
         from: token1.address,
         to: token2.address,
-        from_tokens: amount1,
-        min_to_tokens: amount2 },
+        tokens_in: amount1,
+        min_tokens_out: amount2 },
         maxGas,
         attach60NearCents
         );
@@ -250,7 +247,6 @@ export async function swapFromIn( token1, token2 ) {
 
 export async function calcPriceFromOut( token1, token2) {
   let amount2 = normalizeAmount( token2.amount );
-  //console.log("amount_out ", amount2);
   if(amount2 < 1) {
     return 0;
   }
@@ -294,7 +290,6 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
   if(tokenIN.type === "Native token") {
     // Native to NEP-21
     //NEARs IN / Tokens out
-    //console.log("SWAP: amt", amount2);
     await window.contract.swap_near_to_token_exact_out( {
       token: tokenOUT.address,
       tokens_out: amountOUT },
@@ -309,8 +304,8 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
       await window.contract.swap_tokens_exact_out( {
         from: tokenIN.address,
         to: tokenOUT.address,
-        to_tokens: amountOUT,
-        max_from_tokens: amountIN },
+        tokens_out: amountOUT,
+        max_tokens_in: amountIN },
         maxGas,
         attach60NearCents
         );

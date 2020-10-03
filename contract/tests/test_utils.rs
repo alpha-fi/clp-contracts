@@ -171,7 +171,7 @@ pub fn call<I: Sized + Serialize>(
     .unwrap();
     */
 
-    println!("--------------------------------");
+    println!("\n================================");
     println!("-- {}.{}() --", contract.account_id(), method);
     println!("execution_outcome.status {:?}", execution_outcome.status);
     println!("execution_outcome {:?}", execution_outcome);
@@ -214,5 +214,5 @@ pub fn call<I: Sized + Serialize>(
     if count_failed > 0 {
         panic!(format!("{} RECEIPT(S) FAILED", count_failed));
     }
-    println!("--------------------------------");
+    println!("================================\n");
 }

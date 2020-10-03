@@ -65,6 +65,58 @@ impl NearCLP {
         )
     }
 
+    pub(crate) fn _price_near_to_token_in(
+        &self,
+        token: &AccountId,
+        ynear_in: u128,
+    ) -> (Pool, u128) {
+        assert!(ynear_in > 0, "E2: balance arguments must be >0");
+        let p = self.must_get_pool(&token);
+        let out = self.calc_out_amount(ynear_in, p.ynear, p.reserve).into();
+        (p, out)
+    }
+
+    pub(crate) fn _price_near_to_token_out(
+        &self,
+        token: &AccountId,
+        tokens_out: u128,
+    ) -> (Pool, U128) {
+        assert!(tokens_out > 0, "E2: balance arguments must be >0");
+        let p = self.must_get_pool(&token);
+        let in_amount = self.calc_in_amount(tokens_out, p.ynear, p.reserve).into();
+        (p, in_amount)
+    }
+
+    pub(crate) fn _price_swap_tokens_in(
+        &self,
+        t_in: &AccountId,
+        t_out: &AccountId,
+        tokens_in: Balance,
+    ) -> (Pool, Pool, Balance, Balance) {
+        assert!(tokens_in > 0, "E2: balance arguments must be >0");
+        assert_ne!(t_in, t_out, "E9: can't swap same tokens");
+        let p_in = self.must_get_pool(t_in);
+        let p_out = self.must_get_pool(t_out);
+        let near_swap = self.calc_out_amount(tokens_in, p_in.reserve, p_in.ynear);
+        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.reserve);
+        return (p_in, p_out, near_swap, tokens2_out);
+    }
+
+    pub(crate) fn _price_swap_tokens_out(
+        &self,
+        t_in: &AccountId,
+        t_out: &AccountId,
+        tokens_out: Balance,
+    ) -> (Pool, Pool, Balance, Balance) {
+        assert!(tokens_out > 0, "E2: balance arguments must be >0");
+        assert_ne!(t_in, t_out, "E9: can't swap same tokens");
+        let p_in = self.must_get_pool(&t_in);
+        let p_out = self.must_get_pool(&t_out);
+        let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.reserve);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.ynear, p_in.reserve);
+        return (p_in, p_out, near_swap, tokens1_to_pay);
+    }
+
     pub(crate) fn _swap_near(
         &mut self,
         p: &mut Pool,
@@ -94,14 +146,10 @@ impl NearCLP {
         min_tokens: Balance,
         recipient: AccountId,
     ) {
-        assert!(
-            near_paid > 0 && min_tokens > 0,
-            "E2: balance arguments must be >0"
-        );
-        let mut p = self.must_get_pool(&token);
-        let tokens_out = self.calc_out_amount(near_paid, p.ynear, p.reserve);
+        assert!(min_tokens > 0, "E2: balance arguments must be >0");
+        let (mut p, tokens_out) = self._price_near_to_token_in(token, near_paid);
         assert_min_buy(tokens_out, min_tokens);
-        self._swap_near(&mut p, token, near_paid, tokens_out, recipient);
+        self._swap_near(&mut p, &token, near_paid, tokens_out, recipient);
     }
 
     /// Pool sells `tokens_out` reserve token for NEAR tokens. Asserts that a user pays no more
@@ -120,12 +168,16 @@ impl NearCLP {
         );
         let mut p = self.must_get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
-        // panics if near_to_pay > max_near_paid
+
         if max_near_paid < near_to_pay {
-            env_log!("E12: you need {}Y to get {}Y {}",near_to_pay,tokens_out,token)
-        }
-        else if max_near_paid > near_to_pay {
-            //refund excess
+            env::panic(
+                format!(
+                    "E12: you need {} yNEAR to get {} {}",
+                    near_to_pay, tokens_out, &token
+                )
+                .as_bytes(),
+            );
+        } else if max_near_paid > near_to_pay {
             Promise::new(buyer).transfer(max_near_paid - near_to_pay);
         }
         self._swap_near(&mut p, token, near_to_pay, tokens_out, recipient);
@@ -196,8 +248,8 @@ impl NearCLP {
 
     pub(crate) fn _swap_tokens(
         &mut self,
-        p1: &mut Pool,
-        p2: &mut Pool,
+        mut p1: Pool,
+        mut p2: Pool,
         token1: &AccountId,
         token2: &AccountId,
         token1_in: Balance,
@@ -220,30 +272,8 @@ impl NearCLP {
         self.schedule_nep21_tx(token1, buyer, caller.clone(), token1_in)
             .then(self.schedule_nep21_tx(token2, caller, recipient, token2_out));
         // TODO: make updates after nep21 transfers (together with promise2)
-        self.set_pool(&token1, p1);
-        self.set_pool(&token2, p2);
-    }
-
-    pub(crate) fn _price_swap_tokens_in(
-        &self,
-        p_in: &Pool,
-        p_out: &Pool,
-        tokens_in: Balance,
-    ) -> (Balance, Balance) {
-        let near_swap = self.calc_out_amount(tokens_in, p_in.reserve, p_in.ynear);
-        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.reserve);
-        return (near_swap, tokens2_out);
-    }
-
-    pub(crate) fn _price_swap_tokens_out(
-        &self,
-        p_in: &Pool,
-        p_out: &Pool,
-        tokens_out: Balance,
-    ) -> (Balance, Balance) {
-        let near_swap = self.calc_in_amount(tokens_out, p_out.reserve, p_out.ynear);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.ynear, p_in.reserve);
-        return (near_swap, tokens1_to_pay);
+        self.set_pool(&token1, &p1);
+        self.set_pool(&token2, &p2);
     }
 
     pub(crate) fn _swap_tokens_exact_in(
@@ -255,18 +285,13 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(
-            tokens1_paid > 0 && min_tokens2 > 0,
-            "E2: balance arguments must be >0"
-        );
-        assert_ne!(token1, token2, "E9: can't swap same tokens");
-        let mut p1 = self.must_get_pool(&token1);
-        let mut p2 = self.must_get_pool(&token2);
-        let (near_swap, tokens2_out) = self._price_swap_tokens_in(&p1, &p2, tokens1_paid);
+        assert!(min_tokens2 > 0, "E2: balance arguments must be >0");
+        let (p1, p2, near_swap, tokens2_out) =
+            self._price_swap_tokens_in(token1, token2, tokens1_paid);
         assert_min_buy(tokens2_out, min_tokens2);
         self._swap_tokens(
-            &mut p1,
-            &mut p2,
+            p1,
+            p2,
             token1,
             token2,
             tokens1_paid,
@@ -286,19 +311,16 @@ impl NearCLP {
         buyer: AccountId,
         recipient: AccountId,
     ) {
-        assert!(
-            tokens2_out > 0 && max_tokens1_paid > 0,
-            "E2: balance arguments must be >0"
-        );
-        assert_ne!(token1, token2, "E9: can't swap same tokens");
-        let mut p1 = self.must_get_pool(&token1);
-        let mut p2 = self.must_get_pool(&token2);
-        let (near_swap, tokens1_to_pay) = self._price_swap_tokens_out(&p1, &p2, tokens2_out);
+        assert!(max_tokens1_paid > 0, "E2: balance arguments must be >0");
+        let (p1, p2, near_swap, tokens1_to_pay) =
+            self._price_swap_tokens_out(token1, token2, tokens2_out);
+        env_log!("Buying price is {}", tokens1_to_pay);
+
         assert_max_pay(tokens1_to_pay, max_tokens1_paid);
 
         self._swap_tokens(
-            &mut p1,
-            &mut p2,
+            p1,
+            p2,
             token1,
             token2,
             tokens1_to_pay,

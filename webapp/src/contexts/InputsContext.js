@@ -17,10 +17,10 @@ const initialInput = {
 
 let initialState = {
   swap: {
-    from: produce(initialInput, draft => {
+    in: produce(initialInput, draft => {
       draft.tokenIndex = 0;
     }),
-    to: produce(initialInput, draft => {
+    out: produce(initialInput, draft => {
       draft.tokenIndex = 1;
     }),
     error: null,               // error string if error, null otherwise

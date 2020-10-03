@@ -17,10 +17,10 @@ export default function SettingsButton() {
   // Initialize connection information
   let nearConnected, ethConnected = "";
   if (window.walletConnection.isSignedIn()) {
-    nearConnected = <Dropdown.Item href={(process.env.REACT_APP_NEAR_ADDRESS_EXPLORER) + window.accountId}>Connected to NEAR: {window.accountId}</Dropdown.Item>;
+    nearConnected = <Dropdown.Item href={(window.config.nearAddressPrefix) + window.accountId}>Connected to NEAR: {window.accountId}</Dropdown.Item>;
   }
   if (currentUser) {
-    ethConnected = <Dropdown.Item href={(process.env.REACT_APP_ETH_ADDRESS_EXPLORER) + currentUser}>Connected to Ethereum: {currentUser.substring(0,5)}...{currentUser.substr(currentUser.length-5)}</Dropdown.Item>
+    ethConnected = <Dropdown.Item href={(window.config.ethWalletExplorerPrefix) + currentUser}>Connected to Ethereum: {currentUser.substring(0,5)}...{currentUser.substr(currentUser.length-5)}</Dropdown.Item>
   }
 
   return (

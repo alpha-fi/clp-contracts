@@ -52,7 +52,7 @@ export default function CurrencySelectionModal(props) {
                 <tr>
                   <th className="border-0"></th>
                   <th className="border-0">Name</th>
-                  <th className="border-0 text-right">Amount</th>
+                  <th className="border-0 text-right">Balance</th>
                 </tr>
               </thead>
               <tbody>

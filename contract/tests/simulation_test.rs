@@ -171,7 +171,7 @@ fn test_clp_add_liquidity_and_swap() {
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    let carol_funt_balance_pre =
+    let carol_t_balance_pre =
         show_nep21_bal(&mut ctx.r, &ctx.nep21_1.account_id, &ctx.carol.account_id);
 
     println!("carol swaps some near for tokens");
@@ -188,16 +188,17 @@ fn test_clp_add_liquidity_and_swap() {
     );
 
     println!("let's see how many token carol has after the swap");
-    let carol_funt_balance_post =
+    let carol_t_balance_post =
         show_nep21_bal(&mut ctx.r, &ctx.nep21_1.account_id, &ctx.carol.account_id);
-    let carol_received = carol_funt_balance_post - carol_funt_balance_pre;
+    let carol_received = carol_t_balance_post - carol_t_balance_pre;
     assert!(
         carol_received >= min_token_expected,
         "carol should have received at least min_token_expected"
     );
 
+    let pooli_after = get_pool_info(&ctx.r, &NEP21_ACC);
     assert_eq!(
-        get_pool_info(&ctx.r, &NEP21_ACC),
+        pooli_after,
         PoolInfo {
             ynear: (u128::from(pooli_before.ynear) + carol_deposit_yoctos).into(),
             reserve: (u128::from(pooli_before.reserve) - carol_received).into(),
@@ -206,10 +207,8 @@ fn test_clp_add_liquidity_and_swap() {
         "new pool balance after swap"
     );
 
-    println!();
-    println!("-----------------------------");
-    //bob creates another pool with nep21_2
-    //---------------
+    //
+    // bob creates another pool with nep21_2
     create_pool_add_liquidity(
         &mut ctx.r,
         &ctx.clp,
@@ -220,12 +219,18 @@ fn test_clp_add_liquidity_and_swap() {
     );
     //---------------
 
+    println!(">> nep21-1 {:?}", pooli_after);
+    println!(">> nep21-2 {:?}", get_pool_info(&ctx.r, &NEP21_ACC2));
+
+    // liquidity1: 3000 NEAR -- 30_000 nep21_1  (1:10)  -- originally
+    // liquidity1: 3010 NEAR -- 29_900 nep21_1  (1:10)  -- after the swap
+    // liquidity2: 1000 NEAR --    500 nep21_2  (2:1)
+
+    // token1:token2 = 1 : 5
+
     //carol tries to swap nep1 she owns with nep2 from bob's pool
-
-    //she gives allowance to CLP first
-    let carol_allowance = 15 * NDENOM;
-
-    println!("carol gives allowance to CLP");
+    let carol_allowance = 6 * NDENOM;
+    println!("carol gives {} allowance to CLP", carol_allowance);
 
     call(
         &mut ctx.r,
@@ -236,18 +241,29 @@ fn test_clp_add_liquidity_and_swap() {
         NEP21_STORAGE_DEPOSIT, //refundable, required if the nep21-contract needs more storage
     );
 
-    println!("nep21-2 {:?}", get_pool_info(&ctx.r, &NEP21_ACC2));
-
-    //-- swap_tokens_exact_out
+    let buy_amount = (25 * NDENOM).to_string();
+    let price: U128 = near_view(
+        &ctx.r,
+        &CLP_ACC.into(),
+        "price_token_to_token_out",
+        &json!({"from": &ctx.nep21_1.account_id,
+                "to":  &ctx.nep21_2.account_id,
+                "tokens_out": buy_amount,
+        }),
+    );
+    println!(
+        ">> price for {} {} is {} {}",
+        buy_amount, &ctx.nep21_2.account_id, price.0, &ctx.nep21_1.account_id
+    );
     call(
         &mut ctx.r,
         &ctx.carol,
         &ctx.clp,
         "swap_tokens_exact_out",
-        &json!({"from": ctx.nep21_1.account_id,
+        &json!({"from": &ctx.nep21_1.account_id,
                 "to":  &ctx.nep21_2.account_id,
-                "to_tokens":  (200 * NDENOM).to_string(),
-                "max_from_tokens":  carol_allowance.to_string(),
+                "tokens_out": buy_amount,
+                "max_tokens_in":  carol_allowance.to_string(),
         }),
         0,
     );
@@ -256,7 +272,6 @@ fn test_clp_add_liquidity_and_swap() {
 
     println!("{} {:?}", &NEP21_ACC, get_pool_info(&ctx.r, &NEP21_ACC));
     println!("{} {:?}", &NEP21_ACC2, get_pool_info(&ctx.r, &NEP21_ACC2));
-    //panic!("show");
     //TODO check balances
 }
 

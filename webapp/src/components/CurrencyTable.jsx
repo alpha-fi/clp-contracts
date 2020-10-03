@@ -23,6 +23,7 @@ const Tr = styled("tr")`
 //set the currency of one of the 4 fields
 export function setCurrencyIndex(inputName, newTokenIndex, inputs, tokenListState ) {
 
+
   // Find URL of token logo, symbol, type, and address
   let newImageUrl = findCurrencyLogoUrl(newTokenIndex, tokenListState.state.tokenList);
   let newSymbol = tokenListState.state.tokenList.tokens[newTokenIndex].symbol;
@@ -35,7 +36,7 @@ export function setCurrencyIndex(inputName, newTokenIndex, inputs, tokenListStat
     symbol: newSymbol,
     type: newType,
     address: newAddress,
-//    balance: newBalance,
+   // balance: newBalance,
   };
 
   // Find correct input to update
@@ -112,6 +113,24 @@ export const CurrencyTable = () => {
     });
   }
 
+  async function updateInputBalance(token) {
+    await delay(500).then(async function () {
+      let yoctos = ""
+      try {
+        if (token.type === "Native token") {
+          yoctos = (await window.walletConnection.account().getAccountBalance()).available;
+        }
+        else {
+          yoctos = await getBalanceNEP(token.address);
+        }
+      } catch (ex) {
+        console.log(ex)
+        yoctos = ex.message;
+      }
+      dispatch({type: 'SET_TOKEN_BALANCE', payload: {symbol: token.symbol, balance: yoctos}})
+    });
+  }
+
 
   // Updates selected currency in global state and closes modal
   function handleCurrencyChange(newTokenIndex) {
@@ -119,8 +138,8 @@ export const CurrencyTable = () => {
     const name = inputs.state.currencySelectionModal.selectedInput
     let newPayload = tokenListState.state.tokenList.tokens[newTokenIndex];
     setCurrencyIndex(name, newTokenIndex, inputs, tokenListState)
+    updateInputBalance(newPayload);
     if (name=="in") updateInAllowance(newPayload);
-
     // Save selection in local storage
     saveInputsLocalStorage(inputs);
   }

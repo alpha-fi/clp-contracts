@@ -341,8 +341,8 @@ export default function SwapInputCards(props) {
   //---------------------------------------------------------------
   useEffect(() => {
     updateSwapBalances(tokenListState, inputs) //get balances from the 2 selected currencies
-    handleInTokenUpdate();
-    handleOutTokenUpdate();
+    // handleInTokenUpdate();
+    // handleOutTokenUpdate();
     //checkStatuses();
   }, []);
 
@@ -444,11 +444,11 @@ export default function SwapInputCards(props) {
 
   // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
-    let oldFromAmount = inputs.state.swap.in.amount;
-    let oldTo = inputs.state.swap.out;
+    let oldInAmount = inputs.state.swap.in.amount;
+    let oldOut = inputs.state.swap.out;
     dispatch({ type: 'SWITCH_SWAP_INPUTS' });
-    handleOutAmountChange(oldFromAmount);
-    updateInAllowance(oldTo);
+    handleOutAmountChange(oldInAmount);
+    updateInAllowance(oldOut);
   }
 
   function readyToSwap() { 

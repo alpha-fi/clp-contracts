@@ -67,10 +67,12 @@ function reduce(state, action) {
 
     case 'SET_TOKEN_BALANCE':
       return produce(state, draft => {
-        if (action.payload.index == draft.swap.in.tokenIndex) {
+        if (action.payload.index == draft.swap.in.tokenIndex || action.payload.symbol == draft.swap.in.symbol) {
+        // if (action.payload.index == draft.swap.in.tokenIndex) {
           draft.swap.in.balance = action.payload.balance
         }
-        if (action.payload.index == draft.swap.out.tokenIndex) {
+        if (action.payload.index == draft.swap.out.tokenIndex  || action.payload.symbol == draft.swap.out.symbol) {
+        // if (action.payload.index == draft.swap.out.tokenIndex) {
           draft.swap.out.balance = action.payload.balance
         }
       })
@@ -136,7 +138,7 @@ function reduce(state, action) {
         draft.swap.in.tokenIndex = action.payload.tokenIndex;
         draft.swap.in.address = action.payload.address;
         draft.swap.in.allowance = "";
-        //draft.swap.in.balance = action.payload.balance;
+        draft.swap.in.balance = action.payload.balance;
         draft.swap.needsApproval = (action.payload.type === "NEP-21");
         draft.swap.status = "notReadyToSwap";
         draft.currencySelectionModal.isVisible = false;

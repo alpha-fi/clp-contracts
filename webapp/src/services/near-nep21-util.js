@@ -131,7 +131,7 @@ export function normalizeAmount( value ) {
   let ok = false;
   let val = 24;
   let res = "";
-  const amount = trimZeros( value );
+  const amount = trimZeros( value.toString() );
   for(var x of amount) {
     if(x === '.') {
       ok = true;
@@ -355,7 +355,6 @@ export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount 
 export async function browsePools() {
   try {
     const pools = await window.contract.list_pools();
-    console.log(pools);
     return pools;
   } catch (error) {
     console.error('cannot fetch pool list');
@@ -365,7 +364,6 @@ export async function browsePools() {
 export async function poolInfo(pool) {
   try {
     const poolInfo = await window.contract.pool_info({token: pool});
-    console.log(poolInfo);
     return poolInfo;
   } catch (error) {
     console.error('cannot fetch pool info');

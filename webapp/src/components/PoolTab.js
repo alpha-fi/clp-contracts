@@ -32,9 +32,9 @@ export default function PoolTab() {
     });
   }
 
-  // useEffect(function() {
-  //   fetchPools();
-  // }, []);
+  useEffect(function() {
+    fetchPools();
+  }, []);
 
   return (
     <>
@@ -47,10 +47,12 @@ export default function PoolTab() {
                     name={pool.name} 
                     />
       ))}
+      {/*
       <p className="mt-4 text-center text-secondary"><small><i>Don't see a pair you're looking for? Create a new pool below.</i></small></p>
       <Hr className="mt-4"/>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>PROVIDE LIQUIDITY</small></p>
       <PoolInputCards/>
+      */}
     </>
   );
 }

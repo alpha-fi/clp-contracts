@@ -341,8 +341,8 @@ export default function SwapInputCards(props) {
   //---------------------------------------------------------------
   useEffect(() => {
     updateSwapBalances(tokenListState, inputs) //get balances from the 2 selected currencies
-    //handleFromTokenUpdate();
-    //handleToTokenUpdate();
+    handleInTokenUpdate();
+    handleOutTokenUpdate();
     //checkStatuses();
   }, []);
 
@@ -375,7 +375,7 @@ export default function SwapInputCards(props) {
 
     // Calculate the value of the other input box (only called when the user types)
     let updatedToken = { ...inputs.state.swap.out, amount: amount };
-    let calculatedFromPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.in)
+    let calculatedFromPrice = await calcPriceFromOut(updatedToken, inputs.state.swap.in)
       .then(function (result) {
         dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
         updateStatus(result, amount); // Update status and/or error message
@@ -526,10 +526,9 @@ export default function SwapInputCards(props) {
               {/* Show balance if any balance of selected token exists */}
               {(inputs.state.swap.out.balance && inputs.state.swap.out.balance !== 0)
                 && <>
-                  <small className="mr-3 text-secondary">
-                  Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.out.balance)}
-                  </small>
-                  <br />
+                  <div className="mr-3 text-secondary">
+                  <small>Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.out.balance)}</small>
+                  </div>
                 </>
               }
 
@@ -578,10 +577,9 @@ export default function SwapInputCards(props) {
               {/* Show balance if any balance of selected token exists */}
               {(inputs.state.swap.in.balance && inputs.state.swap.in.balance !== 0)
                 && <>
-                  <small className="mr-3 text-secondary">
-                    Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.in.balance)}
-                  </small>
-                  <br />
+                  <div className="mr-3 text-secondary">
+                    <small>Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.in.balance)}</small>
+                  </div>
                 </>
               }
 

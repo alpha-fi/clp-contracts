@@ -1,5 +1,7 @@
 import React, { useContext, useEffect } from "react";
 
+import { getBalanceNEP, convertToE24Base5Dec } from '../services/near-nep21-util'
+
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { getAllowance } from "../services/near-nep21-util";
 import { delay } from "../utils"
@@ -57,9 +59,32 @@ export function saveInputsLocalStorage(inputs) {
   localStorage.setItem("inputs", JSON.stringify(inputs.state));
 }
 
+async function updateSwapBal(token, tokenName, tokenListState) {
+  let yoctos = ""
+  try {
+    if (token.type === "Native token") {
+      yoctos = (await window.walletConnection.account().getAccountBalance()).available;
+    }
+    else {
+      yoctos = await getBalanceNEP(token.address);
+    }
+  } catch (ex) {
+    console.log(ex)
+    yoctos = ex.message;
+  }
+
+  tokenListState.dispatch({
+    type: 'SET_TOKEN_BALANCE',
+    payload: {
+      name: tokenName,
+      balance: yoctos
+    }
+})
+
+}
+
 // Parses token list to table
 export const CurrencyTable = () => {
-
 
   const inputs = useContext(InputsContext);
   const { dispatch } = inputs;
@@ -67,9 +92,15 @@ export const CurrencyTable = () => {
   // Token list state
   const tokenListState = useContext(TokenListContext);
 
+  useEffect(() => {
+    tokenListState.state.tokenList.tokens.map((token, index) => {
+      updateSwapBal(token, token.name, tokenListState);
+    })
+  }, []);
+
   // Inputs state
   // Updates allowance of from token
-  async function updateFromAllowance(token) {
+  async function updateInAllowance(token) {
     await delay(500).then(async function () {
       if (token.type == "NEP-21") {
         try {
@@ -88,7 +119,7 @@ export const CurrencyTable = () => {
     //update active input
     const name = inputs.state.currencySelectionModal.selectedInput
     setCurrencyIndex(name, newTokenIndex, inputs, tokenListState)
-    if (name=="from") updateFromAllowance(newPayload);
+    if (name=="in") updateInAllowance(newPayload);
 
     // Save selection in local storage
     saveInputsLocalStorage(inputs);
@@ -120,7 +151,7 @@ export const CurrencyTable = () => {
           </td>
           <td className="text-right">
             {token.balance
-              ? <code className="text-secondary">{Number(token.balance)}</code>
+              ? <code className="text-secondary">{convertToE24Base5Dec(token.balance)}</code>
               : <code className="text-secondary">-</code>
             }
           </td>

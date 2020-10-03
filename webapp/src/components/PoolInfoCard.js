@@ -56,11 +56,11 @@ export default function PoolInfoCard(props) {
                   <tbody>
                     <tr>
                       <td><ColoredThemeText>Reserve Amount</ColoredThemeText></td>
-                      <td><ColoredThemeText>{props.reserve}</ColoredThemeText></td>
+                      <td><ColoredThemeText>{Number(convertToE24Base(props.reserve)).toFixed(5)}</ColoredThemeText></td>
                     </tr>
                     <tr>
                       <td>Total shares</td>
-                      <td>{props.total_shares}</td>
+                      <td>{Number(convertToE24Base(props.total_shares)).toFixed(5)}</td>
                     </tr>
                   </tbody>
                 </Table>

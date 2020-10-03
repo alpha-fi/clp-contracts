@@ -17,7 +17,7 @@ export async function initContract() {
   window.accountId = window.walletConnection.getAccountId()
 
   // Initializing our contract APIs by contract name and configuration
-  window.contract = await new Contract(window.walletConnection.account(), nearConfig.contractName, {
+  window.contract = await new Contract(window.walletConnection.account(), window.config.contractName, {
     // View methods are read only. They don't modify the state, but usually return some value.
     viewMethods: view_methods_lib_contract,
     // Change methods can modify the state. But you don't receive the returned value when called.
@@ -36,7 +36,7 @@ export function login() {
   // user's behalf.
   // This works by creating a new access key for the user's account and storing
   // the private key in localStorage.
-  window.walletConnection.requestSignIn(nearConfig.contractName)
+  window.walletConnection.requestSignIn(window.config.contractName)
 }
 
 export function isNonzeroNumber(num) {

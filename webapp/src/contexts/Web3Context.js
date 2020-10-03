@@ -11,7 +11,7 @@ const providerOptions = {
   walletconnect: {
     package: WalletConnectProvider, // required
     options: {
-      infuraId: +process.env.REACT_APP_IPFS_GATEWAY.split('/').pop(),
+      infuraId: window.config.infuraId,
     },
   },
 };
@@ -21,12 +21,12 @@ const w3connect = async (web3Modal) => {
   const web3 = new Web3(provider);
   const injectedChainId = await web3.eth.getChainId();
 
-  if (injectedChainId !== +process.env.REACT_APP_CHAIN_ID) {
+  if (injectedChainId !== window.config.ethChainId) {
     alert(
       `Please switch Web3 to the correct network and try signing in again. Detected network: ${
         injectedChainId
       }, Required network: ${
-        +process.env.REACT_APP_CHAIN_ID
+        window.config.ethChainId
       }`,
     );
   }
@@ -37,7 +37,7 @@ const w3connect = async (web3Modal) => {
 const signInWithWeb3 = async () => {
 
   const web3Modal = new Web3Modal({
-    network: +process.env.REACT_APP_CHAIN_ID, // optional
+    network: window.config.ethChainId, // optional
     providerOptions, // required
     cacheProvider: true,
   });
@@ -46,12 +46,12 @@ const signInWithWeb3 = async () => {
   const web3 = new Web3(provider);
   const injectedChainId = await web3.eth.getChainId();
 
-  if (injectedChainId !== +process.env.REACT_APP_CHAIN_ID) {
+  if (injectedChainId !== window.config.ethChainId) {
     alert(
       `Please switch Web3 to the correct network and try signing in again. Detected network: ${
         injectedChainId
       }, Required network: ${
-        +process.env.REACT_APP_CHAIN_ID
+        window.config.ethChainId
       }`,
     );
   }
@@ -64,7 +64,7 @@ const Web3Provider = ( { children } ) => {
   const [currentUser, setCurrentUser] = useState();
   const [web3Modal, setWeb3Modal] = useState(
     new Web3Modal({
-      network: +process.env.REACT_APP_CHAIN_ID, // optional
+      network: window.config.ethChainId, // optional
       providerOptions, // required
       cacheProvider: true,
     }),

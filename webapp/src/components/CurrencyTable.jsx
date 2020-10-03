@@ -39,11 +39,11 @@ export function setCurrencyIndex(inputName, newTokenIndex, inputs, tokenListStat
 
   // Find correct input to update
   switch (inputName) {
-    case 'from':
-      inputs.dispatch({ type: 'UPDATE_FROM_SELECTED_CURRENCY', payload: newPayload });
+    case 'in':
+      inputs.dispatch({ type: 'UPDATE_IN_SELECTED_CURRENCY', payload: newPayload });
       break;
-    case 'to':
-      inputs.dispatch({ type: 'UPDATE_TO_SELECTED_CURRENCY', payload: newPayload });
+    case 'out':
+      inputs.dispatch({ type: 'UPDATE_OUT_SELECTED_CURRENCY', payload: newPayload });
       break;
     case 'input1':
       inputs.dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });

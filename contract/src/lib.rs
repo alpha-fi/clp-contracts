@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::UnorderedMap;
+use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
@@ -57,7 +57,7 @@ impl fmt::Display for PoolInfo {
 pub struct Pool {
     ynear: Balance,
     reserve: Balance,
-    shares: UnorderedMap<AccountId, Balance>,
+    shares: LookupMap<AccountId, Balance>,
     /// check `PoolInfo.total_shares`
     total_shares: Balance,
 }
@@ -67,7 +67,7 @@ impl Pool {
         Self {
             ynear: 0,
             reserve: 0,
-            shares: UnorderedMap::new(pool_id),
+            shares: LookupMap::new(pool_id),
             total_shares: 0,
         }
     }
@@ -110,7 +110,7 @@ impl NearCLP {
         Self {
             fee_dst: owner.clone(),
             owner,
-            pools: UnorderedMap::new(env::current_account_id().as_bytes().to_vec()),
+            pools: UnorderedMap::new("pools".as_bytes().to_vec()),
         }
     }
 
@@ -588,6 +588,7 @@ impl NearCLP {
 
     pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
         println!("enter add_liquidity_transfer_callback");
+        // TODO: handle refund from nep21
         assert_eq!(
             env::current_account_id(),
             env::predecessor_account_id(),
@@ -940,7 +941,7 @@ mod tests {
         let a = ctx.accounts.predecessor.clone();
 
         let initial_ynear = 30 * NDENOM;
-        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &initial_ynear);
         let p = Pool {
             ynear: initial_ynear,
@@ -974,7 +975,7 @@ mod tests {
         let t = ctx.accounts.token1.clone();
 
         let shares_bal = 12 * NDENOM;
-        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
@@ -1015,7 +1016,7 @@ mod tests {
         let t = ctx.accounts.token1.clone();
 
         let shares_bal = 12 * NDENOM;
-        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
@@ -1121,14 +1122,14 @@ mod tests {
             ynear: G,
             reserve: p1_factor * G,
             total_shares: 0,
-            shares: UnorderedMap::new("1".as_bytes().to_vec()),
+            shares: LookupMap::new("1".as_bytes().to_vec()),
         };
         let p2 = Pool {
             // 2:1
             ynear: 2 * G,
             reserve: G,
             total_shares: 0,
-            shares: UnorderedMap::new("2".as_bytes().to_vec()),
+            shares: LookupMap::new("2".as_bytes().to_vec()),
         };
         c.set_pool(&t1, &p1);
         c.set_pool(&t2, &p2);

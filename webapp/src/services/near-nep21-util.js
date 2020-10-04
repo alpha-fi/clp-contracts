@@ -279,7 +279,7 @@ export async function calcPriceFromOut(token1, token2) {
       tokens_out: amount2
     });
     console.log("expect_in ", price);
-    return convertToE24Base(price);
+    return price;
   }
   else {
     if (token2.type === "NEP-21") {
@@ -290,7 +290,7 @@ export async function calcPriceFromOut(token1, token2) {
         tokens_out: amount2
       });
       console.log("expect_in ", price);
-      return convertToE24Base(price);
+      return price;
     }
     else if (token2.type === "Native token") {
       // NEP-21 to Native
@@ -298,7 +298,7 @@ export async function calcPriceFromOut(token1, token2) {
         token: token1.address,
         ynear_out: amount2
       });
-      return convertToE24Base(price);
+      return price;
     }
     else {
       console.log("Error: Token type error");

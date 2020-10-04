@@ -163,7 +163,7 @@ function reduce(state, action) {
         draft.swap.out.address = action.payload.address;
         draft.swap.out.allowance = null;
         if (action.payload.balance !== undefined) draft.swap.out.balance = action.payload.balance;
-        draft.swap.needsApproval = (state.swap.in.type === "NEP-21");
+        draft.swap.needsApproval = false; //(state.swap.in.type === "NEP-21");
         draft.swap.status = "notReadyToSwap";
         draft.currencySelectionModal.isVisible = false;
         //draft.swap.in.amount = "";
@@ -227,6 +227,7 @@ function reduce(state, action) {
     case 'UPDATE_IN_ALLOWANCE':
       return produce(state, draft => {
         draft.swap.in.allowance = action.payload.allowance;
+        if (action.payload.needsApproval!==undefined) draft.swap.in.needsApproval = action.payload.needsApproval;
       });
 
     case 'SWITCH_SWAP_INPUTS':
@@ -238,7 +239,7 @@ function reduce(state, action) {
           amount: 0,
         }
         draft.swap.out = oldIn;
-        draft.swap.needsApproval = (state.swap.out.type === "NEP-21");
+        draft.swap.needsApproval = (state.swap.out.type === "NEP-21")
         draft.swap.status = "notReadyToSwap";
         draft.swap.error = null;
       });

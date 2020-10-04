@@ -304,6 +304,7 @@ export default function SwapInputCards(props) {
   //---------------------------------------------------------------
   useEffect(() => {
     updateSwapBalances(tokenListState, inputs) //get balances from the 2 selected currencies
+    updateFromAllowance(inputs.state.swap.in);
     //handleFromTokenUpdate();
     //handleToTokenUpdate();
     //checkStatuses();
@@ -396,7 +397,7 @@ export default function SwapInputCards(props) {
     await delay(500).then(async function () {
       if (token.type == "NEP-21") {
         try {
-          let allowance = await getAllowance(tokenPayload);
+          let allowance = await getAllowance(token);
           dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
         } catch (e) {
           console.error(e);
@@ -444,7 +445,7 @@ export default function SwapInputCards(props) {
 
       {/* STATUS */}
 
-      <Row className="px-2 status">
+     {/* <Row className="px-2 status">
         <Alert variant="warning"
           className="status"
           style={{ display: waiting() ? 'block' : 'none' }}
@@ -460,7 +461,7 @@ export default function SwapInputCards(props) {
           />
           {statusText()}
         </Alert>
-      </Row>
+      </Row> */}
 
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}>
         <small>SWAP</small>
@@ -566,9 +567,9 @@ export default function SwapInputCards(props) {
         </Row>
       </Theme>
 
-      {(inputs.state.swap.in.allowance) &&
+      {(inputs.state.swap.in.allowance && inputs.state.swap.in.type==="NEP-21") &&
         <div className="text-right pr-3 text-secondary">
-          <small>Current {inputs.state.swap.in.symbol} allowance: {inputs.state.swap.in.allowance}</small>
+          <small>Current {inputs.state.swap.in.symbol} allowance: {convertToE24Base5Dec(inputs.state.swap.in.allowance)}</small>
         </div>
       }
 

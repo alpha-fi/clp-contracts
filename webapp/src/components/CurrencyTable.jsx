@@ -195,7 +195,10 @@ export const CurrencyTable = () => {
       if (token.type == "NEP-21") {
         try {
           let allowance = await getAllowance(token);
-          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance } });
+          let needsApproval = true;
+          try{ needsApproval = inputs.state.swap.in.allowance<inputs.state.swap.in.amount } catch (ex){};
+          needsApproval = (action.payload.type === "NEP-21" && needsApproval);
+          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance, needsApproval:needsApproval } });
         } catch (e) {
           console.error(e);
         }

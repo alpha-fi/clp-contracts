@@ -3,7 +3,7 @@ import React, { useEffect, useReducer, useContext, useCallback } from "react";
 import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP } from '../services/near-nep21-util'
 import { produce } from 'immer';
 
-import {getCurrentBalance, setCurrencyIndex} from "./CurrencyTable"
+import {getCurrentBalance, saveInputsStateLocalStorage, setCurrencyIndex} from "./CurrencyTable"
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 import { isNonzeroNumber, delay } from "../utils"
@@ -342,6 +342,9 @@ export default function SwapInputCards(props) {
   //handleIncAllowance
   function handleApprovalSubmission() {
     setStatus("isApproving" );
+    
+    saveInputsStateLocalStorage(inputs.state);
+
     //ok, here it comes another SDE
     //dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { status: "isApproving", error: null, previous: inputs.state.swap.in.allowance } });
     incAllowance(inputs.state.swap.in)

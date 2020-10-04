@@ -2,6 +2,9 @@ import React, { useContext, createContext, useReducer } from 'react';
 import { produce } from 'immer';
 import { NotificationContext } from './NotificationContext';
 import { convertToE24Base5Dec } from '../services/near-nep21-util';
+import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
+import { saveInputsStateLocalStorage } from '../components/CurrencyTable';
+import { computeInAmount } from "../components/SwapInputCards";
 
 const initialInput = {
   amount: "",       // Amount of tokens
@@ -61,6 +64,8 @@ catch (ex) {
 const InputsContext = createContext(initialState);
 const { Provider } = InputsContext;
 
+
+
 function reduce(state, action) {
 
   switch (action.type) {
@@ -88,18 +93,20 @@ function reduce(state, action) {
         draft.swap.previous = action.payload.previous;
       });
 
-      case 'CLEAR_PREVIOUS':
-        return produce(state, draft => {
-          draft.swap.previous = "";
-        });
-        
+    case 'CLEAR_PREVIOUS':
+      let newState = produce(state, draft => {
+        draft.swap.previous = "";
+      });
+      saveInputsStateLocalStorage(newState);
+      return newState;
+
     // case 'FETCH_NEAR_BALANCES':
-    //   let updatedNearTokenList = updateNearBalances(state.tokenList);
+    //   let updatedNearTokenList = updateNearBalances(state.tokens);
     //   return { tokenList: updatedNearTokenList };
     //   break;
 
     // case 'FETCH_ETH_BALANCES':
-    //   let updatedEthTokenList = updateEthBalances(state.tokenList, action.payload.w3.web3, action.payload.ethAccount);
+    //   let updatedEthTokenList = updateEthBalances(state.tokens, action.payload.w3.web3, action.payload.ethAccount);
     //   return { tokenList: updatedEthTokenList };
     //   break;
 
@@ -129,6 +136,7 @@ function reduce(state, action) {
     // Updates the currency in the 'From' input card on the swap tab usually when a user chooses from the
     // currency selection modal
     case 'UPDATE_IN_SELECTED_CURRENCY':
+
       return produce(state, draft => {
         draft.swap.in.symbol = action.payload.symbol;
         draft.swap.in.type = action.payload.type;
@@ -136,12 +144,12 @@ function reduce(state, action) {
         draft.swap.in.tokenIndex = action.payload.tokenIndex;
         draft.swap.in.address = action.payload.address;
         draft.swap.in.allowance = "";
-        //draft.swap.in.balance = action.payload.balance;
+        if (action.payload.balance !== undefined) draft.swap.in.balance = action.payload.balance;
         draft.swap.needsApproval = (action.payload.type === "NEP-21");
         draft.swap.status = "notReadyToSwap";
         draft.currencySelectionModal.isVisible = false;
         draft.swap.in.amount = "";
-        draft.swap.out.amount = "";
+        //draft.swap.out.amount = "";
       });
 
     // Updates the currency in the 'To' input card on the swap tab usually when a user chooses from the
@@ -154,12 +162,12 @@ function reduce(state, action) {
         draft.swap.out.tokenIndex = action.payload.tokenIndex;
         draft.swap.out.address = action.payload.address;
         draft.swap.out.allowance = null;
-        //draft.swap.out.balance = action.payload.balance;
+        if (action.payload.balance !== undefined) draft.swap.out.balance = action.payload.balance;
         draft.swap.needsApproval = (state.swap.in.type === "NEP-21");
         draft.swap.status = "notReadyToSwap";
         draft.currencySelectionModal.isVisible = false;
-        draft.swap.in.amount = "";
-        draft.swap.out.amount = "";
+        //draft.swap.in.amount = "";
+        //draft.swap.out.amount = "";
       });
 
     // Updates the currency in the first input card for providing liquidity on the pool tab
@@ -172,7 +180,7 @@ function reduce(state, action) {
         draft.pool.input1.tokenIndex = action.payload.tokenIndex;
         draft.pool.input1.address = action.payload.address;
         draft.pool.input1.allowance = null;
-        //draft.pool.input1.balance = action.payload.balance;
+        if (action.payload.balance !== undefined) draft.pool.input1.balance = action.payload.balance;
         draft.currencySelectionModal.isVisible = false;
       });
 
@@ -187,7 +195,7 @@ function reduce(state, action) {
         draft.pool.input2.tokenIndex = action.payload.tokenIndex;
         draft.pool.input2.address = action.payload.address;
         draft.pool.input2.allowance = null;
-        //draft.pool.input2.balance = action.payload.balance;
+        if (action.payload.balance !== undefined) draft.pool.input2.balance = action.payload.balance;
         draft.currencySelectionModal.isVisible = false;
       });
 

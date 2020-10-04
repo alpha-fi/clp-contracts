@@ -40,7 +40,7 @@ export default function PoolInfoCard(props) {
           <small><ColoredThemeText><b>NEAR-{props.name}</b></ColoredThemeText></small>
         </label>
         <div className="px-2 ml-3 mb-1">
-          <Image rounded src={tokenListState.state.tokenList.tokens[0].logoURI} width="23px" className="mr-2"/>
+          <Image rounded src={tokenListState.state.tokens[0].logoURI} width="23px" className="mr-2"/>
           {props.name} Pool
           <br/>
           <div className="my-1">

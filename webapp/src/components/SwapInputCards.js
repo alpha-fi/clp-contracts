@@ -3,7 +3,7 @@ import React, { useEffect, useReducer, useContext, useCallback } from "react";
 import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP } from '../services/near-nep21-util'
 import { produce } from 'immer';
 
-import {saveInputsLocalStorage, setCurrencyIndex} from "./CurrencyTable"
+import {getCurrentBalance, setCurrencyIndex} from "./CurrencyTable"
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 import { isNonzeroNumber, delay } from "../utils"
@@ -40,6 +40,7 @@ async function testContractCall(token1, token2) {
   console.log([token1.amount, token2.amount])
   return await window.nep21.get_balance({ owner_id: window.walletConnection.getAccountId() });
 }
+
 
 //MAIN COMPONENT
 export default function SwapInputCards(props) {
@@ -151,7 +152,7 @@ export default function SwapInputCards(props) {
   }
 
   // Updates swap status (usually readyToSwap, notReadyToSwap) and error message. Called by handleToAmountChange() 
-  function updateStatus(fromAmount, toAmount) {
+  function updateStatus(inAmount, outAmount) {
 
     let newError;
     let newStatus = "notReadyToSwap";
@@ -161,9 +162,9 @@ export default function SwapInputCards(props) {
       newError = "Cannot swap to same currency.";
     } else if (!window.accountId) {
       newError = "Not signed in.";
-    } else if (Number(fromAmount) > Number(inputs.state.swap.in.balance)) {
+    } else if (Number(inAmount) > Number(inputs.state.swap.in.balance)) {
       newError = "Input exceeds balance.";
-    } else if (Number(fromAmount) === 0 && Number(outAmount) !== 0) {
+    } else if (Number(inAmount) === 0 && Number(outAmount) !== 0) {
       newError = "Insufficient liquidity for trade."
     } else if (!isNonzeroNumber(outAmount)) {
       newError = "Enter a non-zero number.";
@@ -180,11 +181,11 @@ export default function SwapInputCards(props) {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     await delay(1000).then(async function () { // delay to wait for balances update
       // Update image, symbol, address, tokenIndex, and type of selected currency
-      let newToken = tokenListState.state.tokenList.tokens[inputs.state.swap.in.tokenIndex];
+      let newToken = tokenListState.state.tokens[inputs.state.swap.in.tokenIndex];
       dispatch({
         type: 'UPDATE_IN_SELECTED_CURRENCY',
         payload: {
-          logoUrl: findCurrencyLogoUrl(inputs.state.swap.in.tokenIndex, tokenListState.state.tokenList),
+          logoUrl: findCurrencyLogoUrl(inputs.state.swap.in.tokenIndex, tokenListState.state.tokens),
           symbol: newToken.symbol,
           type: newToken.type,
           tokenIndex: inputs.state.swap.in.tokenIndex,
@@ -208,11 +209,11 @@ export default function SwapInputCards(props) {
   async function handleOutTokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     await delay(1000).then(async function () { // delay to wait for balances update
-      let newToken = tokenListState.state.tokenList.tokens[inputs.state.swap.out.tokenIndex];
+      let newToken = tokenListState.state.tokens[inputs.state.swap.out.tokenIndex];
       dispatch({
         type: 'UPDATE_OUT_SELECTED_CURRENCY',
         payload: {
-          logoUrl: findCurrencyLogoUrl(inputs.state.swap.out.tokenIndex, tokenListState.state.tokenList),
+          logoUrl: findCurrencyLogoUrl(inputs.state.swap.out.tokenIndex, tokenListState.state.tokens),
           symbol: newToken.symbol,
           type: newToken.type,
           tokenIndex: inputs.state.swap.out.tokenIndex,
@@ -222,43 +223,6 @@ export default function SwapInputCards(props) {
       });
     })
   }
-
-  // function updateNearBalances(tokenListState, inputs) {
-
-  //   let countPending = tokenListState.state.tokenList.tokens.length;
-
-  //   //MAP ASYNC
-  //   tokenListState.state.tokenList.tokens.map(async (token, index) => {
-
-  //     let yoctos = ""
-  //     try {
-
-  //       if (token.type === "Native token") {
-  //         yoctos = (await window.walletConnection.account().getAccountBalance()).available;
-  //       }
-  //       else {
-  //         yoctos = await getBalanceNEP(token.address);
-  //       }
-
-  //       tokenListState.dispatch({
-  //         type: 'SET_TOKEN_BALANCE',
-  //         payload: {
-  //           name: token.name,
-  //           balance: yoctos
-  //         }
-  //       });
-  //     }
-  //     catch (ex) {
-  //       console.log(ex)
-  //     }
-
-  //     countPending--;
-  //     if (countPending == 0) {
-  //       inputs.dispatch({type:'ALL_BALANCES_LOADED'})
-  //     }
-
-  //   });
-  // }
 
 
   function newUserBalanceReceived(newBalance){
@@ -282,20 +246,8 @@ export default function SwapInputCards(props) {
 
   //fetch balance for a leg of the swap
   async function updateSwapBal(inputs, inOut, tokenListState) {
-    let yoctos = ""
-    let token = tokenListState.state.tokenList.tokens[inOut.tokenIndex]
-    try {
-      if (token.type === "Native token") {
-        yoctos = (await window.walletConnection.account().getAccountBalance()).available;
-      }
-      else {
-        yoctos = await getBalanceNEP(token.address);
-      }
-    }
-    catch (ex) {
-      console.log(ex)
-      yoctos = ex.message;
-    }
+
+    let yoctos = await getCurrentBalance(inOut.tokenIndex, tokenListState)
 
     inputs.dispatch({
       type: 'SET_TOKEN_BALANCE',
@@ -316,13 +268,13 @@ export default function SwapInputCards(props) {
     //first leg
     let Promise1 = updateSwapBal(inputs, inputs.state.swap.out, tokenListState)
       .then((newBalance)=>{
-        setCurrencyIndex("to", inputs.state.swap.out.tokenIndex, inputs, tokenListState);
+        setCurrencyIndex("out", inputs.state.swap.out.tokenIndex, inputs, tokenListState);
         newUserBalanceReceived(newBalance)
       })
 
     //second leg
     let Promise2 = updateSwapBal(inputs, inputs.state.swap.in, tokenListState)
-      .then(setCurrencyIndex("from", inputs.state.swap.in.tokenIndex, inputs, tokenListState))
+      .then(setCurrencyIndex("in", inputs.state.swap.in.tokenIndex, inputs, tokenListState))
 
     //when both resolve
     Promise.all([Promise1, Promise2])
@@ -331,9 +283,20 @@ export default function SwapInputCards(props) {
       })
   }
 
+  //computes "in" from the "out" wanted and the price
+  function computeInAmountRequired(outAmount){
+    // Calculate the value of the other input box (only called when the user types)
+    let updatedToken = { ...inputs.state.swap.out, amount: outAmount };
+    return calcPriceFromIn(updatedToken, inputs.state.swap.in)
+      .then(function (result) {
+        dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
+        updateStatus(result, outAmount); // Update status and/or error message
+      })
+  }
+  
   //---------------------------------------------------------------
   //---------------------------------------------------------------
-  // APP after mounted / recovery after SDE --------------------------------
+  // APP after mounted / recovery after SDE -----------------------
   //---------------------------------------------------------------
   // Load icons and symbol for the current selected currency/token
   // TODO - async load info for the token list --------------------
@@ -351,7 +314,7 @@ export default function SwapInputCards(props) {
     dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "in" } });
   }
   function handleCurrencySelectionModalTo() {
-    dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "to" } });
+    dispatch({ type: 'SET_CURRENCY_SELECTION_INPUT', payload: { input: "out" } });
   }
 
   // Handle 'I want' amount changes
@@ -372,25 +335,22 @@ export default function SwapInputCards(props) {
     });
 
     setStatus("notReadyToSwap"); //can't swap until the data comes back
-
-    // Calculate the value of the other input box (only called when the user types)
-    let updatedToken = { ...inputs.state.swap.out, amount: amount };
-    let calculatedFromPrice = await calcPriceFromIn(updatedToken, inputs.state.swap.in)
-      .then(function (result) {
-        dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
-        updateStatus(result, amount); // Update status and/or error message
-      })
+    return computeInAmountRequired(amount);
   }
 
-  async function handleApprovalSubmission() {
+
+  //handleIncAllowance
+  function handleApprovalSubmission() {
     setStatus("isApproving" );
+    //ok, here it comes another SDE
     //dispatch({ type: 'UPDATE_SWAP_STATUS', payload: { status: "isApproving", error: null, previous: inputs.state.swap.in.allowance } });
-    await delay(1000).then(function () {
-      dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
-    })
-      .then(async function () {
-        let isApproved = await incAllowance(inputs.state.swap.in, inputs.state.swap.out);
-      })
+    incAllowance(inputs.state.swap.in)
+    // await delay(1000).then(function () {
+    //   dispatch({ type: 'SAVE_INPUTS_TO_LOCAL_STORAGE' });
+    // })
+    //   .then(async function () {
+    //     let isApproved = await incAllowance(inputs.state.swap.in);
+    //   })
   }
 
   function setError(error){
@@ -637,14 +597,14 @@ export default function SwapInputCards(props) {
         && <>
           <small className="text-secondary">Step 1: </small>
           <Button variant="warning" block
-            disabled={(inputs.state.swap.status !== "readyToSwap" || inputs.state.swap.error)}
+            //disabled={(inputs.state.swap.status !== "readyToSwap" || inputs.state.swap.error)}
             onClick={handleApprovalSubmission}
           >
             {(inputs.state.swap.status !== "isApproving")
               ? <>
                 Approve {inputs.state.swap.in.symbol} allowance {
                   (inputs.state.swap.in.amount && inputs.state.swap.in.amount !== 0)
-                    ? <>of {inputs.state.swap.in.amount}</>
+                    ? <>of {convertToE24Base5Dec(inputs.state.swap.in.amount)}</>
                     : ""
                 }
               </>

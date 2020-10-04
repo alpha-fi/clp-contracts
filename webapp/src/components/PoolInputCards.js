@@ -44,22 +44,22 @@ export default function PoolInputCards(props) {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', 
       payload: { 
-        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input1.tokenIndex, tokenListState.state.tokenList),
-        symbol: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].symbol,
-        type: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].type,
+        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input1.tokenIndex, tokenListState.state.tokens),
+        symbol: tokenListState.state.tokens[inputs.state.pool.input1.tokenIndex].symbol,
+        type: tokenListState.state.tokens[inputs.state.pool.input1.tokenIndex].type,
         tokenIndex: inputs.state.pool.input1.tokenIndex,
-        address: tokenListState.state.tokenList.tokens[inputs.state.pool.input1.tokenIndex].address }
+        address: tokenListState.state.tokens[inputs.state.pool.input1.tokenIndex].address }
     });
   }
   function handleInput2TokenUpdate() {
     // Update image, symbol, address, tokenIndex, and type of selected currency
     dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', 
       payload: { 
-        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input2.tokenIndex, tokenListState.state.tokenList),
-        symbol: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].symbol,
-        type: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].type,
+        logoUrl: findCurrencyLogoUrl(inputs.state.pool.input2.tokenIndex, tokenListState.state.tokens),
+        symbol: tokenListState.state.tokens[inputs.state.pool.input2.tokenIndex].symbol,
+        type: tokenListState.state.tokens[inputs.state.pool.input2.tokenIndex].type,
         tokenIndex: inputs.state.pool.input2.tokenIndex,
-        address: tokenListState.state.tokenList.tokens[inputs.state.pool.input2.tokenIndex].address }
+        address: tokenListState.state.tokens[inputs.state.pool.input2.tokenIndex].address }
     });
   }
 

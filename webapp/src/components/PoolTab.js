@@ -32,9 +32,12 @@ export default function PoolTab() {
     });
   }
 
-  // useEffect(function() {
-  //   fetchPools();
-  // }, []);
+  //----------------------------
+  //----------------------------
+  //----------------------------
+  useEffect(function() {
+     fetchPools();
+   }, []);
 
   return (
     <>

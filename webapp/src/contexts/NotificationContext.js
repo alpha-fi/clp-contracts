@@ -9,11 +9,12 @@ let initialState = {
   show: false,
 }
 
-// Initialize with previous notification state if found in local storage
-let notifs = localStorage.getItem("notifs");
-if (notifs) {
-  initialState = JSON.parse(notifs);
-}
+// LMT commented, notifications should NOT be persistent
+// // Initialize with previous notification state if found in local storage
+// let notifs = localStorage.getItem("notifs");
+// if (notifs) {
+//   initialState = JSON.parse(notifs);
+// }
 
 const NotificationProvider = ({ children }) => {
   

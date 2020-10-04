@@ -287,7 +287,7 @@ export default function SwapInputCards(props) {
   function computeInAmountRequired(outAmount){
     // Calculate the value of the other input box (only called when the user types)
     let updatedToken = { ...inputs.state.swap.out, amount: outAmount };
-    return calcPriceFromIn(updatedToken, inputs.state.swap.in)
+    return calcPriceFromOut(inputs.state.swap.in, updatedToken)
       .then(function (result) {
         dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
         updateStatus(result, outAmount); // Update status and/or error message

@@ -315,7 +315,6 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
           maxGas,
           attach60NearCents
           );
-
       }
     else {
       console.error("Error: Token type error");
@@ -323,17 +322,16 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
   }
 }
 
-export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
-  await window.contract.add_liquidity( { token: tokenDetails.address,
-    max_tokens: maxTokenAmount,
-    min_shares: minSharesAmount},
-    maxGas,
-    attach60NearCents
-    );
+export function addLiquidity( tokenDetails, maxTokenAmount, minSharesAmount, ynear ) {
+  return window.contract.add_liquidity( { token: tokenDetails.address,
+                                          max_tokens: maxTokenAmount,
+                                          min_shares: minSharesAmount},
+                                        maxGas,
+                                        ynear + nep21AllowanceFee);
 }
 
 // returns true if pool already exists
-export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount ) {
+export async function createPool( tokenDetails, tokenAmount, ynearAmount ) {
   const info = await window.contract.pool_info( { token: tokenDetails.address} );
 
   if(info !== null) {
@@ -341,8 +339,7 @@ export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount 
     return true;
   }
   await window.contract.create_pool( { token: tokenDetails.address });
-
-  await addLiquiduty( tokenDetails.address, maxTokenAmount, minSharesAmount);
+  await addLiquidity( tokenDetails.address, tokenAmount, ynearAmount, ynearAmount);
 
   return false;
 }

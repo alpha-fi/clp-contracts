@@ -3,7 +3,7 @@ import { Contract} from 'near-api-js'
 const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
 const attach60NearCents = '6' + e22;
-const nep21AllowanceFee = '4' + e22;
+const nep21AllowanceFee = '5' + e22;
 const NDENOM = 1e24;
 
 export async function getBalanceNEP( contractName ) {
@@ -322,12 +322,13 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
   }
 }
 
-export function addLiquidity( tokenDetails, maxTokenAmount, minSharesAmount, ynear ) {
+export function addLiquidity( tokenDetails, maxTokenAmount, minSharesAmount, ynear, transferDeposit ) {
   return window.contract.add_liquidity( { token: tokenDetails.address,
                                           max_tokens: maxTokenAmount,
-                                          min_shares: minSharesAmount},
+                                          min_shares: minSharesAmount,
+                                          transfer_deposit: transferDeposit},
                                         maxGas,
-                                        ynear + nep21AllowanceFee);
+                                        ynear);
 }
 
 // returns true if pool already exists
@@ -339,7 +340,7 @@ export async function createPool( tokenDetails, tokenAmount, ynearAmount ) {
     return true;
   }
   await window.contract.create_pool( { token: tokenDetails.address });
-  await addLiquidity( tokenDetails.address, tokenAmount, ynearAmount, ynearAmount);
+  await addLiquidity( tokenDetails.address, tokenAmount, ynearAmount, ynearAmount, nep21AllowanceFee);
 
   return false;
 }

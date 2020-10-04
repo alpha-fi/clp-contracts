@@ -154,7 +154,7 @@ pub fn call<I: Sized + Serialize>(
 
     let tx = sending_account
         .new_tx(runtime, contract.account_id())
-        .function_call(method.into(), args, gas.into(), attached_amount)
+        .function_call(method.into(), args.clone(), gas.into(), attached_amount)
         .sign(&sending_account.signer);
 
     let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
@@ -172,7 +172,12 @@ pub fn call<I: Sized + Serialize>(
     */
 
     println!("\n================================");
-    println!("-- {}.{}() --", contract.account_id(), method);
+    println!(
+        "-- {}.{}({}) --",
+        contract.account_id(),
+        method,
+        String::from_utf8(args).unwrap()
+    );
     println!("execution_outcome.status {:?}", execution_outcome.status);
     println!("execution_outcome {:?}", execution_outcome);
     match execution_outcome.status {

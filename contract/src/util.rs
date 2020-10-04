@@ -55,7 +55,9 @@ pub fn yton(yocto_amount: u128) -> u128 {
 #[macro_export]
 macro_rules! env_log {
     ($($arg:tt)*) => {{
-        let res = format!($($arg)*);
-        env::log(res.as_bytes())
+        let msg = format!($($arg)*);
+        // io::_print(msg);
+        println!("{}", msg);
+        env::log(msg.as_bytes())
     }}
 }

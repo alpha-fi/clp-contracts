@@ -92,30 +92,43 @@ fn create_pool_add_liquidity(
         NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
     );
 
-    println!("{} adds first liquidity", owner.account_id);
+    add_liquidity(r, clp, owner, token, near_amount, token_amount);
+}
 
+fn add_liquidity(
+    r: &mut RuntimeStandalone,
+    clp: &ExternalUser,
+    liquidity_provider: &ExternalUser,
+    token: &ExternalUser,
+    near_amount: u128,
+    token_amount: u128,
+) {
+    println!(
+        "{} adds liquidity to {}",
+        liquidity_provider.account_id, token.account_id
+    );
     println!("creating allowance for CLP");
     call(
         r,
-        &owner,
+        &liquidity_provider,
         &token,
         "inc_allowance",
         &json!({"escrow_account_id": CLP_ACC, "amount": token_amount.to_string()}),
-        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
+        2 * NEP21_STORAGE_DEPOSIT, //refundable, required if nep21 or clp needs more storage
     );
 
-    show_nep21_bal(r, &token.account_id, &owner.account_id);
+    show_nep21_bal(r, &token.account_id, &liquidity_provider.account_id);
 
     //add_liquidity
     call(
         r,
-        &owner,
+        &liquidity_provider,
         &clp,
         "add_liquidity",
         &json!({"token": token.account_id,
                 "max_tokens": token_amount.to_string(),
                 "min_shares": near_amount.to_string()}),
-        near_amount.into(), //send NEAR
+        (near_amount + NEP21_STORAGE_DEPOSIT).into(), //send NEAR
     );
 
     let after_adding_info = get_pool_info(&r, &token.account_id());
@@ -146,16 +159,28 @@ fn test_clp_add_liquidity_and_swap() {
         near_deposit,
         token_deposit,
     );
+    // TOOD: let's add a bit more liquidity
+    // println!("Alice increases the liquidity right first top up");
+
+    // add_liquidity(
+    //     &mut ctx.r,
+    //     &ctx.clp,
+    //     &ctx.alice,
+    //     &ctx.nep21_1,
+    //     3 * NDENOM,
+    //     30 * NDENOM + 1,
+    // );
+
     //---------------
 
-    //get pool state before swap
+    // get pool state before swap
     let pooli_before = get_pool_info(&ctx.r, &NEP21_ACC);
     assert_eq!(
         pooli_before,
         PoolInfo {
-            ynear: near_deposit.into(),
-            reserve: token_deposit.into(),
-            total_shares: near_deposit.into()
+            ynear: (near_deposit).into(),
+            reserve: (token_deposit).into(),
+            total_shares: (near_deposit).into()
         },
         "new pool balance should be from first deposit"
     );
@@ -219,19 +244,21 @@ fn test_clp_add_liquidity_and_swap() {
     );
     //---------------
 
+    //
+    // carol tries to swap nep1 she owns with nep2 from bob's pool
+
     println!(">> nep21-1 {:?}", pooli_after);
     println!(">> nep21-2 {:?}", get_pool_info(&ctx.r, &NEP21_ACC2));
 
     // liquidity1: 3000 NEAR -- 30_000 nep21_1  (1:10)  -- originally
-    // liquidity1: 3010 NEAR -- 29_900 nep21_1  (1:10)  -- after the swap
+    // liquidity1: 3010 NEAR -- 29_900 nep21_1  (1:~10)  -- after the swap
     // liquidity2: 1000 NEAR --    500 nep21_2  (2:1)
 
-    // token1:token2 = 1 : 5
+    // token1:token2 = 20 : 1
+    // buying 3 nep21_2 requires 60 nep21_1 + fees
 
-    //carol tries to swap nep1 she owns with nep2 from bob's pool
-    let carol_allowance = 6 * NDENOM;
-    println!("carol gives {} allowance to CLP", carol_allowance);
-
+    let buy_amount = (3 * NDENOM).to_string();
+    let carol_allowance = 61 * NDENOM;
     call(
         &mut ctx.r,
         &ctx.carol,
@@ -241,7 +268,6 @@ fn test_clp_add_liquidity_and_swap() {
         NEP21_STORAGE_DEPOSIT, //refundable, required if the nep21-contract needs more storage
     );
 
-    let buy_amount = (25 * NDENOM).to_string();
     let price: U128 = near_view(
         &ctx.r,
         &CLP_ACC.into(),
@@ -252,8 +278,8 @@ fn test_clp_add_liquidity_and_swap() {
         }),
     );
     println!(
-        ">> price for {} {} is {} {}",
-        buy_amount, &ctx.nep21_2.account_id, price.0, &ctx.nep21_1.account_id
+        ">> price for {} {} is {} {}; allowance={}",
+        buy_amount, &ctx.nep21_2.account_id, price.0, &ctx.nep21_1.account_id, carol_allowance
     );
     call(
         &mut ctx.r,
@@ -280,9 +306,8 @@ fn get_nep21_balance(r: &mut RuntimeStandalone, token: &AccountId, account: &Acc
 }
 
 fn show_nep21_bal(r: &mut RuntimeStandalone, token: &AccountId, acc: &AccountId) -> u128 {
-    println!("let's see how many tokens {} has now", acc);
     let bal: u128 = get_nep21_balance(r, token, acc).into();
-    println!("{} has {} {} tokens ", acc, token, bal);
+    println!("Balance check: {} has {} {}", acc, token, bal);
     return bal;
 }
 

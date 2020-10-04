@@ -169,15 +169,13 @@ impl NearCLP {
         let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
         let shares_minted;
-        let ynear_amount = env::attached_deposit();
+        let ynear_amount = env::attached_deposit() - NEP21_STORAGE_DEPOSIT;
         let added_reserve;
         let max_tokens: Balance = max_tokens.into();
         assert!(
             ynear_amount > 0 && max_tokens > 0,
             "E2: balance arguments must be >0"
         );
-
-        env_log!("adding liquidity for {} ynear", &ynear_amount);
 
         // the very first deposit -- we define the constant ratio
         if p.total_shares == 0 {
@@ -186,25 +184,30 @@ impl NearCLP {
             p.total_shares = shares_minted;
             added_reserve = max_tokens;
             p.reserve = added_reserve;
-            p.shares.insert(&caller, &p.ynear);
+            p.shares.insert(&caller, &shares_minted);
         } else {
-            added_reserve = ynear_amount * p.reserve / p.ynear + 1;
-            shares_minted = ynear_amount * p.total_shares / ynear_amount;
+            let ynear_256 = u256::from(ynear_amount);
+            let p_ynear_256 = u256::from(p.ynear);
+            added_reserve = (ynear_256 * u256::from(p.reserve) / p_ynear_256 + 1).as_u128();
+            shares_minted = (ynear_256 * u256::from(p.total_shares) / p_ynear_256).as_u128();
+            env_log!(
+                "shares_to_mint={}, min_shares={}; attached_ynear={}, added_reserve={}, max_added_reserve={}",
+                shares_minted,
+                min_shares.0,
+                ynear_amount,
+                added_reserve, max_tokens
+            );
             assert!(
                 max_tokens >= added_reserve,
-                format!(
-                    "E3: needs to transfer {} of tokens and it's bigger then specified  maximum",
-                    added_reserve
-                )
+                "E3: needs to transfer {} of tokens and it's bigger then specified  maximum={}",
+                added_reserve,
+                max_tokens
             );
             assert!(
                 u128::from(min_shares) <= shares_minted,
-                format!(
-                    "E4: amount minted shares ({}) is smaller then the required minimum",
-                    shares_minted
-                )
+                "E4: amount minted shares ({}) is smaller then the required minimum",
+                shares_minted
             );
-
             p.shares.insert(
                 &caller,
                 &(p.shares.get(&caller).unwrap_or(0) + shares_minted),
@@ -219,11 +222,6 @@ impl NearCLP {
             shares_minted,
             ynear_amount,
             added_reserve
-        );
-        println!(
-            ">> in contract, attached deposit: {}, PoolInfo: {}",
-            ynear_amount,
-            p.pool_info()
         );
         self.set_pool(&token, &p);
 
@@ -776,13 +774,6 @@ mod tests {
             };
         }
 
-        pub fn set_gas_and_deposit_for_token_op(&mut self) {
-            // 6 is arbitrary number easy to recoginze)
-            self.vm.attached_deposit = NEP21_STORAGE_DEPOSIT * 120;
-            self.vm.prepaid_gas = MAX_GAS;
-            testing_env!(self.vm.clone());
-        }
-
         pub fn set_deposit(&mut self, attached_deposit: Balance) {
             self.vm.attached_deposit = attached_deposit;
             testing_env!(self.vm.clone());
@@ -879,46 +870,103 @@ mod tests {
     fn add_liquidity_happy_path() {
         let (mut ctx, mut c) = init();
         let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
 
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let ynear_deposit = 12 * NDENOM;
-        let token_deposit = 2 * NDENOM;
-        let ynear_deposit_j = U128::from(ynear_deposit);
-        ctx.set_gas_and_deposit_for_token_op();
-        ctx.set_deposit(ynear_deposit);
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        ctx.set_deposit(ynear_deposit_with_storage);
 
         c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 
-        let p = c.pool_info(&t).expect("Pool should exist");
-        let expected_pool = PoolInfo {
-            ynear: ynear_deposit_j,
+        let mut p = c.pool_info(&t).expect("Pool should exist");
+        let mut expected_pool = PoolInfo {
+            ynear: ynear_deposit.into(),
             reserve: token_deposit.into(),
-            total_shares: ynear_deposit_j,
+            total_shares: ynear_deposit.into(),
         };
         assert_eq!(p, expected_pool, "pool_info should be correct");
-        let predecessor_shares = c.balance_of(t.clone(), ctx.accounts.predecessor);
+        let a_shares = to_num(c.balance_of(t.clone(), a.clone()));
         assert_eq!(
-            predecessor_shares, ynear_deposit_j,
+            a_shares, ynear_deposit,
             "LP should have correct amount of shares"
         );
         assert_eq!(
-            c.total_supply(t),
-            ynear_deposit_j,
-            "LP should have correct amount of shares"
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit,
+            "Total supply should be correct"
         );
 
         // total supply of an unknown token must be 0
         assert_eq!(
             to_num(c.total_supply("unknown-token".to_string())),
             0,
-            "LP should have correct amount of shares"
+            "total supply of other token shouldn't change"
         );
 
-        // TODO tests
-        // + add liquidity with max_balance > allowance
+        println!(">> adding liquidity - second time");
+
+        c.add_liquidity(t.clone(), (token_deposit * 10).into(), ynear_deposit.into());
+        p = c.pool_info(&t).expect("Pool should exist");
+        expected_pool = PoolInfo {
+            ynear: (ynear_deposit * 2).into(),
+            reserve: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            total_shares: (ynear_deposit * 2).into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), a.clone())),
+            ynear_deposit * 2,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit * 2,
+            "Total supply should be correct"
+        );
     }
+
+    #[test]
+    fn add_liquidity2_happy_path() {
+        let ynear_deposit = 3 * NDENOM;
+        let token_deposit = 1 * NDENOM + 1;
+        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+
+        let (ctx, mut c) = _init(ynear_deposit_with_storage);
+        let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
+
+        let initial_ynear = 30 * NDENOM;
+        let mut shares_map = UnorderedMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&a, &initial_ynear);
+        let p = Pool {
+            ynear: initial_ynear,
+            reserve: 10 * NDENOM,
+            total_shares: 30 * NDENOM,
+            shares: shares_map,
+        };
+        c.pools.insert(&t, &p);
+
+        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+
+        let p_info = c.pool_info(&t).expect("Pool should exist");
+        let expected_pool = PoolInfo {
+            ynear: (ynear_deposit + p.ynear).into(),
+            reserve: (token_deposit + p.reserve).into(),
+            total_shares: (ynear_deposit + p.ynear).into(),
+        };
+        assert_eq!(p_info, expected_pool, "pool_info should be correct");
+        let a_shares = c.balance_of(t.clone(), a);
+        assert_eq!(
+            to_num(a_shares),
+            ynear_deposit + p.ynear,
+            "LP should have correct amount of shares"
+        );
+    }
+
     #[test]
     fn withdraw_happy_path() {
         let (ctx, mut c) = init_with_storage_deposit();

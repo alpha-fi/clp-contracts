@@ -23,8 +23,8 @@ export async function getBalanceNEP(contractName) {
 
 export async function incAllowance(swapLeg) {
 
-  if (swapLeg.amount==0) {
-    console.log("ERR:swapLeg.amount==0!!")
+  if (swapLeg.amount==""||swapLeg.amount=="0".repeat(24)) {
+    console.log("ERR:swapLeg.amount==''!!")
     return;
   }
   window.nep21 = await new Contract(
@@ -42,7 +42,7 @@ export async function incAllowance(swapLeg) {
     //WARN: SDE, State Destruction Event, window.nep21.inc_allowance will navigate out of this SPA to the wallet
     await window.nep21.inc_allowance({
       escrow_account_id: window.config.contractName,
-      amount: toYoctosString(swapLeg.amount)
+      amount: swapLeg.amount+""
     },
       maxGas,
       nep21AllowanceFee

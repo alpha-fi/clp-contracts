@@ -40,3 +40,7 @@ Tips:
 
 + Review the standard and finalize the implementation.
 + We want to add operator related functions, which could do some breaking changes.
+
+## Code organization
+
++ multiple contracts: https://stackoverflow.com/questions/64110056/how-to-build-and-deploy-multiple-contracts-in-near-protocol

@@ -321,7 +321,7 @@ impl NearCLP {
     /// receving at least `min_tokens` of `token`.
     #[payable]
     pub fn swap_near_to_token_exact_in(&mut self, token: AccountId, min_tokens: U128) {
-        self._swap_near_exact_in(
+        self._swap_n2t_exact_in(
             &token,
             env::attached_deposit(),
             min_tokens.into(),
@@ -338,7 +338,7 @@ impl NearCLP {
         min_tokens: U128,
         recipient: AccountId,
     ) {
-        self._swap_near_exact_in(
+        self._swap_n2t_exact_in(
             &token,
             env::attached_deposit(),
             min_tokens.into(),
@@ -353,7 +353,7 @@ impl NearCLP {
     #[payable]
     pub fn swap_near_to_token_exact_out(&mut self, token: AccountId, tokens_out: U128) {
         let b = env::predecessor_account_id();
-        self._swap_near_exact_out(
+        self._swap_n2t_exact_out(
             &token,
             tokens_out.into(),
             env::attached_deposit(),
@@ -371,7 +371,7 @@ impl NearCLP {
         tokens_out: U128,
         recipient: AccountId,
     ) {
-        self._swap_near_exact_out(
+        self._swap_n2t_exact_out(
             &token,
             tokens_out.into(),
             env::attached_deposit(),
@@ -393,7 +393,7 @@ impl NearCLP {
         min_ynear: U128,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_token_exact_in(&token, tokens_paid.into(), min_ynear.into(), b.clone(), b);
+        self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b.clone(), b);
     }
 
     /// Same as `swap_token_to_near_exact_in`, but user additionly specifies the `recipient`
@@ -407,7 +407,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_token_exact_in(&token, tokens_paid.into(), min_ynear.into(), b, recipient);
+        self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b, recipient);
     }
 
     /// Swaps `token` to NEAR and transfers NEAR to the caller.
@@ -424,7 +424,7 @@ impl NearCLP {
         max_tokens: U128,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_token_exact_out(&token, ynear_out.into(), max_tokens.into(), b.clone(), b);
+        self._swap_t2n_exact_out(&token, ynear_out.into(), max_tokens.into(), b.clone(), b);
     }
 
     /// Same as `swap_token_to_near_exact_out`, but user additionly specifies the `recipient`
@@ -438,7 +438,7 @@ impl NearCLP {
         recipient: AccountId,
     ) {
         let b = env::predecessor_account_id();
-        self._swap_token_exact_out(&token, ynear_out.into(), max_tokens.into(), b, recipient);
+        self._swap_t2n_exact_out(&token, ynear_out.into(), max_tokens.into(), b, recipient);
     }
 
     /// Swaps two different tokens.
@@ -1048,17 +1048,87 @@ mod tests {
 
         // ## test 2:1 ## - we expect 0.5x*0.997
         assert_out(1, 2 * G, G, 0); // 0 because we cut the decimals (should be 0.997)
-        assert_out(10, 2 * G, G, 4); // again rounding, should be 9.97
-        assert_out(1_000, 2 * G, G, 996 / 2); // rounding again...
+        assert_out(10, 2 * G, G, 4); // again rounding
+        assert_out(1_000, 2 * G, G, 996 / 2); // 996 because we add `in_net` to the denominator
         assert_out(100_000, 2 * NDENOM, NDENOM, 99699 / 2); // 49849
 
         // ## test 1:2  ## - we expect 2x*0.997
         assert_out(1, G, 2 * G, 1); // 0 because we cut the decimals (should be 1.997)
         assert_out(1_000, G, 2 * G, 1993); // rounding again...
         assert_out(100_000, NDENOM, 2 * NDENOM, 199399);
+
+        // ## test 1:10  ## - we expect 10x*0.997 $net_calc
+        assert_out(1_000, G, 10 * G, 9969); //
+    }
+
+    #[test]
+    fn price_swap() {
+        let (_, mut c) = init_with_storage_deposit();
+        const G: u128 = 1_000_000_000_000_000_000;
+        let t1: AccountId = "token1".to_string();
+        let t2: AccountId = "token2".to_string();
+        let p1_factor = 4;
+        let p1 = Pool {
+            // 1:4
+            ynear: G,
+            reserve: p1_factor * G,
+            total_shares: 0,
+            shares: UnorderedMap::new("1".as_bytes().to_vec()),
+        };
+        let p2 = Pool {
+            // 2:1
+            ynear: 2 * G,
+            reserve: G,
+            total_shares: 0,
+            shares: UnorderedMap::new("2".as_bytes().to_vec()),
+        };
+        c.set_pool(&t1, &p1);
+        c.set_pool(&t2, &p2);
+
+        let amount: u128 = 1_000_000;
+        let amount_net: u128 = 997_000;
+        let mut v = c.price_near_to_token_in(t1.clone(), amount.into());
+        let v_expected = amount_net * p1.reserve / (p1.ynear + amount_net);
+        assert_eq!(to_num(v), v_expected);
+        let mut v2 = c.price_near_to_token_out(t1.clone(), v.into());
+        assert_eq!(to_num(v2), amount, "price_out(price_in) must be identity");
+
+        // check reverse computation
+        v = c.price_token_to_near_in(t1.clone(), (amount * p1_factor).into());
+        assert_eq!(to_num(v), v_expected / p1_factor);
+        v2 = c.price_token_to_near_out(t1.clone(), v.into());
+        assert_close(v2, amount * p1_factor, 10);
+
+        // we can also do a reverse computation by starting from expected output
+        v2 = c.price_token_to_near_out(t1.clone(), v_expected.into());
+        assert_close(v2, amount * p1_factor * p1_factor, 10);
+        v = c.price_token_to_near_in(t1.clone(), v2.into()).into();
+        assert_eq!(to_num(v), v_expected);
+
+        /*
+         * test  token1 -> token2 swap
+         */
+        v = c.price_token_to_token_in(t1.clone(), t2.clone(), amount.into());
+        v2 = c.price_token_to_token_out(t1.clone(), t2.clone(), v.into());
+        assert_close(v2, amount, 10);
+
+        v2 = c.price_token_to_token_out(t2.clone(), t1.clone(), amount.into());
+        assert_close(v2, v.into(), amount * 2 / 1_000);
     }
 
     fn to_num(a: U128) -> u128 {
         a.into()
+    }
+
+    fn assert_close(a1: U128, a2: u128, margin: u128) {
+        let a1 = to_num(a1);
+        let diff = if a1 > a2 { a1 - a2 } else { a2 - a1 };
+        assert!(
+            diff <= margin,
+            format!(
+                "Expect to be close (margin={}):\n  left: {}\n right: {}\n  diff: {}\n",
+                margin, a1, a2, diff
+            )
+        )
     }
 }

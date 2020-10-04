@@ -8,6 +8,7 @@ test-debug:
 
 test-unit:
 	@cargo +nightly test --lib -- --nocapture
+# run specific tests: cargo +nightly test --lib <testname>  -- --nocapture
 
 
 build:

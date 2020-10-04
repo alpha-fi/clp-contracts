@@ -103,6 +103,7 @@ We believe that Yield Farming can create additional incentives for powerful enti
 - it's a gravity force for opportunistic users
 - creates more instability in the market.
 
+Here is a great overview of strategies and values of [liquidity mining](https://medium.com/bollinger-investment-group/liquidity-mining-a-user-centric-token-distribution-strategy-1d05c5174641).
 
 We want to assure economy-safe conditions in NEARswap protocol, hence we will put lot of effort to make a solid incentives scheme before shipping any yield farming mechanism.
 

@@ -26,6 +26,7 @@ impl NearCLP {
 
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
+    #[inline]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // in_a * out_bal / (in_bal + in_a)  and scaling for fee
         let in_net = u256::from(in_amount) * 997;
@@ -36,6 +37,7 @@ impl NearCLP {
     /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
     /// balance in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens
     /// respectively.
+    #[inline]
     pub(crate) fn calc_in_amount(&self, out_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // this is getOutputPrice in Uniswap
         // (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
@@ -99,6 +101,10 @@ impl NearCLP {
         let p_out = self.must_get_pool(t_out);
         let near_swap = self.calc_out_amount(tokens_in, p_in.reserve, p_in.ynear);
         let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.reserve);
+        println!(
+            "Swapping_in {} {} -> {} ynear -> {} {}",
+            tokens_in, t_in, near_swap, tokens2_out, t_out
+        );
         return (p_in, p_out, near_swap, tokens2_out);
     }
 
@@ -113,7 +119,11 @@ impl NearCLP {
         let p_in = self.must_get_pool(&t_in);
         let p_out = self.must_get_pool(&t_out);
         let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.reserve);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.ynear, p_in.reserve);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.reserve, p_in.ynear);
+        println!(
+            "Swapping_out {} {} -> {} ynear -> {} {}",
+            tokens1_to_pay, t_in, near_swap, tokens_out, t_out
+        );
         return (p_in, p_out, near_swap, tokens1_to_pay);
     }
 
@@ -139,7 +149,7 @@ impl NearCLP {
 
     /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
     /// `min_tokens` of reserve tokens.
-    pub(crate) fn _swap_near_exact_in(
+    pub(crate) fn _swap_n2t_exact_in(
         &mut self,
         token: &AccountId,
         near_paid: Balance,
@@ -154,7 +164,7 @@ impl NearCLP {
 
     /// Pool sells `tokens_out` reserve token for NEAR tokens. Asserts that a user pays no more
     /// than `max_near_paid`.
-    pub(crate) fn _swap_near_exact_out(
+    pub(crate) fn _swap_n2t_exact_out(
         &mut self,
         token: &AccountId,
         tokens_out: Balance,
@@ -207,7 +217,7 @@ impl NearCLP {
 
     /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
     /// `min_near`.
-    pub(crate) fn _swap_token_exact_in(
+    pub(crate) fn _swap_t2n_exact_in(
         &mut self,
         token: &AccountId,
         tokens_paid: Balance,
@@ -227,7 +237,7 @@ impl NearCLP {
 
     /// Pool sells `tokens_out` reserve tokens for NEAR tokens. Asserts that a user pays
     /// no more than `max_near_paid`.
-    pub(crate) fn _swap_token_exact_out(
+    pub(crate) fn _swap_t2n_exact_out(
         &mut self,
         token: &AccountId,
         near_out: Balance,
@@ -240,7 +250,7 @@ impl NearCLP {
             "E2: balance arguments must be >0"
         );
         let mut p = self.must_get_pool(&token);
-        let tokens_to_pay = self.calc_in_amount(near_out, p.ynear, p.reserve);
+        let tokens_to_pay = self.calc_in_amount(near_out, p.reserve, p.ynear);
         assert_max_pay(tokens_to_pay, max_tokens_paid);
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
@@ -267,7 +277,7 @@ impl NearCLP {
         p2.ynear += near_swap;
 
         let caller = env::current_account_id();
-        // firstly get tokens from buyer, then send to to the recipient
+        // firstly get tokens from buyer, then send to the recipient
         self.schedule_nep21_tx(token1, buyer, caller.clone(), token1_in)
             .then(self.schedule_nep21_tx(token2, caller, recipient, token2_out));
         // TODO: make updates after nep21 transfers (together with promise2)
@@ -348,10 +358,6 @@ impl NearCLP {
         assert!(
             shares >= amount_u,
             "E11: Insufficient amount of shares balance"
-        );
-        println!(
-            ">>>>> Transferring shares. Sender {}, shares: {}, amount: {}",
-            sender, shares, amount.0,
         );
         let initial_storage = env::storage_usage();
         p.shares.insert(&sender, &(shares - amount_u));

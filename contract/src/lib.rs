@@ -163,13 +163,24 @@ impl NearCLP {
 
     /// Increases Near and the Reserve token liquidity.
     /// The supplied funds must preserve current ratio of the liquidity pool.
+    /// `transfer_deposit`: amount of yNEAR attached to the NEP21.transfer_from AND
+    ///   deduced from the attached deposit (hence removed from the new pool supply).
+    ///   Usually, on subsequent add_liquidity calls for the given token, we don't need
+    ///   to attach extra deposit for `transfer_from` calls.
     /// Returns amount of LP Shares is minted for the user.
     #[payable]
-    pub fn add_liquidity(&mut self, token: AccountId, max_tokens: U128, min_shares: U128) -> U128 {
+    pub fn add_liquidity(
+        &mut self,
+        token: AccountId,
+        max_tokens: U128,
+        min_shares: U128,
+        transfer_deposit: U128,
+    ) -> U128 {
         let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
+        let transfer_deposit = u128::from(transfer_deposit);
         let shares_minted;
-        let ynear_amount = env::attached_deposit() - NEP21_STORAGE_DEPOSIT;
+        let ynear_amount = env::attached_deposit() - transfer_deposit;
         let added_reserve;
         let max_tokens: Balance = max_tokens.into();
         assert!(
@@ -234,8 +245,14 @@ impl NearCLP {
             0,
             5 * TGAS,
         );
-        self.schedule_nep21_tx(&token, caller, env::current_account_id(), added_reserve)
-            .then(callback); //after that, the callback will check success/failure
+        self.schedule_nep21_tx(
+            &token,
+            caller,
+            env::current_account_id(),
+            added_reserve,
+            transfer_deposit,
+        )
+        .then(callback); //after that, the callback will check success/failure
 
         // TODO:
         // Handling exception is work-in-progress in NEAR runtime
@@ -303,6 +320,7 @@ impl NearCLP {
             env::current_account_id(),
             caller.clone(),
             token_amount,
+            NEP21_STORAGE_DEPOSIT,
         )
         .then(Promise::new(caller).transfer(ynear_amount));
 
@@ -877,10 +895,16 @@ mod tests {
 
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit + 2 * NEP21_STORAGE_DEPOSIT;
+        let transfer_deposit = U128::from(2 * NEP21_STORAGE_DEPOSIT);
         ctx.set_deposit(ynear_deposit_with_storage);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(
+            t.clone(),
+            token_deposit.into(),
+            ynear_deposit.into(),
+            transfer_deposit,
+        );
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
@@ -909,7 +933,12 @@ mod tests {
 
         println!(">> adding liquidity - second time");
 
-        c.add_liquidity(t.clone(), (token_deposit * 10).into(), ynear_deposit.into());
+        c.add_liquidity(
+            t.clone(),
+            (token_deposit * 10).into(),
+            ynear_deposit.into(),
+            transfer_deposit,
+        );
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
@@ -933,9 +962,9 @@ mod tests {
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM + 1;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let transfer_deposit = U128::from(0);
 
-        let (ctx, mut c) = _init(ynear_deposit_with_storage);
+        let (ctx, mut c) = _init(ynear_deposit);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -950,7 +979,12 @@ mod tests {
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(
+            t.clone(),
+            token_deposit.into(),
+            ynear_deposit.into(),
+            transfer_deposit,
+        );
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {

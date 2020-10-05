@@ -119,7 +119,6 @@ fn add_liquidity(
 
     show_nep21_bal(r, &token.account_id, &liquidity_provider.account_id);
 
-    //add_liquidity
     call(
         r,
         &liquidity_provider,
@@ -127,7 +126,8 @@ fn add_liquidity(
         "add_liquidity",
         &json!({"token": token.account_id,
                 "max_tokens": token_amount.to_string(),
-                "min_shares": near_amount.to_string()}),
+                "min_shares": near_amount.to_string(),
+                "transfer_deposit": NEP21_STORAGE_DEPOSIT.to_string()}),
         (near_amount + NEP21_STORAGE_DEPOSIT).into(), //send NEAR
     );
 

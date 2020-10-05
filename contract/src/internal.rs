@@ -53,7 +53,7 @@ impl NearCLP {
         from: AccountId,
         to: AccountId,
         amount: u128,
-        // gas: Gas,
+        deposit: u128, // gas: Gas,
     ) -> Promise {
         let gas = env::prepaid_gas();
         assert!(gas >= 20 * TGAS, "Not enough gas");
@@ -62,7 +62,7 @@ impl NearCLP {
             to,
             amount.into(),
             token,
-            util::NEP21_STORAGE_DEPOSIT,
+            deposit,
             env::prepaid_gas() / 3,
         )
     }
@@ -142,7 +142,13 @@ impl NearCLP {
         p.reserve -= reserve;
         p.ynear += near;
 
-        self.schedule_nep21_tx(token, env::current_account_id(), recipient, reserve);
+        self.schedule_nep21_tx(
+            token,
+            env::current_account_id(),
+            recipient,
+            reserve,
+            NEP21_STORAGE_DEPOSIT,
+        );
         // TODO: this updated should be done after nep21 transfer
         self.set_pool(token, p);
     }
@@ -209,8 +215,14 @@ impl NearCLP {
         p.ynear -= near;
 
         // firstly get tokens from the buyer, then send NEAR to recipient
-        self.schedule_nep21_tx(token, buyer, env::current_account_id(), reserve)
-            .then(Promise::new(recipient).transfer(near));
+        self.schedule_nep21_tx(
+            token,
+            buyer,
+            env::current_account_id(),
+            reserve,
+            NEP21_STORAGE_DEPOSIT,
+        )
+        .then(Promise::new(recipient).transfer(near));
         // TODO - this should be in a promise.
         self.set_pool(&token, p);
     }
@@ -278,8 +290,20 @@ impl NearCLP {
 
         let caller = env::current_account_id();
         // firstly get tokens from buyer, then send to the recipient
-        self.schedule_nep21_tx(token1, buyer, caller.clone(), token1_in)
-            .then(self.schedule_nep21_tx(token2, caller, recipient, token2_out));
+        self.schedule_nep21_tx(
+            token1,
+            buyer,
+            caller.clone(),
+            token1_in,
+            NEP21_STORAGE_DEPOSIT,
+        )
+        .then(self.schedule_nep21_tx(
+            token2,
+            caller,
+            recipient,
+            token2_out,
+            NEP21_STORAGE_DEPOSIT,
+        ));
         // TODO: make updates after nep21 transfers (together with promise2)
         self.set_pool(&token1, &p1);
         self.set_pool(&token2, &p2);

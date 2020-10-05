@@ -3,7 +3,7 @@ import { Contract} from 'near-api-js'
 const e22 = '0'.repeat(22);
 const maxGas = '300000000000000';
 const attach60NearCents = '6' + e22;
-const nep21AllowanceFee = '4' + e22;
+const nep21AllowanceFee = '5' + e22;
 const NDENOM = 1e24;
 
 export async function getBalanceNEP( contractName ) {
@@ -315,7 +315,6 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
           maxGas,
           attach60NearCents
           );
-
       }
     else {
       console.error("Error: Token type error");
@@ -323,17 +322,17 @@ export async function swapFromOut( tokenIN, tokenOUT ) {
   }
 }
 
-export async function addLiquiduty( tokenDetails, maxTokenAmount, minSharesAmount ) {
-  await window.contract.add_liquidity( { token: tokenDetails.address,
-    max_tokens: maxTokenAmount,
-    min_shares: minSharesAmount},
-    maxGas,
-    attach60NearCents
-    );
+export function addLiquidity( tokenDetails, maxTokenAmount, minSharesAmount, ynear, transferDeposit ) {
+  return window.contract.add_liquidity( { token: tokenDetails.address,
+                                          max_tokens: maxTokenAmount,
+                                          min_shares: minSharesAmount,
+                                          transfer_deposit: transferDeposit},
+                                        maxGas,
+                                        ynear);
 }
 
 // returns true if pool already exists
-export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount ) {
+export async function createPool( tokenDetails, tokenAmount, ynearAmount ) {
   const info = await window.contract.pool_info( { token: tokenDetails.address} );
 
   if(info !== null) {
@@ -341,8 +340,7 @@ export async function createPool( tokenDetails, maxTokenAmount, minSharesAmount 
     return true;
   }
   await window.contract.create_pool( { token: tokenDetails.address });
-
-  await addLiquiduty( tokenDetails.address, maxTokenAmount, minSharesAmount);
+  await addLiquidity( tokenDetails.address, tokenAmount, ynearAmount, ynearAmount, nep21AllowanceFee);
 
   return false;
 }

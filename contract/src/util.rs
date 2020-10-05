@@ -13,7 +13,7 @@ pub const TGAS: Gas = 1_000_000_000_000;
 pub const MAX_GAS: Gas = 200 * TGAS;
 
 /// nep21 may require NEAR deposit for storage to create a new balance
-pub const NEP21_STORAGE_DEPOSIT: u128 = 4 * NDENOM / 100; //0.04 NEAR
+pub const NEP21_STORAGE_DEPOSIT: u128 = 5 * NDENOM / 100; //0.05 NEAR
 
 // TODO: should we make it customizable?
 /// Price per 1 byte of storage from mainnet genesis config. 100e18

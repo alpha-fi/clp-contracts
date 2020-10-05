@@ -10,7 +10,6 @@ export default function SwapTab() {
 
   return (
     <>
-      <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>SWAP</small></p>
       <SwapInputCards/>
     </>
   );

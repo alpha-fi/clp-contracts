@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from "react";
 
-import { convertToE24Base } from "../services/near-nep21-util";
+import { convertToE24Base5Dec } from "../services/near-nep21-util";
 
 import { TokenListContext } from "../contexts/TokenListContext";
 
@@ -40,7 +40,7 @@ export default function PoolInfoCard(props) {
           <small><ColoredThemeText><b>NEAR-{props.name}</b></ColoredThemeText></small>
         </label>
         <div className="px-2 ml-3 mb-1">
-          <Image rounded src={tokenListState.state.tokenList.tokens[0].logoURI} width="23px" className="mr-2"/>
+          <Image rounded src={tokenListState.state.tokens[0].logoURI} width="23px" className="mr-2"/>
           {props.name} Pool
           <br/>
           <div className="my-1">
@@ -50,17 +50,17 @@ export default function PoolInfoCard(props) {
                   <thead>
                     <tr>
                       <th>NEAR Amount</th>
-                      <th>{Number(convertToE24Base(props.ynear)).toFixed(5)}</th>
+                      <th className="amount">{convertToE24Base5Dec(props.ynear)}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td><ColoredThemeText>Reserve Amount</ColoredThemeText></td>
-                      <td><ColoredThemeText>{Number(convertToE24Base(props.reserve)).toFixed(5)}</ColoredThemeText></td>
+                      <td className="amount"><ColoredThemeText>{convertToE24Base5Dec(props.reserve)}</ColoredThemeText></td>
                     </tr>
                     <tr>
                       <td>Total shares</td>
-                      <td>{Number(convertToE24Base(props.total_shares)).toFixed(5)}</td>
+                      <td className="amount">{convertToE24Base5Dec(props.total_shares)}</td>
                     </tr>
                   </tbody>
                 </Table>

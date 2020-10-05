@@ -178,6 +178,7 @@ impl NearCLP {
         );
         let mut p = self.must_get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
+
         if max_near_paid < near_to_pay {
             env::panic(
                 format!(

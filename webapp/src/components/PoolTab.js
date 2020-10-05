@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import { browsePools, poolInfo } from "../services/near-nep21-util";
+import { convertToE24Base, browsePools, poolInfo } from "../services/near-nep21-util";
 
 import PoolInputCards from "./PoolInputCards"
 import PoolInfoCard from "./PoolInfoCard"
@@ -32,15 +32,23 @@ export default function PoolTab() {
     });
   }
 
+  //----------------------------
+  //----------------------------
+  //----------------------------
   useEffect(function() {
-    fetchPools();
-  }, []);
+     fetchPools();
+   }, []);
 
   return (
     <>
       <p className="text-center my-1 text-secondary" style={{ 'letterSpacing': '3px' }}><small>POOLS</small></p>
       {pools.map((pool, index) => (
-        <PoolInfoCard key={index} ynear={pool.ynear} reserve={pool.reserve} total_shares={pool.total_shares} name={pool.name} />
+        <PoolInfoCard key={index} 
+                    ynear={pool.ynear} 
+                    reserve={pool.reserve} 
+                    total_shares={pool.total_shares} 
+                    name={pool.name} 
+                    />
       ))}
       <p className="mt-4 text-center text-secondary"><small><i>Don't see a pair you're looking for? Create a new pool below.</i></small></p>
       <Hr className="mt-4"/>

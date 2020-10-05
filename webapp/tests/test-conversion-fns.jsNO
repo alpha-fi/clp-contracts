@@ -1,0 +1,46 @@
+amount=process.argv[2]
+
+ function normalizeAmount( value ) {
+    let ok = false;
+    let val = 24;
+    let res = "";
+    let amount = (value+"").trim();
+    while(amount.length>0 && amount.slice(0,1)=="0") amount=amount.slice(1);
+    for(var x of amount) {
+      if(x === '.') {
+        ok = true;
+      }
+      else if (x >= '0' && x <= '9') {
+        if(ok)
+          val--;
+        res += x;
+      } else {
+        console.error("Error: Wrong Input");
+        return -1;
+      }
+    }
+    res = res + '0'.repeat(val);
+    return res;
+  }
+  
+  function toYoctosString(amount){
+    let result = (amount + "").trim()
+    while(result.length>0 && result.slice(0,1)=="0") result=result.slice(1);
+    let zerosToAdd=24;
+    let pos = result.indexOf(".");
+    if (pos>=0){
+        zerosToAdd=zerosToAdd-(result.length-pos-1)
+    }
+    result = result.replace(".","") + "0".repeat(zerosToAdd)
+    return result.toString()
+  }
+  
+  function show(amount, fn, result){
+    console.log((fn+"('"+amount+"') => ").padStart(60)+result);
+    if (typeof result=="string"){
+        console.log((fn+"('"+amount+"') => ").padStart(60)+result.slice(0,-24)+"."+result.slice(-24));
+    }
+  }
+
+  show(amount, "toYoctosString", toYoctosString(amount))
+  show(amount, "normalizeAmount", normalizeAmount(amount))

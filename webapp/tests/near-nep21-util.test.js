@@ -45,10 +45,10 @@ describe("Convert to real number", () => {
 
     it("Division ",  () => {
         var res = convertToE24Base("1000000000000000000000000");
-        assert.equal(res, "1", 'mismatch');
+        assert.equal(res, "1.000000000000000000000000", 'mismatch');
         
         var res = convertToE24Base("10000000000000000000000");
-        assert.equal(res, "0.01", 'mismatch');
+        assert.equal(res, "0.010000000000000000000000", 'mismatch');
 
         var res = convertToE24Base("1234567891234567891234567");
         assert.equal(res, "1.234567891234567891234567", 'mismatch');
@@ -60,15 +60,15 @@ describe("Convert to real number", () => {
         assert.equal(res, "0.000000000000000000000001", 'mismatch');
 
         var res = convertToE24Base("0");
-        assert.equal(res, "0", 'mismatch');
+        assert.equal(res, "0."+"0".repeat(24), 'mismatch');
 
         var res = convertToE24Base("00");
-        assert.equal(res, "0", 'mismatch');
+        assert.equal(res, "0."+"0".repeat(24), 'mismatch');
 
-        var res = convertToE24Base("0012340000000000000000000000000");
-        assert.equal(res, "12340", 'mismatch');
+        var res = convertToE24Base("12340000000000000000000000000");
+        assert.equal(res, "12340."+"0".repeat(24), 'mismatch');
 
-        var res = convertToE24Base("0012340000000000000000000000001");
+        var res = convertToE24Base("12340000000000000000000000001");
         assert.equal(res, "12340.000000000000000000000001", 'mismatch');
     });
 });

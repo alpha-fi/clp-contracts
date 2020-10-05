@@ -1,3 +1,4 @@
+import './fallback-config.js'
 import 'regenerator-runtime/runtime'
 import React from 'react'
 import './global.css'

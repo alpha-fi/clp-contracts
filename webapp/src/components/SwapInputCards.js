@@ -1,11 +1,11 @@
 import React, { useEffect, useReducer, useContext, useCallback } from "react";
 
-import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP } from '../services/near-nep21-util'
+import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP, toYoctosString } from '../services/near-nep21-util'
 import { produce } from 'immer';
 
 import {getCurrentBalance, saveInputsStateLocalStorage, setCurrencyIndex} from "./CurrencyTable"
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
-import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
+import { calcPriceFromOut, normalizeAmount, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 import { isNonzeroNumber, delay } from "../utils"
 
 import { InputsContext } from "../contexts/InputsContext";
@@ -283,15 +283,15 @@ export default function SwapInputCards(props) {
       })
   }
 
-  //computes "in" from the "out" wanted and the price
-  function computeInAmountRequired(outAmount){
+  //computes required "in" from the "out" wanted and the price
+  async function computeInAmountRequired(outAmount){
     // Calculate the value of the other input box (only called when the user types)
     let updatedToken = { ...inputs.state.swap.out, amount: outAmount };
-    return calcPriceFromOut(inputs.state.swap.in, updatedToken)
-      .then(function (result) {
-        dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
-        updateStatus(result, outAmount); // Update status and/or error message
-      })
+    let amount = await calcPriceFromOut(inputs.state.swap.in, updatedToken);
+    dispatch({ type: 'SET_IN_AMOUNT', payload: { amount: amount, isValid: isNonzeroNumber(amount) } });
+    let updatedIn = { ...inputs.state.swap.in, amount: amount };
+    updateFromAllowance(updatedIn);
+    updateStatus(amount, outAmount); // Update status and/or error message
   }
   
   //---------------------------------------------------------------
@@ -329,7 +329,7 @@ export default function SwapInputCards(props) {
 
     // Update inputs state
     dispatch({
-      type: 'SET_IN_AMOUNT', payload: {
+      type: 'SET_OUT_AMOUNT', payload: {
         amount: amount,
         isValid: newIsValid,
       }
@@ -374,6 +374,8 @@ export default function SwapInputCards(props) {
       const newState= produce(inputs, draft => {
         draft.state.swap.status="isSwapping";
         draft.state.swap.previous=inputs.state.swap.out.balance; //prev balance
+        draft.state.swap.in.amount=0; //clear in
+        draft.state.swap.out.amount=0; //clear out
       })
       //status is saved 
       localStorage.setItem("inputs", JSON.stringify(newState.state));
@@ -399,7 +401,7 @@ export default function SwapInputCards(props) {
         try {
           let allowance = await getAllowance(token);
           let needsApproval = true;
-          try{ needsApproval = inputs.state.swap.in.allowance<inputs.state.swap.in.amount } catch (ex){};
+          try{ needsApproval = (token.allowance+"").padStart(60,"0")<(token.amount+"").padStart(60,"0") } catch (ex){};
           dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance, needsApproval:needsApproval } });
         } catch (e) {
           console.error(e);
@@ -410,11 +412,11 @@ export default function SwapInputCards(props) {
 
   // Move "To" input and currency to "From" and vice versa
   function switchInputs() {
-    let oldFromAmount = inputs.state.swap.in.amount;
-    let oldTo = inputs.state.swap.out;
+    let oldInAmount = inputs.state.swap.in.amount; //yoctos
+    let oldOutAmount = inputs.state.swap.out; //units
     dispatch({ type: 'SWITCH_SWAP_INPUTS' });
-    handleToAmountChange(oldFromAmount);
-    updateFromAllowance(oldTo);
+    //handleOutAmountChange(convertToE24Base5Dec(oldInAmount));
+    updateFromAllowance(toYoctosString(oldOutAmount));
   }
 
   function readyToSwap() { 
@@ -599,7 +601,7 @@ export default function SwapInputCards(props) {
       </div>
 
       {/* Display approve button if NEP-21 -> ____ swap */}
-      {(inputs.state.swap.needsApproval)
+      {(inputs.state.swap.in.needsApproval)
         && <>
           <small className="text-secondary">Step 1: </small>
           <Button variant="warning" block
@@ -621,7 +623,7 @@ export default function SwapInputCards(props) {
       }
 
       {/* Enable submission only if inputs are valid */}
-        {(inputs.state.swap.needsApproval == true) && 
+        {(inputs.state.swap.in.needsApproval == true) && 
           <small className="text-secondary">Step 2: </small>
         }
 

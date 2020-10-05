@@ -66,23 +66,26 @@ export function setCurrencyIndex(inputName, newTokenIndex, inputs, tokenListStat
 
     case 'in':
       inputs.dispatch({ type: 'UPDATE_IN_SELECTED_CURRENCY', payload: newPayload });
-      // Calculate the value of the other input box (only called when the user types)
-      //let updatedToken = { ...inputs.state.swap.out, amount: outAmount };
-      calcPriceFromIn(inputs.state.swap.out, inputs.state.swap.in)
-        .then(function (result) {
-          inputs.dispatch({ type: 'SET_OUT_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
-          //updateStatus(result, outAmount); // Update status and/or error message
-        })
       break;
 
     case 'out':
       inputs.dispatch({ type: 'UPDATE_OUT_SELECTED_CURRENCY', payload: newPayload });
+      // Calculate the value of the other input box (only called when the user types)
+      //let updatedToken = { ...inputs.state.swap.out, amount: outAmount };
+      calcPriceFromIn(inputs.state.swap.out, inputs.state.swap.in)
+        .then(function (result) {
+          inputs.dispatch({ type: 'SET_IN_AMOUNT', payload: { amount: result, isValid: isNonzeroNumber(result) } });
+          //updateStatus(result, outAmount); // Update status and/or error message
+        })
+      break;
 
     case 'input1':
       inputs.dispatch({ type: 'UPDATE_INPUT1_SELECTED_CURRENCY', payload: newPayload });
       break;
+
     case 'input2':
       inputs.dispatch({ type: 'UPDATE_INPUT2_SELECTED_CURRENCY', payload: newPayload });
+      break;
   }
 }
 
@@ -191,18 +194,16 @@ export const CurrencyTable = () => {
   // Inputs state
   // Updates allowance of from token
   async function updateFromAllowance(token) {
-    await delay(500).then(async function () {
-      if (token.type == "NEP-21") {
-        try {
-          let allowance = await getAllowance(token);
-          let needsApproval = true;
-          try{ needsApproval = inputs.state.swap.in.allowance<inputs.state.swap.in.amount } catch (ex){};
-          dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance, needsApproval:needsApproval } });
-        } catch (e) {
-          console.error(e);
-        }
+    if (token.type == "NEP-21") {
+      try {
+        let allowance = await getAllowance(token);
+        let needsApproval = true;
+        try{ needsApproval = (token.allowance+"").padStart(60,"0")<(token.amount+"").padStart(60,"0") } catch (ex){};
+        dispatch({ type: 'UPDATE_IN_ALLOWANCE', payload: { allowance: allowance, needsApproval:needsApproval } });
+      } catch (e) {
+        console.error(e);
       }
-    });
+    }
   }
 
 

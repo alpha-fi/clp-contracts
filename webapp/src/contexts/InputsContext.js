@@ -1,7 +1,7 @@
 import React, { useContext, createContext, useReducer } from 'react';
 import { produce } from 'immer';
 import { NotificationContext } from './NotificationContext';
-import { convertToE24Base5Dec } from '../services/near-nep21-util';
+import { convertToE24Base5Dec, normalizeAmount, toYoctosString } from '../services/near-nep21-util';
 import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
 import { saveInputsStateLocalStorage } from '../components/CurrencyTable';
 import { computeInAmount } from "../components/SwapInputCards";
@@ -112,14 +112,14 @@ function reduce(state, action) {
 
     case 'SET_OUT_AMOUNT':
       return produce(state, draft => {
-        draft.swap.in.amount = action.payload.amount;
-        draft.swap.in.isValid = action.payload.isValid;
+        draft.swap.out.amount = action.payload.amount;
+        draft.swap.out.isValid = action.payload.isValid;
       });
 
     case 'SET_IN_AMOUNT':
       return produce(state, draft => {
-        draft.swap.out.amount = action.payload.amount;
-        draft.swap.out.isValid = action.payload.isValid;
+        draft.swap.in.amount = action.payload.amount;
+        draft.swap.in.isValid = action.payload.isValid;
       });
 
     case 'SET_INPUT1_AMOUNT':
@@ -231,14 +231,17 @@ function reduce(state, action) {
       });
 
     case 'SWITCH_SWAP_INPUTS':
-      let oldOut = state.swap.out;
-      let oldIn = state.swap.in;
+      let oldOut = state.swap.out; //in units
+      let oldIn = state.swap.in; //in yoctos
       return produce(state, draft => {
         draft.swap.in = {
           ...oldOut,
-          amount: 0,
+          amount: toYoctosString(oldOut.amount),
         }
-        draft.swap.out = oldIn;
+        draft.swap.out = {
+          ...oldIn,
+          amount: convertToE24Base5Dec(oldIn.amount),
+        }
         draft.swap.needsApproval = (state.swap.out.type === "NEP-21")
         draft.swap.status = "notReadyToSwap";
         draft.swap.error = null;

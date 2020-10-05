@@ -8,6 +8,8 @@ const NDENOM = 1e24;
 
 export async function getBalanceNEP(contractName) {
 
+  if (!window.walletConnection.isSignedIn()) return "0";
+
   window.nep21 = await new Contract(
     window.walletConnection.account(),
     contractName,

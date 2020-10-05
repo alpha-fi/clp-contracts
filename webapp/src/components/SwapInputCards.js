@@ -1,3 +1,4 @@
+import '../fallback-config.js'
 import React, { useEffect, useReducer, useContext, useCallback } from "react";
 
 import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP, toYoctosString } from '../services/near-nep21-util'

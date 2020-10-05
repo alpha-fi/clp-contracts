@@ -23,22 +23,6 @@ if (window.config==undefined) {
           "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png"
         },
         {
-          "name": "GOLD",
-          "type": "NEP-21",
-          "address": "gold.nearswap.testnet",
-          "symbol": "GOLD",
-          "decimals": 24,
-          "logoURI": "https://user-images.githubusercontent.com/26249903/94925431-d3f07700-04dc-11eb-8189-68fbd65e7738.png"
-        },
-        {
-          "name": "USD",
-          "type": "NEP-21",
-          "address": "usd.nearswap.testnet",
-          "symbol": "USD",
-          "decimals": 24,
-          "logoURI": "https://user-images.githubusercontent.com/26249903/94925506-f3879f80-04dc-11eb-83cc-d480ef4b91cf.png"
-        },
-        {
           "name": "Basic Attention Token",
           "type": "NEP-21",
           "address": "bat.nearswap.testnet",
@@ -77,8 +61,16 @@ if (window.config==undefined) {
           "symbol": "nABND",
           "decimals": 24,
           "logoURI": ""
-        }
-      ]
+        },
+        { 
+          "name": "GOLD",
+          "type": "NEP-21",
+          "address": "gold.nearswap.testnet",
+          "symbol": "GOLD",
+          "decimals": 24,
+          "logoURI": "https://user-images.githubusercontent.com/26249903/94925431-d3f07700-04dc-11eb-8189-68fbd65e7738.png"
+        },
+     ]
     }
   }
 }

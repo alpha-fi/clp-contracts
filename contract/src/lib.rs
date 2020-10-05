@@ -10,7 +10,7 @@ pub mod util;
 use crate::types::*;
 use crate::util::*;
 
-// acc way to optimize memory management
+// a way to optimize memory management
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -26,11 +26,11 @@ mod internal;
 // E7: computed amount of buying tokens is smaller than user required minimum.
 // E8: computed amount of selling tokens is bigger than user required maximum.
 // E9: assets (tokens) must be different in token to token swap.
-// E10: Pool is empty and can't make acc swap.
+// E10: Pool is empty and can't make a swap.
 // E11: Insufficient amount of shares balance.
 // E12: Insufficient amount of NEAR attached
 
-/// PoolInfo is acc helper structure to extract public data from acc Pool
+/// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 pub struct PoolInfo {
     /// balance in yoctoNEAR
@@ -121,7 +121,7 @@ impl NearCLP {
         self.fee_dst = fee_dst;
     }
 
-    /// Owner is an account (can be acc multisig) who has management rights to update
+    /// Owner is an account (can be a multisig) who has management rights to update
     /// fee size.
     pub fn change_owner(&mut self, new_owner: AccountId) {
         self.assert_owner();
@@ -134,10 +134,10 @@ impl NearCLP {
      POOL MANAGEMENT
     *********************/
 
-    /// Allows any user to creat acc new near-token pool. Each pool is identified by the `token`
+    /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
     /// account - which we call the Pool Reserve Token.
-    /// If acc pool for give token exists then "E1" assert exception is thrown.
-    /// TODO: charge user for acc storage created!
+    /// If a pool for give token exists then "E1" assert exception is thrown.
+    /// TODO: charge user for a storage created!
     #[payable]
     pub fn create_pool(&mut self, token: AccountId) {
         assert!(
@@ -226,7 +226,7 @@ impl NearCLP {
         self.set_pool(&token, &p);
 
         // TODO: do proper rollback
-        // Prepare acc callback for liquidity transfer rollback which we will attach later on.
+        // Prepare a callback for liquidity transfer rollback which we will attach later on.
         let callback_args = format!(r#"{{ "token":"{}" }}"#, token).into();
         let callback = Promise::new(env::current_account_id()).function_call(
             "add_liquidity_transfer_callback".into(),
@@ -239,8 +239,8 @@ impl NearCLP {
 
         // TODO:
         // Handling exception is work-in-progress in NEAR runtime
-        // 1. rollback `p` on changes or move the pool update to acc promise
-        // 2. consider adding acc lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
+        // 1. rollback `p` on changes or move the pool update to a promise
+        // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
 
         return shares_minted.into();
     }
@@ -315,7 +315,7 @@ impl NearCLP {
     **********************/
 
     /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
-    /// Caller attaches near tokens he wants to swap to the transacion under acc condition of
+    /// Caller attaches near tokens he wants to swap to the transacion under a condition of
     /// receving at least `min_tokens` of `token`.
     #[payable]
     pub fn swap_near_to_token_exact_in(&mut self, token: AccountId, min_tokens: U128) {
@@ -382,7 +382,7 @@ impl NearCLP {
     /// condition of receving at least `min_ynear` yocto NEARs.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract (at least `tokens_paid`).
-    /// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
+    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_token_to_near_exact_in(
         &mut self,
@@ -409,11 +409,11 @@ impl NearCLP {
     }
 
     /// Swaps `token` to NEAR and transfers NEAR to the caller.
-    /// Caller defines the amount of NEAR he wants to receive under acc condition of not spending
+    /// Caller defines the amount of NEAR he wants to receive under a condition of not spending
     /// more than `max_tokens` of `token`.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract.
-    /// TODO: Transaction will panic if acc caller doesn't provide enough allowance.
+    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_token_to_near_exact_out(
         &mut self,
@@ -440,11 +440,11 @@ impl NearCLP {
     }
 
     /// Swaps two different tokens.
-    /// Caller defines the amount of tokens he wants to swap under acc condition of
+    /// Caller defines the amount of tokens he wants to swap under a condition of
     /// receving at least `min_to_tokens`.
     /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
-    /// Transaction will panic if acc caller doesn't provide enough allowance.
+    /// Transaction will panic if a caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_in(
         &mut self,
@@ -487,11 +487,11 @@ impl NearCLP {
     }
 
     /// Swaps two different tokens.
-    /// Caller defines the amount of tokens he wants to receive under acc of not spending
-    /// more than `max_from_tokens`.
+    /// Caller defines the amount of tokens he wants to receive under a condiiton
+    /// of not spending more than `max_from_tokens`.
     /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
-    /// Transaction will panic if acc caller doesn't provide enough allowance.
+    /// Transaction will panic if a caller doesn't provide enough allowance.
     #[payable]
     pub fn swap_tokens_exact_out(
         &mut self,
@@ -592,10 +592,10 @@ impl NearCLP {
         assert_eq!(
             env::current_account_id(),
             env::predecessor_account_id(),
-            "Can be called only as acc callback"
+            "Can be called only as a callback"
         );
 
-        // TODO: simulation doesn't allow using acc promise inside callbacks.
+        // TODO: simulation doesn't allow using a promise inside callbacks.
         // For now we just log result
         if !is_promise_success() {
             env_log!(
@@ -631,14 +631,14 @@ impl NearCLP {
         U128::from(1)
     }
 
-    /// granularity is the smallest amount of tokens (in the internal denomination) which
-    /// may be minted, sent or burned at any time.
+    /// Returns the number of decimals the token uses - e.g. 8, means to divide the token
+    /// amount by 100000000 to get its user representation.
     #[allow(unused)]
     pub fn decimals(&self, token: AccountId) -> u8 {
         24
     }
 
-    /// Returns total balance of acc given subtoken. Implements the NEP-MFT standard.
+    /// Returns total balance of given subtoken. Implements the NEP-MFT standard.
     pub fn total_supply(&self, token: AccountId) -> U128 {
         match self.pools.get(&token) {
             None => 0.into(),
@@ -646,7 +646,7 @@ impl NearCLP {
         }
     }
 
-    /// Returns the owner balance of shares of acc pool identified by token.
+    /// Returns the `owner` shares balance of a pool identified by the `token`.
     pub fn balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
         self.must_get_pool(&token)
             .shares
@@ -655,15 +655,15 @@ impl NearCLP {
             .into()
     }
 
-    /// Transfer `amount` of LP Shares of acc pool identified by the `token` (must be acc valid
-    /// AccountID related to acc registered pool) from to acc `recipeint` contract.
-    /// Implements the NEP-MFT interface.
-    /// `recipient` MUST be acc contract address.
+    /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
+    /// by the `token` (must be a valid AccountID) from the predecessor
+    /// to the `recipient` contract. Implements the NEP-MFT interface.
+    /// `recipient` MUST be a smart contract address.
     /// The recipient contract MUST implement `MFTRecipient` interface.
     /// `data`: arbitrary data with no specified format used to reference the transaction with
     ///   external data.
-    /// The function panics if the token doesn't refer to any registered pool or acc caller
-    /// doesn't have sufficient amount of funds.
+    /// The function panics if the token doesn't refer to any registered pool or the predecessor
+    /// doesn't have sufficient amount of shares.
     #[payable]
     pub fn transfer_to_sc(
         &mut self,
@@ -675,14 +675,15 @@ impl NearCLP {
         self._transfer(token, recipient, amount, data, true)
     }
 
-    /// Transfer `amount` of LP Shares of acc pool identified by the `token` (must be acc valid
-    /// AccountID related to acc registered pool) from to acc `recipeint` account.
+    /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
+    /// by the `token` (must be a valid AccountID) from the predecessor
+    /// to the `recipient` account. Implements the NEP-MFT interface.
     /// Implements the NEP-MFT interface.
-    /// `recipient` MUST NOT be acc contract address.
+    /// `recipient` MUST NOT be a smart-contract.
     /// `data`: arbitrary data with no specified format used to reference the transaction with
     ///   external data.
-    /// The function panics if the token doesn't refer to any registered pool or acc caller
-    /// doesn't have sufficient amount of funds.
+    /// The function panics if the token doesn't refer to any registered pool or the predecessor
+    /// doesn't have sufficient amount of shares.
     #[payable]
     pub fn transfer(
         &mut self,

@@ -32,8 +32,7 @@ Go to the [NEAR-CLP usage](/docs/nearclp-usage.md) page.
 
    Note: This design will limit the a capabilities of the contract (all pools will stay in the same shard). However we don't see it as a problem. Each token contract will already be evenly distributed. And our implementation design provides better efficiency for the protocols we are designing.
 
-1. We are aware about the [Impermanent Loss](https://medium.com/@pintail/uniswap-a-good-deal-for-liquidity-providers-104c0b6816f2) problems and we are working on new trading models for AMM. In a volatile market, the basic fee model (as the one defined by Uniswap) is not enough to cover the Impermanent Losses. Through investigation of many approaches drafted the evolution of the protocol and will probably implement the Thorchain CLP trading model.
-
+1. We are aware about the [Impermanent Loss](https://medium.com/@pintail/uniswap-a-good-deal-for-liquidity-providers-104c0b6816f2) problems and we are working on new trading models for AMM. In a volatile market, the basic fee model (as the one defined by Uniswap) is not enough to cover the Impermanent Losses. Through investigation of many approaches we drafted the evolution of the protocol and will probably implement new CLP trading model.
 We will iterate on the above model, and we are already designing new mechanism for pool management and balancing which will not depend on a fixed fee and Uniswap v2.
 
 
@@ -89,7 +88,10 @@ There is a very nice [article](https://www.tokendaily.co/newsletter/21371e5354) 
 
 Let's be aware that a governance token posses a power to adapt the protocol towards more trading profits. Gov tokens can become a playground for gamification and market manipulation. These activities, when done with a right precision, could be extremely hard to observe.
 
-In summary: today DeFi projects didn't deliver a solid governance mechanism, instead they created an **augmented speculation scheme** in a form of _limited_ governance tokens. Instead of shared responsibility and shareholders principals, the gov tokens are mainly being used in trading venues, making the traders, rather than the users, to controlling the market
+Bitcoinsuiss in the [The Aftershock of Governance Tokens](https://www.bitcoinsuisse.com/research/decrypt/the-aftershock-of-governance-tokens) article, reviews a role of governance tokens in wave of innovation in the DeFi space. The article focuses on the added value of creating a new token. In my opinion it's an experiment. However I want to note that these experiments are targeted towards not sophisticated investors and were done on a live market usually with not audited or tested smart contracts!
+> Holders will want to find a way to monetize the protocol, and due to the intertwined nature of DeFi, governance decisions can have effects far beyond just one protocol. Network effects are in the process of being established, and – perhaps a remarkable difference to the ICO mania in 2017 – protocols are often mutually reinforcing and adding value to each other instead of fighting for a share of the same pie.
+
+**In summary**: today DeFi projects didn't deliver a solid governance mechanism, instead they created an **augmented speculation scheme** in a form of _limited_ governance tokens. Instead of shared responsibility and shareholders principals, the gov tokens are mainly being used in trading venues, making the traders, rather than the users, to controlling the market.
 
 Maybe in the future the space can mature. But we don't see that future yet.
 
@@ -108,5 +110,7 @@ Here is a great overview of strategies and values of [liquidity mining](https://
 We want to assure economy-safe conditions in NEARswap protocol, hence we will put lot of effort to make a solid incentives scheme before shipping any yield farming mechanism.
 
 ### Summary
+
+The big raise and severe fall of speculative yield farming and gov tokens during the 2020 Summer only prove that the market doesn't have fundamentals for a sustainable economy. Project don't show to have long term economical value, rather they are building a ponzi scheme (sometimes not intentionally).
 
 Most of DeFi is currently money out of the air, with arguable utility provided. IMHO, a good, AMM protocol doesn't need any governance. Market should decide about strategies. If you have better strategy, you modify a smart-contract code, deploy it and let users decide to move the funds. No need for governance tokens. And in fact I prefer an AMM without governance because I can trust it.

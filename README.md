@@ -20,6 +20,8 @@ We use **Ethereum-NEAR Rainbow Bridge** to provide better service for Ethereum a
 
 Status: Alpha. Basic functionality is implemented and tested. However there are few known exploits - we don't handle all edge cases yet. Please use it for testing and playing.
 
+* [OTC Trading](/docs/otc-trading.md)
+
 
 #### BCO: Bonding-curve Coin Offering
 

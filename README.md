@@ -10,17 +10,21 @@ We are creating building blocks for the DeFi which are secure, reliable and sust
 We use **Ethereum-NEAR Rainbow Bridge** to provide better service for Ethereum assets. Check the note [below](#why-bridging-with-ethereum) for more details.
 
 
-### Our protocols
+## Our protocols
 
 
 #### [NEARswap](/docs/nearswap.md)
 
 * Automated Market Maker
 * Continious Liquidity Provider
+* [OTC Trading](/docs/otc-trading.md)
 
 Status: Alpha. Basic functionality is implemented and tested. However there are few known exploits - we don't handle all edge cases yet. Please use it for testing and playing.
 
-* [OTC Trading](/docs/otc-trading.md)
+Demo:
+
+* [Video 1](https://www.dropbox.com/s/s1oiasb11qz8trv/NEAR-hack-the-rainbow-demo.ogv?dl=0): Rainbow bridge integration, moving ERC20 to NEARswap smart-contracts, creating NEARswap pool, adding liquidity to the pool, and trading tokens with the pool using the WEB UI.
+* [Video 2](https://www.youtube.com/watch?v=DXV5Fa-r2UE)  - Command Line Interface.
 
 
 #### BCO: Bonding-curve Coin Offering
@@ -42,7 +46,7 @@ We analyze different approaches (slowly releasing a content there) in the [resea
 
 ## Usage
 
-Please refer to the specific protocol documentation page to see the available tools and webapp functionality. In principal, to use our protocols you can use:
+Please refer to the specific protocol documentation page to see the available tools and webapp functionality. Here are the principal tools:
 
 * our webapp (provides the integration for basic features)
 * [near-cli](https://github.com/near/near-cli) - a tool to make generic transactions and operations with NEAR blockchain runtime.

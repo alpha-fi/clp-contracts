@@ -9,6 +9,11 @@ You can call any `NEARClp` public function using RPC or the [near-cli](https://g
 near view beta-1.nearswap.testnet price_near_to_token_out '{"token": "gold.nearswap.testnet", "tokens_out": "100000000000000000000"}' --accountId me.testnet
 ```
 
+#### Demo
+
+* [Video 1](https://www.dropbox.com/s/s1oiasb11qz8trv/NEAR-hack-the-rainbow-demo.ogv?dl=0): Rainbow bridge integration, moving ERC20 to NEARswap smart-contracts, creating NEARswap pool, adding liquidity to the pool, and trading tokens with the pool using the WEB UI.
+* [Video 2](https://www.youtube.com/watch?v=DXV5Fa-r2UE)  - Command Line Interface.
+
 
 ## Web application
 

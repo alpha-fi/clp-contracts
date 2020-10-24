@@ -27,6 +27,10 @@ Demo:
 * [Video 2](https://www.youtube.com/watch?v=DXV5Fa-r2UE)  - Command Line Interface.
 
 
+#### [Flash Loans](/docs/clp-flash-loans.md)
+
+TL;DR: this is not feasible in current design of NEAR blockchain.
+
 #### BCO: Bonding-curve Coin Offering
 
 * Did you hear about ICO? Or Uniswap Offering? BCO is moving this to a next level.

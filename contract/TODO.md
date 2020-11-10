@@ -45,3 +45,11 @@ Tips:
 ## Code organization
 
 + multiple contracts: https://stackoverflow.com/questions/64110056/how-to-build-and-deploy-multiple-contracts-in-near-protocol
+
+## Different Pricing Mechanism
+
+Thorchain
+
+#### Different curves
+
++ https://blog.aventus.io/more-price-functions-for-token-bonding-curves-cfb1ebb5b659?gi=7898d006f3cc

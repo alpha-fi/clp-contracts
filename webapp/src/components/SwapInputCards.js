@@ -3,6 +3,8 @@ import React, { useEffect, useReducer, useContext, useCallback } from "react";
 import { convertToE24Base, convertToE24Base5Dec, getBalanceNEP } from '../services/near-nep21-util'
 import { produce } from 'immer';
 
+import SwapButtons from "./SwapButtons";
+
 import {getCurrentBalance, saveInputsStateLocalStorage, setCurrencyIndex} from "./CurrencyTable"
 import findCurrencyLogoUrl from "../services/find-currency-logo-url";
 import { calcPriceFromIn, calcPriceFromOut, swapFromOut, incAllowance, getAllowance } from "../services/near-nep21-util";
@@ -361,31 +363,6 @@ export default function SwapInputCards(props) {
     setStatus(inputs.state.swap.status,"Invalid amounts")
   }
 
-  async function handleSwap() {
-
-    try {
-
-      if (!inputs.state.swap.in.isValid || !inputs.state.swap.out.isValid){
-        setError("Invalid amounts")
-        return
-      }
-
-      //save state with new flags because it's gonna be destroyed
-      const newState= produce(inputs, draft => {
-        draft.state.swap.status="isSwapping";
-        draft.state.swap.previous=inputs.state.swap.out.balance; //prev balance
-      })
-      //status is saved 
-      localStorage.setItem("inputs", JSON.stringify(newState.state));
-
-      //call near wallet -- navigates out - state destroyed
-      await swapFromOut(inputs.state.swap.in, inputs.state.swap.out);
-
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
   // Clear inputs
   function clearInputs() {
     dispatch({ type: 'CLEAR_SWAP_INPUTS' });
@@ -491,12 +468,12 @@ export default function SwapInputCards(props) {
 
               {/* Show balance if any balance of selected token exists */}
               {(inputs.state.swap.out.balance && inputs.state.swap.out.balance !== 0)
-                && <>
-                  <small className="mr-3 text-secondary">
+                && <div className="mr-3">
+                  <small className="text-secondary">
                   Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.out.balance)}
                   </small>
                   <br />
-                </>
+                </div>
               }
 
               <Button size="sm" variant="outline-secondary" className="mr-1" style={{ 'whiteSpace': 'nowrap' }} onClick={handleCurrencySelectionModalTo}>
@@ -543,12 +520,12 @@ export default function SwapInputCards(props) {
 
               {/* Show balance if any balance of selected token exists */}
               {(inputs.state.swap.in.balance && inputs.state.swap.in.balance !== 0)
-                && <>
-                  <small className="mr-3 text-secondary">
+                && <div className="mr-3">
+                  <small className="text-secondary">
                     Your Balance:<br />{convertToE24Base5Dec(inputs.state.swap.in.balance)}
                   </small>
                   <br />
-                </>
+                </div>
               }
 
               <Button size="sm" variant="outline-secondary" className="mr-1" style={{ 'whiteSpace': 'nowrap' }} onClick={handleCurrencySelectionModalFrom}>
@@ -569,69 +546,7 @@ export default function SwapInputCards(props) {
         </Row>
       </Theme>
 
-      {(inputs.state.swap.in.allowance && inputs.state.swap.in.type==="NEP-21") &&
-        <div className="text-right pr-3 text-secondary">
-          <small>Current {inputs.state.swap.in.symbol} allowance: {convertToE24Base5Dec(inputs.state.swap.in.allowance)}</small>
-        </div>
-      }
-
-      <div className="text-right my-2 pr-2">
-
-        <small className="text-danger mr-1 text-center">{inputs.state.swap.error}</small>
-
-        {/* Display textual information before user swaps */}
-        {!inputs.state.swap.error &&
-          <small className="text-secondary">
-            You'll get <b className="text-black">{inputs.state.swap.out.amount}</b> {inputs.state.swap.out.symbol}{' '} 
-            for <b className="text-black">{convertToE24Base5Dec(inputs.state.swap.in.amount)}</b> {inputs.state.swap.in.symbol}.
-          </small>
-        }
-        
-
-        {/* Clear button and clippage */}
-          <small className="mx-2 text-secondary">Slippage: 1%</small>
-          <Button size="sm" variant="warning" 
-            disable={readyToSwap()?"true":"false"}
-            onClick={clearInputs} className="ml-2">
-            Clear
-          </Button>
-
-      </div>
-
-      {/* Display approve button if NEP-21 -> ____ swap */}
-      {(inputs.state.swap.needsApproval)
-        && <>
-          <small className="text-secondary">Step 1: </small>
-          <Button variant="warning" block
-            //disabled={(inputs.state.swap.status !== "readyToSwap" || inputs.state.swap.error)}
-            onClick={handleApprovalSubmission}
-          >
-            {(inputs.state.swap.status !== "isApproving")
-              ? <>
-                Approve {inputs.state.swap.in.symbol} allowance {
-                  (inputs.state.swap.in.amount && inputs.state.swap.in.amount !== 0)
-                    ? <>of {convertToE24Base5Dec(inputs.state.swap.in.amount)}</>
-                    : ""
-                }
-              </>
-              : "Approving..."
-            }
-          </Button>
-        </>
-      }
-
-      {/* Enable submission only if inputs are valid */}
-        {(inputs.state.swap.needsApproval == true) && 
-          <small className="text-secondary">Step 2: </small>
-        }
-
-      {/* SWAP BUTTON */}
-      <Button variant="warning" block
-        onClick={handleSwap}
-        disable={readyToSwap()?"false":"true"}
-      >
-        Swap
-      </Button>
+      <SwapButtons/>
 
     </>
   );

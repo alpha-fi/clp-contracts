@@ -11,7 +11,7 @@ const initialInput = {
   symbol: "",       // Symbol of token
   type: "",         // Native token (NEAR), ERC-20, NEP-21, ...
   logoUrl: "",      // Address of token logo image
-  tokenIndex: 0,   // Index of currency within token list
+  tokenIndex: 0,    // Index of currency within token list
   address: "",      // Token address of selected currency
   isValid: false,   // True if non-zero number, false otherwise
   allowance: null,  // Required for NEP-21 swaps (null otherwise)
@@ -29,8 +29,9 @@ let initialState = {
     error: null,               // error string if error, null otherwise
     needsApproval: false,      // required for NEP-21 swaps
     status: "notReadyToSwap",  // possible values: notReadyToSwap, readyToSwap, isApproving, isSwapping, fetchingData
-    previous: null             // when isSwapping or isApproving, we need to store a value to compare
-    // to verify if the swap was successful
+    previous: null,            // when isSwapping or isApproving, we need to store a value to compare
+                               // to verify if the swap was successful
+    slippage: "0.5",
   },
   pool: {
     input1: produce(initialInput, draft => {
@@ -244,6 +245,10 @@ function reduce(state, action) {
         draft.swap.error = null;
       });
 
+    case 'SET_SLIPPAGE':
+      return produce(state, draft => {
+        draft.swap.slippage = action.payload.slippage;
+      });
 
     case 'SET_CURRENCY_SELECTION_INPUT':
       return produce(state, draft => {

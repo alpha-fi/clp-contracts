@@ -23,6 +23,9 @@ const Tr = styled("tr")`
 export async function getCurrentBalance(tokenIndex, tokenListState) {
   let yoctos = ""
   let token = tokenListState.state.tokens[tokenIndex]
+  if (window.walletConnection.getAccountId() === "") {
+    return;
+  }
   try {
     if (token.type === "Native token") {
       yoctos = (await window.walletConnection.account().getAccountBalance()).available;

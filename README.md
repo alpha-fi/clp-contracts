@@ -3,7 +3,7 @@
 
 NEAR-CLP is a set of protocols for decentralized finance. With a ground research and solid experience in smart-contract development we define our mission as:
 
-__To develop a sustainable foundation of DeFi ecosystem with NEAR blockchain_
+_To develop a sustainable foundation of DeFi ecosystem with NEAR blockchain_
 
 We are creating a building blocks for the DeFi which are secure, reliable and sustainable.
 

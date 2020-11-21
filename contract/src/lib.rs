@@ -94,7 +94,7 @@ pub struct NearCLP {
 
 impl Default for NearCLP {
     fn default() -> Self {
-        panic!("Fun token should be initialized before usage")
+        panic!("NearCLP should be initialized before usage")
     }
 }
 

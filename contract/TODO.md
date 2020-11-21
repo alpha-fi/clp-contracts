@@ -20,6 +20,7 @@ Handle exceptions in _foreign_ contracts. Example: [StackOverflow question](http
 Tips:
 + https://github.com/nearprotocol/NEPs/pull/26
 
+
 ## Tests
 
 + inspect near balances using `runtime.view_account`
@@ -33,9 +34,14 @@ Tips:
 
 + `set_pool` should remove the pool if it's empty (as it's done by nep21)
 
+
 ### Economics
 
 + Review and add missing storage costs calculations.
+
+### Support Safe token standard
+
++ https://github.com/near/core-contracts/tree/safe-based-ft/safe-based-fungible-token
 
 ### Multi Fungible Token standard
 

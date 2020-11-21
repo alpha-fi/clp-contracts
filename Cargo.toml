@@ -1,0 +1,16 @@
+
+# https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
+[profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+
+[workspace]
+members = [
+    "nearswap"
+]

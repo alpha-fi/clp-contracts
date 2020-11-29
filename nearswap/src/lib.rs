@@ -665,7 +665,7 @@ impl NearCLP {
     /// The function panics if the token doesn't refer to any registered pool or the predecessor
     /// doesn't have sufficient amount of shares.
     #[payable]
-    pub fn transfer_to_sc(
+    pub fn transfer_call(
         &mut self,
         token: String,
         recipient: AccountId,

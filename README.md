@@ -118,18 +118,13 @@ Today, most of the valuable assets are hosted on Ethereum. In fact, today, DeFi 
 We want to enable people to use Ethereum based assets and do asset management on NEAR using NEAR growing ecosystem. Through the inter-blockchain **bridge**, NEAR will provide a scale-ability to the current Ethereum DeFi ecosystem and more robust smart-contract runtime.
 
 
-
 ## License
 
 We create foundations for DeFi, hence an open access is the key.
 
-We build the Open Source software and knowledge base. All our work is licensed with a Mozilla Public License (MPL) version 2.0. Refer to [LICENSE](LICENSE) for terms.
+We build the Open Source software and knowledge base. All our work is licensed under GPL-3.0. Refer to [LICENSE](LICENSE) for terms.
 
-The MPL is a simple copyleft license. The MPL's "file-level" copyleft is designed to encourage contributors to share modifications they make to your code, while still allowing them to combine your code with code under other licenses (open or proprietary) with minimal restrictions.
-Q2: Why yet another open source license?
-
-The MPL fills a useful space in the spectrum of free and open source software licenses, sitting between the Apache license, which does not require modifications to be shared, and the GNU family of licenses, which requires modifications to be shared under a much broader set of circumstances than the MPL. [FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
-
+Copyright (C) 2020 Robert Zaremba and contributors.
 
 
 ## Contact

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2020 Robert Zaremba and contributors
+
 use near_sdk::Gas;
 use near_sdk::{env, AccountId, PromiseResult};
 use uint::construct_uint;

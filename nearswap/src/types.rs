@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2020 Robert Zaremba and contributors
+
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::ext_contract;
 use near_sdk::json_types::U128;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2020 Robert Zaremba and contributors
+
 use crate::*;
 use near_sdk::StorageUsage;
 

@@ -350,7 +350,8 @@ impl NearCLP {
         token: String,
         recipient: AccountId,
         amount: U128,
-        data: Data,
+        msg: String,
+        _data: String,
         is_contract: bool,
     ) -> bool {
         let sender = env::predecessor_account_id();
@@ -377,7 +378,7 @@ impl NearCLP {
                 token.clone(),
                 sender,
                 amount,
-                data,
+                msg,
                 &recipient,
                 0,
                 env::prepaid_gas() / 4,

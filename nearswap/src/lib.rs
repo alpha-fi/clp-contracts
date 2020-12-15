@@ -663,8 +663,10 @@ impl NearCLP {
     /// to the `recipient` contract. Implements the NEP-MFT interface.
     /// `recipient` MUST be a smart contract address.
     /// The recipient contract MUST implement `MFTRecipient` interface.
+    /// `msg` is a message sent to the receiver. It might be used to send additional call
+    //      instructions
     /// `data`: arbitrary data with no specified format used to reference the transaction with
-    ///   external data.
+    ///     external data. If referencing a binary data, it should use base64 serialization.
     /// The function panics if the token doesn't refer to any registered pool or the predecessor
     /// doesn't have sufficient amount of shares.
     #[payable]
@@ -673,9 +675,10 @@ impl NearCLP {
         token: String,
         recipient: AccountId,
         amount: U128,
-        /*#[serializer(borsh)]*/ data: Data,
+        msg: String,
+        data: String,
     ) -> bool {
-        self._transfer(token, recipient, amount, data, true)
+        self._transfer(token, recipient, amount, msg, data, true)
     }
 
     /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
@@ -683,8 +686,10 @@ impl NearCLP {
     /// to the `recipient` account. Implements the NEP-MFT interface.
     /// Implements the NEP-MFT interface.
     /// `recipient` MUST NOT be a smart-contract.
+    /// `msg` is a message sent to the receiver. It might be used to send additional call
+    //      instructions
     /// `data`: arbitrary data with no specified format used to reference the transaction with
-    ///   external data.
+    ///     external data. If referencing a binary data, it should use base64 serialization.
     /// The function panics if the token doesn't refer to any registered pool or the predecessor
     /// doesn't have sufficient amount of shares.
     #[payable]
@@ -693,9 +698,10 @@ impl NearCLP {
         token: String,
         recipient: AccountId,
         amount: U128,
-        /*#[serializer(borsh)]*/ data: Data,
+        msg: String,
+        data: String,
     ) -> bool {
-        self._transfer(token, recipient, amount, data, false)
+        self._transfer(token, recipient, amount, msg, data, false)
     }
 
     /**********************
@@ -846,7 +852,7 @@ mod tests {
     fn check_and_create_pool(c: &mut NearCLP, token: &AccountId) {
         c.create_pool(token.to_string());
         match c.pool_info(token) {
-            None => panic!("Pool for {} token is expected"),
+            None => panic!("Pool for {} token is expected", token),
             Some(p) => assert_eq!(
                 p,
                 PoolInfo {
@@ -1032,7 +1038,13 @@ mod tests {
 
         let amount = shares_bal / 3;
         let alice = ctx.accounts.alice.clone();
-        c.transfer(t.clone(), alice.clone(), amount.into(), Data(Vec::new()));
+        c.transfer(
+            t.clone(),
+            alice.clone(),
+            amount.into(),
+            "msg".to_string(),
+            "reference".to_string(),
+        );
 
         // pool_info shouldn't be the same
         let p_info = c.pool_info(&t).expect("Pool should exist");

@@ -23,7 +23,7 @@ Status: Alpha. Basic functionality is implemented and tested. However there are 
 
 Demo:
 
-* [Video 1](https://www.dropbox.com/s/s1oiasb11qz8trv/NEAR-hack-the-rainbow-demo.ogv?dl=0): Rainbow bridge integration, moving ERC20 to NEARswap smart-contracts, creating NEARswap pool, adding liquidity to the pool, and trading tokens with the pool using the WEB UI.
+* [Video 1](https://www.youtube.com/watch?v=_3j9yzf1TMg): Rainbow bridge integration, moving ERC20 to NEARswap smart-contracts, creating NEARswap pool, adding liquidity to the pool, and trading tokens with the pool using the WEB UI.
 * [Video 2](https://www.youtube.com/watch?v=DXV5Fa-r2UE)  - Command Line Interface.
 
 

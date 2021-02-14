@@ -5,7 +5,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
+use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
 pub mod types;
 pub mod util;
@@ -87,18 +87,12 @@ impl Pool {
 /// NearCLP is the main contract for managing the swap pools and liquidity.
 /// It implements the NEARswap functionality.
 #[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct NearCLP {
     pub fee_dst: AccountId,
     pub owner: AccountId,
     // we are using unordered map because it allows to iterate over the pools
     pools: UnorderedMap<AccountId, Pool>,
-}
-
-impl Default for NearCLP {
-    fn default() -> Self {
-        panic!("NearCLP should be initialized before usage")
-    }
 }
 
 //-------------------------

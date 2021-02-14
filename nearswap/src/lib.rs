@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
+// a way to optimize memory management
+#[cfg(feature = "wee_alloc")]
+#[cfg(target = "wasm32")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
@@ -12,10 +18,6 @@ pub mod util;
 
 use crate::types::*;
 use crate::util::*;
-
-// a way to optimize memory management
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 mod internal;
 
@@ -101,30 +103,29 @@ pub struct NearCLP {
 #[near_bindgen]
 impl NearCLP {
     #[init]
-    pub fn new(owner: AccountId) -> Self {
+    pub fn new(owner: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
-        util::assert_account_is_valid(&owner);
+        let o = AccountId::from(owner);
         Self {
-            fee_dst: owner.clone(),
-            owner,
+            fee_dst: o.clone(),
+            owner: o,
             pools: UnorderedMap::new("pools".as_bytes().to_vec()),
         }
     }
 
     /// Updates the fee destination destination account
-    pub fn set_fee_dst(&mut self, fee_dst: AccountId) {
+    pub fn set_fee_dst(&mut self, fee_dst: ValidAccountId) {
         self.assert_owner();
-        util::assert_account_is_valid(&fee_dst);
-        self.fee_dst = fee_dst;
+        self.fee_dst = fee_dst.into();
     }
 
     /// Owner is an account (can be a multisig) who has management rights to update
     /// fee size.
-    pub fn change_owner(&mut self, new_owner: AccountId) {
+    pub fn change_owner(&mut self, new_owner: ValidAccountId) {
         self.assert_owner();
-        util::assert_account_is_valid(&new_owner);
-        env_log!("Changing owner from {} to {}", self.owner, new_owner);
-        self.owner = new_owner;
+        let o = AccountId::from(new_owner);
+        env_log!("Changing owner from {} to {}", self.owner, o);
+        self.owner = o;
     }
 
     /**********************
@@ -136,7 +137,8 @@ impl NearCLP {
     /// If a pool for give token exists then "E1" assert exception is thrown.
     /// TODO: charge user for a storage created!
     #[payable]
-    pub fn create_pool(&mut self, token: AccountId) {
+    pub fn create_pool(&mut self, token: ValidAccountId) {
+        let token = AccountId::from(token);
         assert!(
             self.pools
                 .insert(&token, &Pool::new(token.as_bytes().to_vec()))

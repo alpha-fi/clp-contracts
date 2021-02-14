@@ -23,3 +23,18 @@ near-crypto = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-vm-errors = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-runtime-standalone = { git = "https://github.com/nearprotocol/nearcore.git" }
+
+
+# https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+
+# compilation profile for a release target
+[profile.release]
+codegen-units = 1
+# s = optimize for binary size ("z" would additionally turn off loop vectorization)
+opt-level = "s"
+# link time optimization
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

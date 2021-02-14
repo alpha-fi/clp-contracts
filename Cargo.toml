@@ -1,16 +1,4 @@
 
-# https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
-# https://doc.rust-lang.org/cargo/reference/profiles.html
-[profile.release]
-codegen-units = 1
-# optimize for binary size ("z" would additionally turn off loop vectorization)
-opt-level = "s"
-# link time optimization
-lto = true
-debug = false
-panic = "abort"
-overflow-checks = true
-
 
 [workspace]
 members = [

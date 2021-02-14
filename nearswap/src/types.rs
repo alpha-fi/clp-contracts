@@ -4,14 +4,14 @@
 use near_sdk::ext_contract;
 use near_sdk::json_types::U128;
 
-/// External interface for the callbacks to MFT Recipient.
+/// Interface for recipient call on multi fungible-token transfers.
 #[ext_contract(ext_mft_rec)]
 pub trait MFTRecipient {
     fn on_mft_receive(&mut self, token: String, from: AccountId, amount: U128, msg: String)
         -> bool;
 }
 
-/// External interface for the callbacks to MFT Receiver.
+/// External interface of NEP-21 contracts.
 #[ext_contract(ext_nep21)]
 pub trait NEP21 {
     fn transfer_from(&mut self, owner_id: AccountId, new_owner_id: AccountId, amount: U128);

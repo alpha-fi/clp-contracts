@@ -351,7 +351,7 @@ impl NearCLP {
         recipient: AccountId,
         amount: U128,
         msg: String,
-        _data: String,
+        _memo: String,
         is_contract: bool,
     ) -> bool {
         let sender = env::predecessor_account_id();

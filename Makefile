@@ -13,8 +13,7 @@ test-unit:
 
 build:
 # more about flags: https://github.com/near-examples/simulation-testing#gotchas
-# we don't add this flags to `cargo.yaml` build section because it would affect
-# tests as well, which we don't need
+# env setting instruments cargo to optimize the the build for size (link-args=-s)
 	@env 'RUSTFLAGS=-C link-arg=-s' cargo +stable build --lib --target wasm32-unknown-unknown --release
 
 # link-to-web:
@@ -25,8 +24,9 @@ build-doc:
 	cargo doc
 
 deploy-nearswap:
-	near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)
+	near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)  --initFunction "new" --initArgs "{\"owner\": \"$NMASTER_ACC\"}"
 
 init-nearswap:
 	@echo near sent ${NMASTER_ACC} ${NCLP_ACC} 200
-	@echo near call ${NCLP_ACC} new "{\"owner\": \"$NMASTER_ACC\"}" --accountId ${NCLP_ACC}
+# no need to call new because we call it during the deployment
+#	@echo near call ${NCLP_ACC} new "{\"owner\": \"$NMASTER_ACC\"}" --accountId ${NCLP_ACC}

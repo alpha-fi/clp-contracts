@@ -641,7 +641,7 @@ impl NearCLP {
         24
     }
 
-    /// Returns total balance of given subtoken. Implements the NEP-MFT standard.
+    /// Returns total supply of given subtoken. Implements the NEP-MFT standard.
     pub fn total_supply(&self, token: AccountId) -> U128 {
         match self.pools.get(&token) {
             None => 0.into(),
@@ -650,45 +650,22 @@ impl NearCLP {
     }
 
     /// Returns the `owner` shares balance of a pool identified by the `token`.
-    pub fn balance_of(&self, token: AccountId, owner: AccountId) -> U128 {
+    pub fn balance_of(&self, token: AccountId, holder: AccountId) -> U128 {
         self.must_get_pool(&token)
             .shares
-            .get(&owner)
+            .get(&holder)
             .unwrap_or(0)
             .into()
     }
 
     /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
     /// by the `token` (must be a valid AccountID) from the predecessor
-    /// to the `recipient` contract. Implements the NEP-MFT interface.
-    /// `recipient` MUST be a smart contract address.
-    /// The recipient contract MUST implement `MFTRecipient` interface.
-    /// `msg` is a message sent to the receiver. It might be used to send additional call
-    //      instructions
-    /// `data`: arbitrary data with no specified format used to reference the transaction with
-    ///     external data. If referencing a binary data, it should use base64 serialization.
-    /// The function panics if the token doesn't refer to any registered pool or the predecessor
-    /// doesn't have sufficient amount of shares.
-    #[payable]
-    pub fn transfer_call(
-        &mut self,
-        token: String,
-        recipient: AccountId,
-        amount: U128,
-        msg: String,
-        data: String,
-    ) -> bool {
-        self._transfer(token, recipient, amount, msg, data, true)
-    }
-
-    /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
-    /// by the `token` (must be a valid AccountID) from the predecessor
     /// to the `recipient` account. Implements the NEP-MFT interface.
-    /// Implements the NEP-MFT interface.
+    /// If recipient is a smart-contract, then `transfer_call` should be used instead.
     /// `recipient` MUST NOT be a smart-contract.
-    /// `msg` is a message sent to the receiver. It might be used to send additional call
-    //      instructions
-    /// `data`: arbitrary data with no specified format used to reference the transaction with
+    /// `msg` is a message for recipient. It might be used to send additional call
+    //      instructions.
+    /// `memo`: arbitrary data with no specified format used to link the transaction with an
     ///     external data. If referencing a binary data, it should use base64 serialization.
     /// The function panics if the token doesn't refer to any registered pool or the predecessor
     /// doesn't have sufficient amount of shares.
@@ -699,9 +676,32 @@ impl NearCLP {
         recipient: AccountId,
         amount: U128,
         msg: String,
-        data: String,
+        memo: String,
     ) -> bool {
-        self._transfer(token, recipient, amount, msg, data, false)
+        self._transfer(token, recipient, amount, msg, memo, false)
+    }
+
+    /// Transfer `amount` of LP Shares (Liquidity Provider Shares) of a pool identified
+    /// by the `token` (must be a valid AccountID) from the predecessor
+    /// to the `recipient` contract. Implements the NEP-MFT interface.
+    /// `recipient` MUST be a smart contract address.
+    /// The recipient contract MUST implement `MFTRecipient` interface.
+    /// `msg` is a message sent to the recipient. It might be used to send additional call
+    //      instructions.
+    /// `memo`: arbitrary data with no specified format used to link the transaction with an
+    ///     external event. If referencing a binary data, it should use base64 serialization.
+    /// The function panics if the token doesn't refer to any registered pool or the predecessor
+    /// doesn't have sufficient amount of shares.
+    #[payable]
+    pub fn transfer_call(
+        &mut self,
+        token: String,
+        recipient: AccountId,
+        amount: U128,
+        msg: String,
+        memo: String,
+    ) -> bool {
+        self._transfer(token, recipient, amount, msg, memo, true)
     }
 
     /**********************

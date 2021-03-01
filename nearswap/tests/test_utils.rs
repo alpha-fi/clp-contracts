@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
-use near_clp::util::*;
+use nearswap::util::*;
 use near_crypto::{InMemorySigner, KeyType, Signer};
 use near_primitives::{
     account::{AccessKey, Account},

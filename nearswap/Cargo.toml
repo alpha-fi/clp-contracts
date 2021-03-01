@@ -21,11 +21,10 @@ env_logger = { version = "0.7.1", default-features = false }
 near-crypto = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-vm-errors = { git = "https://github.com/nearprotocol/nearcore.git" }
-near-runtime-standalone = { git = "https://github.com/nearprotocol/nearcore.git" }
-
-# New version of simulation tests:
+funty = "=1.1.0"
+#New version of simulation tests:
 # [dev-dependencies]
-# near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", tag="2.2.0" }
+near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", tag="2.2.0" }
 
 # https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
 # https://doc.rust-lang.org/cargo/reference/profiles.html

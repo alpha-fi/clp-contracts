@@ -15,7 +15,7 @@ use nearswap::PoolInfo;
 //use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;
 use near_primitives::types::{AccountId, Balance};
-use near_runtime_standalone::{init_runtime_and_signer, RuntimeStandalone};
+use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 
@@ -341,7 +341,7 @@ pub struct Ctx {
 impl Ctx {
     pub fn new() -> Self {
         let signer_account: AccountId = "main.testnet".to_string();
-        let (mut r, signer) = init_runtime_and_signer(&signer_account);
+        let (mut r, signer) = init_runtime(&signer_account);
         let signer_u = ExternalUser {
             account_id: signer_account,
             signer: signer,

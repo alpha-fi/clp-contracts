@@ -2,15 +2,15 @@
 // Copyright (C) 2020 Robert Zaremba and contributors
 
 use nearswap::util::*;
-use near_crypto::{InMemorySigner, KeyType, Signer};
-use near_primitives::{
+use near_primitives::types::{AccountId, Balance};
+use near_sdk_sim::{
+    runtime::RuntimeStandalone,
     account::{AccessKey, Account},
-    errors::{RuntimeError, TxExecutionError},
     hash::CryptoHash,
+    errors::{RuntimeError, TxExecutionError},
     transaction::{ExecutionOutcome, ExecutionStatus, Transaction},
-    types::{AccountId, Balance},
+    near_crypto::{InMemorySigner, KeyType, Signer}
 };
-use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::U64;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;

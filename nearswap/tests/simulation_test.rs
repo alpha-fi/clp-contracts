@@ -412,7 +412,7 @@ pub fn deploy_nep21(
             0,
         )
         .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
+    let res = runtime.resolve_tx(tx).unwrap().1;
     runtime.process_all().unwrap();
     outcome_into_result(res)
 }
@@ -434,7 +434,7 @@ pub fn deploy_clp(
             0,
         )
         .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
+    let res = runtime.resolve_tx(tx).unwrap().1;
     runtime.process_all().unwrap();
     outcome_into_result(res)
 }

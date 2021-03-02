@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-near-sdk = { git = "https://github.com/near/near-sdk-rs.git", tag="2.2.0" }
+near-sdk = { git = "https://github.com/near/near-sdk-rs.git", tag="3.0.0" }
 uint = { version = "0.8.5", default-features = false }
 
 [dev-dependencies]
@@ -18,13 +18,11 @@ uint = { version = "0.8.5", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4"
 env_logger = { version = "0.7.1", default-features = false }
-near-crypto = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
-near-vm-errors = { git = "https://github.com/nearprotocol/nearcore.git" }
 funty = "=1.1.0"
 #New version of simulation tests:
 # [dev-dependencies]
-near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", tag="2.2.0" }
+near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", tag="3.0.0" }
 
 # https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
 # https://doc.rust-lang.org/cargo/reference/profiles.html

@@ -115,8 +115,7 @@ pub fn near_view<I: ToString, O: DeserializeOwned>(
     let args = args.to_string();
     let result = runtime
         .view_method_call(contract_id, method, args.as_bytes())
-        .unwrap()
-        .0;
+        .unwrap();
     let output: O = serde_json::from_reader(result.as_slice()).unwrap();
     output
 }

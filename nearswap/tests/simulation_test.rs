@@ -340,8 +340,8 @@ pub struct Ctx {
 }
 impl Ctx {
     pub fn new() -> Self {
-        let signer_account: AccountId = "main.testnet".to_string();
-        let (mut r, signer) = init_runtime(&signer_account);
+        let signer_account: AccountId;
+        let (mut r, signer, signer_account) = init_runtime(None);
         let signer_u = ExternalUser {
             account_id: signer_account,
             signer: signer,

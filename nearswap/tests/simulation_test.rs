@@ -9,49 +9,105 @@ use crate::ctrtypes::*;
 mod test_utils;
 use crate::test_utils::*;
 
+use near_sdk_sim::{
+    call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
+    UserAccount, STORAGE_AMOUNT,
+};
+use near_sdk_sim::account::AccessKey;
+
 use nearswap::util::*;
 use nearswap::PoolInfo;
-
+use nearswap::NearCLPContract;
+use nep21_mintable::FungibleTokenContract;
 //use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;
 use near_primitives::types::{AccountId, Balance};
 use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
+use std::convert::TryInto;
 
-//#[test]
+const TOKEN_CONTRACT_ID: &str = "token";
+const NEARSWAP_CONTRACT_ID: &str = "nearswap";
+
+/// Load in contract bytes
+near_sdk_sim::lazy_static! {
+    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
+    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nep21_mintable.wasm").as_ref();
+}
+
+// Deploy NearCLP Contract
+pub fn deploy_clp() -> (UserAccount, ContractAccount<NearCLPContract>, UserAccount) {
+    let master_account = init_simulator(None);
+    println!("deploy_and_init_CLP");
+    // uses default values for deposit and gas
+    let contract_user = deploy!(
+        // Contract Proxy
+        contract: NearCLPContract,
+        // Contract account id
+        contract_id: NEARSWAP_CONTRACT_ID,
+        // Bytes of contract
+        bytes: &CLP_WASM_BYTES,
+        // User deploying the contract,
+        signer_account: master_account,
+        // init method
+        init_method: new(master_account.account_id().try_into().unwrap())
+    );
+    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
+    (master_account, contract_user, alice)
+}
+
+// Deploy NEP-21 Contract
+pub fn deploy_nep21(total_supply: U128) -> (UserAccount, ContractAccount<FungibleTokenContract>, UserAccount) {
+    let master_account = init_simulator(None);
+    println!("deploy_nep21");
+    // uses default values for deposit and gas
+    let contract_user = deploy!(
+        // Contract Proxy
+        contract: FungibleTokenContract,
+        // Contract account id
+        contract_id: TOKEN_CONTRACT_ID,
+        // Bytes of contract
+        bytes: &FUNGIBLE_TOKEN_BYTES,
+        // User deploying the contract,
+        signer_account: master_account,
+        // init method
+        init_method: new(master_account.account_id(), total_supply, 24)
+    );
+
+    //let supply = view!(contract_user.get_total_supply(master_account.account_id()));
+    //assert_eq!(supply.0, total_supply);
+
+    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
+    (master_account, contract_user, alice)
+}
+
+#[test]
 fn test_nep21_transer() {
-    let mut ctx = Ctx::new();
     println!(
         "Note that we can use println! instead of env::log in simulation tests. To debug add '-- --nocapture' after 'cargo test': "
     );
-
-    ctx.deploy_tokens();
-    ctx.deploy_clp();
+    let (master_account, contract, alice) = deploy_nep21(U128(1_000_000 * NDENOM));
     println!("tokens deployed");
 
-    check_nep21_bal(&ctx, &NEP21_ACC.into(), &ALICE_ACC.into(), 0);
-
+    let transfer_amount = to_yocto("100");
+    let initial_balance = to_yocto("0");
     // send some to Alice
-    let _execution_result = near_call(
-        &mut ctx.r,
-        &ctx.nep21_1,
-        &ctx.nep21_1.account_id(),
-        "transfer",
-        &json!({
-            "new_owner_id": ALICE_ACC,
-            "amount": "191919",
-        }),
-        U64(MAX_GAS),
-        36_500_000_000_000_000_000_000,
-    )
-    .unwrap();
+    let res = call!(
+        master_account,
+        contract.transfer(alice.account_id(), transfer_amount.into()),
+        deposit = STORAGE_AMOUNT
+    );
+    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    assert!(res.is_ok());
 
-    check_nep21_bal(&ctx, &NEP21_ACC.into(), &ALICE_ACC.into(), 191_919);
+    let value = view!(contract.get_balance(alice.account_id()));
+    let value: U128 = value.unwrap_json();
+    assert_eq!(initial_balance + transfer_amount, value.0);
 }
 
 // utility, get pool info from CLP
-fn get_pool_info(r: &RuntimeStandalone, token: &str) -> PoolInfo {
+/*fn get_pool_info(r: &RuntimeStandalone, token: &str) -> PoolInfo {
     return near_view(r, &CLP_ACC.into(), "pool_info", &json!({ "token": token }));
 }
 
@@ -389,56 +445,6 @@ impl Ctx {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("./res/nep21_basic.wasm").as_ref();
-}
-
-pub fn deploy_nep21(
-    runtime: &mut RuntimeStandalone,
-    signer: &ExternalUser,
-    gas: U64,
-    args: &NewNEP21Args,
-) -> TxResult {
-    let tx = signer
-        .new_tx(runtime, &signer.account_id)
-        // transfer tokens otherwise "wouldn't have enough balance to cover storage"
-        .transfer(ntoy(50))
-        .deploy_contract(FUNGIBLE_TOKEN_BYTES.to_vec())
-        .function_call(
-            "new".to_string(),
-            serde_json::to_vec(args).unwrap(),
-            gas.into(),
-            0,
-        )
-        .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap().1;
-    runtime.process_all().unwrap();
-    outcome_into_result(res)
-}
-
-pub fn deploy_clp(
-    runtime: &mut RuntimeStandalone,
-    signer: &ExternalUser,
-    gas: U64,
-    args: &NewClpArgs,
-) -> TxResult {
-    let tx = signer
-        .new_tx(runtime, &signer.account_id)
-        .transfer(ntoy(50))
-        .deploy_contract(CLP_WASM_BYTES.to_vec())
-        .function_call(
-            "new".to_string(),
-            serde_json::to_vec(args).unwrap(),
-            gas.into(),
-            0,
-        )
-        .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap().1;
-    runtime.process_all().unwrap();
-    outcome_into_result(res)
-}
-
 fn check_nep21_bal(ctx: &Ctx, token: &AccountId, who: &AccountId, expected: Balance) {
     let bal: U128 = near_view(
         &ctx.r,
@@ -449,4 +455,4 @@ fn check_nep21_bal(ctx: &Ctx, token: &AccountId, who: &AccountId, expected: Bala
         }),
     );
     assert_eq!(bal.0, expected);
-}
+}*/

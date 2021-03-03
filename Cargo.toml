@@ -2,5 +2,6 @@
 
 [workspace]
 members = [
-    "nearswap"
+    "nearswap",
+    "other-contracts/nep-21"
 ]

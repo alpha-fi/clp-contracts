@@ -9,13 +9,13 @@ use crate::ctrtypes::*;
 mod test_utils;
 use crate::test_utils::*;
 
-use near_clp::util::*;
-use near_clp::PoolInfo;
+use nearswap::util::*;
+use nearswap::PoolInfo;
 
 //use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;
 use near_primitives::types::{AccountId, Balance};
-use near_runtime_standalone::{init_runtime_and_signer, RuntimeStandalone};
+use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 
@@ -340,8 +340,8 @@ pub struct Ctx {
 }
 impl Ctx {
     pub fn new() -> Self {
-        let signer_account: AccountId = "main.testnet".to_string();
-        let (mut r, signer) = init_runtime_and_signer(&signer_account);
+        let signer_account: AccountId;
+        let (mut r, signer, signer_account) = init_runtime(None);
         let signer_u = ExternalUser {
             account_id: signer_account,
             signer: signer,
@@ -390,8 +390,8 @@ impl Ctx {
 }
 
 lazy_static::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../target/wasm32-unknown-unknown/release/near_clp.wasm").as_ref();
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../neardev/nep-21/target/wasm32-unknown-unknown/release/nep21_basic.wasm").as_ref();
+    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
+    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("./res/nep21_basic.wasm").as_ref();
 }
 
 pub fn deploy_nep21(
@@ -412,7 +412,7 @@ pub fn deploy_nep21(
             0,
         )
         .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
+    let res = runtime.resolve_tx(tx).unwrap().1;
     runtime.process_all().unwrap();
     outcome_into_result(res)
 }
@@ -434,7 +434,7 @@ pub fn deploy_clp(
             0,
         )
         .sign(&signer.signer);
-    let res = runtime.resolve_tx(tx).unwrap();
+    let res = runtime.resolve_tx(tx).unwrap().1;
     runtime.process_all().unwrap();
     outcome_into_result(res)
 }

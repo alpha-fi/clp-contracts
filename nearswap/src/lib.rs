@@ -728,6 +728,7 @@ mod tests {
     use super::*;
     use near_sdk::MockedBlockchain;
     use near_sdk::{testing_env, VMContext};
+    use std::convert::TryInto;
 
     struct Accounts {
         current: AccountId,
@@ -791,7 +792,7 @@ mod tests {
         let mut ctx = Ctx::new(vec![], false);
         ctx.vm.attached_deposit = attached_near;
         testing_env!(ctx.vm.clone());
-        let contract = NearCLP::new(ctx.accounts.owner.clone());
+        let contract = NearCLP::new("clp_owner".try_into().unwrap());
         return (ctx, contract);
     }
     fn init() -> (Ctx, NearCLP) {
@@ -817,16 +818,16 @@ mod tests {
 
         ctx.vm.predecessor_account_id = ctx.accounts.owner;
         testing_env!(ctx.vm);
-        let owner2 = "new_owner_near".to_string();
-        c.change_owner(owner2.clone());
-        assert_eq!(c.owner, owner2);
+
+        c.change_owner("new_owner_near".try_into().unwrap());
+        assert_eq!(c.owner, "new_owner_near");
     }
 
     #[test]
     #[should_panic(expected = "Only the owner can call this function")]
     fn change_owner_other_account() {
         let (_, mut c) = init();
-        let owner2 = "new_owner_near".to_string();
+        let owner2: ValidAccountId = "new_owner_near".try_into().unwrap();
         c.change_owner(owner2.clone());
     }
 
@@ -834,7 +835,7 @@ mod tests {
     #[should_panic(expected = "E1: pool already exists")]
     fn create_twice_same_pool_fails() {
         let (ctx, mut c) = init();
-        c.create_pool(ctx.accounts.token1.clone());
+        c.create_pool("token1".try_into().unwrap());
 
         // let's check firstly the pool is there
         let pools = c.list_pools();
@@ -842,11 +843,11 @@ mod tests {
         assert_eq!(pools, expected);
 
         //
-        c.create_pool(ctx.accounts.token1);
+        c.create_pool("token1".try_into().unwrap());
     }
 
     fn check_and_create_pool(c: &mut NearCLP, token: &AccountId) {
-        c.create_pool(token.to_string());
+        c.create_pool(token.to_string().try_into().unwrap());
         match c.pool_info(token) {
             None => panic!("Pool for {} token is expected", token),
             Some(p) => assert_eq!(

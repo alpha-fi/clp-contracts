@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
-use near_clp::util::*;
-use near_crypto::{InMemorySigner, KeyType, Signer};
-use near_primitives::{
+use nearswap::util::*;
+use near_primitives::types::{AccountId, Balance};
+use near_sdk_sim::{
+    runtime::RuntimeStandalone,
     account::{AccessKey, Account},
-    errors::{RuntimeError, TxExecutionError},
     hash::CryptoHash,
+    errors::{RuntimeError, TxExecutionError},
     transaction::{ExecutionOutcome, ExecutionStatus, Transaction},
-    types::{AccountId, Balance},
+    near_crypto::{InMemorySigner, KeyType, Signer}
 };
-use near_runtime_standalone::RuntimeStandalone;
 use near_sdk::json_types::U64;
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
@@ -81,7 +81,7 @@ impl ExternalUser {
                 unreachable!();
             }
         } else {
-            outcome_into_result(res.unwrap())?;
+            outcome_into_result(res.unwrap().1)?;
             runtime.process_all().unwrap();
             Ok(ExternalUser {
                 account_id: new_account_id.clone(),
@@ -115,8 +115,7 @@ pub fn near_view<I: ToString, O: DeserializeOwned>(
     let args = args.to_string();
     let result = runtime
         .view_method_call(contract_id, method, args.as_bytes())
-        .unwrap()
-        .0;
+        .unwrap();
     let output: O = serde_json::from_reader(result.as_slice()).unwrap();
     output
 }
@@ -135,7 +134,7 @@ pub fn near_call<I: Sized + Serialize>(
         .new_tx(runtime, contract_id)
         .function_call(method.into(), args, gas.into(), deposit)
         .sign(&sending_account.signer);
-    let ex_outcome = runtime.resolve_tx(tx).unwrap();
+    let ex_outcome = runtime.resolve_tx(tx).unwrap().1;
     runtime.process_all().unwrap();
     outcome_into_result(ex_outcome)
 }
@@ -160,7 +159,7 @@ pub fn call<I: Sized + Serialize>(
         .function_call(method.into(), args.clone(), gas.into(), attached_amount)
         .sign(&sending_account.signer);
 
-    let execution_outcome = runtime.resolve_tx(tx).unwrap(); //first TXN - unwraps to ExecutionOutcome
+    let execution_outcome = runtime.resolve_tx(tx).unwrap().1; //first TXN - unwraps to ExecutionOutcome
     runtime.process_all().unwrap(); //proces until there's no more generated receipts
 
     /* THE ABOVE CODE REPLACED THIS: near_call(runtime, //runtime

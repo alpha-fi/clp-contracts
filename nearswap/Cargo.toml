@@ -23,6 +23,7 @@ funty = "=1.1.0"
 #New version of simulation tests:
 # [dev-dependencies]
 near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", tag="3.0.0" }
+nep21-mintable = { path = "../other-contracts/nep-21" }
 
 # https://github.com/near/core-contracts/blob/master/staking-pool/Cargo.toml
 # https://doc.rust-lang.org/cargo/reference/profiles.html

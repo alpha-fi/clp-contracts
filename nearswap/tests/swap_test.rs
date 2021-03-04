@@ -3,66 +3,47 @@
 
 #![allow(unused)]
 
-mod test_utils;
-use test_utils::*;
+mod clp_utils;
+mod nep21_utils;
+use clp_utils::*;
+use nep21_utils::*;
 
 use near_sdk_sim::{
     call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
     UserAccount, STORAGE_AMOUNT,
 };
-use near_sdk_sim::account::AccessKey;
-
 use nearswap::util::*;
-use nearswap::PoolInfo;
 use nearswap::{NearCLPContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
-//use near_primitives::errors::{ActionErrorKind, TxExecutionError};
-use near_primitives::transaction::ExecutionStatus;
 use near_primitives::types::{AccountId, Balance};
-use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use std::convert::TryInto;
-
-// utility, get pool info from CLP
-//------------------------
 
 #[test]
 fn test_clp_add_liquidity_and_swap() {
     let (master_account, clp_contract, token, alice, carol) = deploy_clp();
     println!("NearSwap Contract Deployed");
 
-    let token_contract = deploy_nep21(&token, U128(1_000_000 * NDENOM));
-    println!("Token deployed");
+    let contract_id = "nep_21_1";
+    let token_contract = deploy_nep21(&token, contract_id.into(), U128(1_000_000 * NDENOM));
+    println!("Token 1 deployed");
     
     let near_deposit = 3_000 * NDENOM;
     let token_deposit = 30_000 * NDENOM;
 
-    //---------------
     create_pool_add_liquidity(
         &clp_contract,
         &token_contract,
         &alice,
         &token,
+        contract_id.into(),
         near_deposit,
         token_deposit,
     );
-    // TOOD: let's add a bit more liquidity
-    // println!("Alice increases the liquidity right first top up");
-
-    // add_liquidity(
-    //     &mut ctx.r,
-    //     &ctx.clp,
-    //     &ctx.alice,
-    //     &ctx.nep21_1,
-    //     3 * NDENOM,
-    //     30 * NDENOM + 1,
-    // );
-
-    //---------------
 
     // get pool state before swap
-    let pooli_before = get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string());
+    let pooli_before = get_pool_info(&clp_contract, &contract_id.to_string());
     assert_eq!(
         pooli_before,
         PoolInfo {
@@ -89,14 +70,14 @@ fn test_clp_add_liquidity_and_swap() {
     let min_token_expected: u128 = to_yocto("98"); //1-10 relation near/token
     let res = call!(
         carol,
-        clp_contract.swap_near_to_token_exact_in(TOKEN_CONTRACT_ID.to_string(), U128(min_token_expected)),
+        clp_contract.swap_near_to_token_exact_in(contract_id.to_string(), U128(min_token_expected)),
         deposit = carol_deposit_yoctos.into()
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     let log = res.logs();
 
     assert!(res.is_ok());
-    println!("pool_info:{}", get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string()));
+    println!("pool_info:{}", get_pool_info(&clp_contract, &contract_id.to_string()));
     println!("let's see how many token carol has after the swap");
     let carol_t_balance_post =
         show_nep21_bal(&token_contract, &carol.account_id());
@@ -107,7 +88,7 @@ fn test_clp_add_liquidity_and_swap() {
         "carol should have received at least min_token_expected"
     );
 
-    /*let pooli_after = get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string());
+    let pooli_after = get_pool_info(&clp_contract, &contract_id.to_string());
     assert_eq!(
         pooli_after,
         PoolInfo {
@@ -118,23 +99,29 @@ fn test_clp_add_liquidity_and_swap() {
         "new pool balance after swap"
     );
 
-    //
+    //--------------
+
+    let bob = master_account.create_user("bob".to_string(), to_yocto("1000000"));
+    let token2 = master_account.create_user("token2".to_string(), to_yocto("1000000"));
+    let token_id_2 = "nep_21_2";
+    let token_contract_2 = deploy_nep21(&token2, token_id_2.into(), U128(1_000_000 * NDENOM));
+    println!("Token deployed");
     // bob creates another pool with nep21_2
     create_pool_add_liquidity(
-        &mut ctx.r,
-        &ctx.clp,
-        &ctx.bob,
-        &ctx.nep21_2,
+        &clp_contract,
+        &token_contract_2,
+        &bob,
+        &token2,
+        token_id_2.into(),
         1000 * NDENOM,
         500 * NDENOM,
     );
-    //---------------
 
     //
     // carol tries to swap nep1 she owns with nep2 from bob's pool
 
     println!(">> nep21-1 {:?}", pooli_after);
-    println!(">> nep21-2 {:?}", get_pool_info(&ctx.r, &NEP21_ACC2));
+    println!(">> nep21-2 {:?}", get_pool_info(&clp_contract, &token_id_2.to_string()));
 
     // liquidity1: 3000 NEAR -- 30_000 nep21_1  (1:10)  -- originally
     // liquidity1: 3010 NEAR -- 29_900 nep21_1  (1:~10)  -- after the swap
@@ -145,16 +132,21 @@ fn test_clp_add_liquidity_and_swap() {
 
     let buy_amount = (3 * NDENOM).to_string();
     let carol_allowance = 61 * NDENOM;
-    call(
+    call!(
+        carol,
+        token_contract_2.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), carol_allowance.into()),
+        deposit = NEP21_STORAGE_DEPOSIT
+    );
+    /*call(
         &mut ctx.r,
         &ctx.carol,
         &ctx.nep21_1,
         "inc_allowance",
         &json!({"escrow_account_id": CLP_ACC, "amount": carol_allowance.to_string()}),
         NEP21_STORAGE_DEPOSIT, //refundable, required if the nep21-contract needs more storage
-    );
+    );*/
 
-    let price: U128 = near_view(
+    /*let price: U128 = near_view(
         &ctx.r,
         &CLP_ACC.into(),
         "price_token_to_token_out",

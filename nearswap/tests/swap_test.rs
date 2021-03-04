@@ -21,12 +21,12 @@ use serde_json::json;
 use std::convert::TryInto;
 
 #[test]
-fn test_clp_add_liquidity_and_swap() {
+fn test_swap() {
     let (master_account, clp_contract, token, alice, carol) = deploy_clp();
     println!("NearSwap Contract Deployed");
 
-    let contract_id = "nep_21_1";
-    let token_contract = deploy_nep21(&token, contract_id.into(), U128(1_000_000 * NDENOM));
+    let token_id_1 = "nep_21_1";
+    let token_contract = deploy_nep21(&token, token_id_1.into(), U128(1_000_000 * NDENOM));
     println!("Token 1 deployed");
     
     let near_deposit = 3_000 * NDENOM;
@@ -37,13 +37,13 @@ fn test_clp_add_liquidity_and_swap() {
         &token_contract,
         &alice,
         &token,
-        contract_id.into(),
+        token_id_1.into(),
         near_deposit,
         token_deposit,
     );
 
     // get pool state before swap
-    let pooli_before = get_pool_info(&clp_contract, &contract_id.to_string());
+    let pooli_before = get_pool_info(&clp_contract, &token_id_1.to_string());
     assert_eq!(
         pooli_before,
         PoolInfo {
@@ -70,14 +70,14 @@ fn test_clp_add_liquidity_and_swap() {
     let min_token_expected: u128 = to_yocto("98"); //1-10 relation near/token
     let res = call!(
         carol,
-        clp_contract.swap_near_to_token_exact_in(contract_id.to_string(), U128(min_token_expected)),
+        clp_contract.swap_near_to_token_exact_in(token_id_1.to_string(), U128(min_token_expected)),
         deposit = carol_deposit_yoctos.into()
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     let log = res.logs();
 
     assert!(res.is_ok());
-    println!("pool_info:{}", get_pool_info(&clp_contract, &contract_id.to_string()));
+    println!("pool_info:{}", get_pool_info(&clp_contract, &token_id_1.to_string()));
     println!("let's see how many token carol has after the swap");
     let carol_t_balance_post =
         show_nep21_bal(&token_contract, &carol.account_id());
@@ -88,7 +88,7 @@ fn test_clp_add_liquidity_and_swap() {
         "carol should have received at least min_token_expected"
     );
 
-    let pooli_after = get_pool_info(&clp_contract, &contract_id.to_string());
+    let pooli_after = get_pool_info(&clp_contract, &token_id_1.to_string());
     assert_eq!(
         pooli_after,
         PoolInfo {
@@ -100,7 +100,6 @@ fn test_clp_add_liquidity_and_swap() {
     );
 
     //--------------
-
     let bob = master_account.create_user("bob".to_string(), to_yocto("1000000"));
     let token2 = master_account.create_user("token2".to_string(), to_yocto("1000000"));
     let token_id_2 = "nep_21_2";
@@ -117,9 +116,8 @@ fn test_clp_add_liquidity_and_swap() {
         500 * NDENOM,
     );
 
-    //
     // carol tries to swap nep1 she owns with nep2 from bob's pool
-
+    // Token to Token Swap
     println!(">> nep21-1 {:?}", pooli_after);
     println!(">> nep21-2 {:?}", get_pool_info(&clp_contract, &token_id_2.to_string()));
 
@@ -129,52 +127,43 @@ fn test_clp_add_liquidity_and_swap() {
 
     // token1:token2 = 20 : 1
     // buying 3 nep21_2 requires 60 nep21_1 + fees
-
-    let buy_amount = (3 * NDENOM).to_string();
+    let buy_amount = (3 * NDENOM);
     let carol_allowance = 61 * NDENOM;
     call!(
         carol,
         token_contract_2.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), carol_allowance.into()),
         deposit = NEP21_STORAGE_DEPOSIT
     );
-    /*call(
-        &mut ctx.r,
-        &ctx.carol,
-        &ctx.nep21_1,
-        "inc_allowance",
-        &json!({"escrow_account_id": CLP_ACC, "amount": carol_allowance.to_string()}),
-        NEP21_STORAGE_DEPOSIT, //refundable, required if the nep21-contract needs more storage
-    );*/
 
-    /*let price: U128 = near_view(
-        &ctx.r,
-        &CLP_ACC.into(),
-        "price_token_to_token_out",
-        &json!({"from": &ctx.nep21_1.account_id,
-                "to":  &ctx.nep21_2.account_id,
-                "tokens_out": buy_amount,
-        }),
-    );
+    let value = view!(clp_contract.price_token_to_token_out(
+        token_id_1.to_string(),
+        token_id_2.to_string(),
+        U128(buy_amount)
+    ));
+    let price: U128 = value.unwrap_json();
     println!(
-        ">> price for {} {} is {} {}; allowance={}",
-        buy_amount, &ctx.nep21_2.account_id, price.0, &ctx.nep21_1.account_id, carol_allowance
+        ">> price for {} {} is {:?} {}; allowance={}",
+        buy_amount, &token_id_1.to_string(), price, &token_id_2.to_string(), carol_allowance
     );
-    call(
-        &mut ctx.r,
-        &ctx.carol,
-        &ctx.clp,
-        "swap_tokens_exact_out",
-        &json!({"from": &ctx.nep21_1.account_id,
-                "to":  &ctx.nep21_2.account_id,
-                "tokens_out": buy_amount,
-                "max_tokens_in":  carol_allowance.to_string(),
-        }),
-        0,
+    let carol_t_balance_pre_2 =
+        show_nep21_bal(&token_contract_2, &carol.account_id());
+
+    call!(
+        carol,
+        clp_contract.swap_tokens_exact_out(
+            token_id_1.to_string(), token_id_2.to_string(), U128(buy_amount), U128(carol_allowance)
+        ),
+        deposit = STORAGE_AMOUNT
     );
+    println!("{} {:?}", &token_id_1.to_string(), get_pool_info(&clp_contract, &token_id_1.to_string()));
+    println!("{} {:?}", &token_id_2.to_string(), get_pool_info(&clp_contract, &token_id_2.to_string()));
 
-    //TDOO println!("carol removes allowance to CLP")
+    let carol_t_balance_post_2 =
+        show_nep21_bal(&token_contract_2, &carol.account_id());
 
-    println!("{} {:?}", &NEP21_ACC, get_pool_info(&ctx.r, &NEP21_ACC));
-    println!("{} {:?}", &NEP21_ACC2, get_pool_info(&ctx.r, &NEP21_ACC2));*/
-    //TODO check balances*/
+    let carol_received = carol_t_balance_post_2 - carol_t_balance_pre_2;
+    assert!(
+        carol_received >= buy_amount,
+        "carol should have received at least min_token_expected"
+    );
 }

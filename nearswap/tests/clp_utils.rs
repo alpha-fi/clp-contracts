@@ -65,78 +65,33 @@ pub fn create_pool_add_liquidity(
     token_amount: u128,
 ) {
     println!("{} creates a pool", owner.account_id());
-
     // Uses default gas amount, `near_sdk_sim::DEFAULT_GAS`
-    let res = call!(
+    // Create Pool
+    call!(
         owner,
         clp.create_pool(token_id.to_string().try_into().unwrap()),
         deposit = STORAGE_AMOUNT
     );
-    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
-    assert!(res.is_ok());
 
-    assert_eq!(
-        get_pool_info(&clp, &token_id.to_string()),
-        PoolInfo {
-            ynear: 0.into(),
-            reserve: 0.into(),
-            total_shares: 0.into()
-        },
-        "new pool should be empty"
-    );
-
+    // Fund tokens
     println!("Making sure owner has token before adding liq");
-    let res1 = call!(
+    call!(
         token,
         token_contract.transfer(owner.account_id(), token_amount.into()),
         deposit = STORAGE_AMOUNT
     );
-    println!("{:#?}\n Cost:\n{:#?}", res1.status(), res1.profile_data());
-    assert!(res1.is_ok());
 
-    add_liquidity(clp, token_contract, owner, token, token_id, near_amount, token_amount);
-}
-
-fn add_liquidity(
-    clp: &ContractAccount<NearCLPContract>,
-    token_contract: &ContractAccount<FungibleTokenContract>,
-    liquidity_provider: &UserAccount,
-    token: &UserAccount,
-    token_id: AccountId,
-    near_amount: u128,
-    token_amount: u128,
-) {
-    println!(
-        "{} adds liquidity to {}",
-        liquidity_provider.account_id(), token.account_id()
-    );
-    println!("creating allowance for CLP");
-    let res = call!(
-        liquidity_provider,
+    // increase allowance
+    call!(
+        owner,
         token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_amount.into()),
         deposit = 2 * NEP21_STORAGE_DEPOSIT
     );
-    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
-    assert!(res.is_ok());
-    let val = view!(token_contract.get_allowance(
-        liquidity_provider.account_id(), NEARSWAP_CONTRACT_ID.to_string())
-    );
-    let value: U128 = val.unwrap_json();
-
+    
     //add_liquidity
-    let res1 = call!(
-        liquidity_provider,
+    call!(
+        owner,
         clp.add_liquidity(token_id.to_string(), U128(token_amount), U128(near_amount)),
         deposit = near_amount + NEP21_STORAGE_DEPOSIT
-    );
-    //show_nep21_bal(&token_contract, &"nearswap".to_string());
-    // TODO: Add separate test for add liquidity and pool creation
-    // make setup function with pool creation and added liquidity
-
-    let after_adding_info = get_pool_info(&clp, &token_id.to_string());
-    println!(
-        "pool after add liq: {} {:?}",
-        &token.account_id(),
-        after_adding_info
     );
 }

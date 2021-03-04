@@ -56,7 +56,7 @@ pub fn deploy_clp() -> (
 
 // Deploy NEP-21 Contract
 pub fn deploy_nep21(
-    master_account: &UserAccount, total_supply: U128
+    master_account: &UserAccount, Contract_Id: AccountId, total_supply: U128
 ) -> ContractAccount<FungibleTokenContract> {
     println!("deploy_nep21");
     // uses default values for deposit and gas
@@ -64,7 +64,7 @@ pub fn deploy_nep21(
         // Contract Proxy
         contract: FungibleTokenContract,
         // Contract account id
-        contract_id: TOKEN_CONTRACT_ID,
+        contract_id: Contract_Id,
         // Bytes of contract
         bytes: &FUNGIBLE_TOKEN_BYTES,
         // User deploying the contract,

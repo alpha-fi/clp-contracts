@@ -107,7 +107,7 @@ fn test_clp_add_liquidity_and_swap() {
         "carol should have received at least min_token_expected"
     );
 
-    /*let pooli_after = get_pool_info(&ctx.r, &NEP21_ACC);
+    /*let pooli_after = get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string());
     assert_eq!(
         pooli_after,
         PoolInfo {

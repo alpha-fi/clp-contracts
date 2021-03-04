@@ -30,7 +30,9 @@ near_sdk_sim::lazy_static! {
 }
 
 // Deploy NearCLP Contract
-pub fn deploy_clp() -> (UserAccount, ContractAccount<NearCLPContract>, UserAccount) {
+pub fn deploy_clp() -> (
+    UserAccount, ContractAccount<NearCLPContract>, UserAccount, UserAccount, UserAccount
+) {
     let master_account = init_simulator(None);
     println!("deploy_and_init_CLP");
     // uses default values for deposit and gas
@@ -46,13 +48,16 @@ pub fn deploy_clp() -> (UserAccount, ContractAccount<NearCLPContract>, UserAccou
         // init method
         init_method: new(master_account.account_id().try_into().unwrap())
     );
-    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    (master_account, contract_user, alice)
+    let token = master_account.create_user("nep_21_token".to_string(), to_yocto("10000"));
+    let alice = master_account.create_user("alice".to_string(), to_yocto("10000"));
+    let carol = master_account.create_user("carol".to_string(), to_yocto("10000"));
+    (master_account, contract_user, token, alice, carol)
 }
 
 // Deploy NEP-21 Contract
-pub fn deploy_nep21(total_supply: U128) -> (UserAccount, ContractAccount<FungibleTokenContract>, UserAccount) {
-    let master_account = init_simulator(None);
+pub fn deploy_nep21(
+    master_account: &UserAccount, total_supply: U128
+) -> ContractAccount<FungibleTokenContract> {
     println!("deploy_nep21");
     // uses default values for deposit and gas
     let contract_user = deploy!(
@@ -67,19 +72,17 @@ pub fn deploy_nep21(total_supply: U128) -> (UserAccount, ContractAccount<Fungibl
         // init method
         init_method: new(master_account.account_id(), total_supply, 24)
     );
-
-    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    (master_account, contract_user, alice)
+    contract_user
 }
 
-fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &UserAccount) -> PoolInfo {
+pub fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &UserAccount) -> PoolInfo {
     let val = view!(clp.pool_info(&(token.account_id())));
     let value: PoolInfo = val.unwrap_json();
     return value;
 }
 
-fn get_nep21_balance(
-    token_contract: ContractAccount<FungibleTokenContract>, account: &UserAccount
+pub fn get_nep21_balance(
+    token_contract: &ContractAccount<FungibleTokenContract>, account: &UserAccount
 ) -> U128 {
     //near_view(&r, &token, "get_balance", &json!({ "owner_id": account }));
     let val = view!(token_contract.get_balance(account.account_id()));
@@ -87,19 +90,19 @@ fn get_nep21_balance(
     return value;
 }
 
-fn show_nep21_bal(
-    token_contract: ContractAccount<FungibleTokenContract>, account: &UserAccount
+pub fn show_nep21_bal(
+    token_contract: &ContractAccount<FungibleTokenContract>, account: &UserAccount
 ) -> u128 {
     let bal: u128 = get_nep21_balance(token_contract, account).into();
     println!("Balance check: {} has {}", account.account_id(), bal);
     return bal;
 }
 
-fn create_pool_add_liquidity(
-    clp: ContractAccount<NearCLPContract>,
-    token_contract: ContractAccount<FungibleTokenContract>,
-    owner: UserAccount,
-    token: UserAccount,
+pub fn create_pool_add_liquidity(
+    clp: &ContractAccount<NearCLPContract>,
+    token_contract: &ContractAccount<FungibleTokenContract>,
+    owner: &UserAccount,
+    token: &UserAccount,
     near_amount: u128,
     token_amount: u128,
 ) {
@@ -137,10 +140,10 @@ fn create_pool_add_liquidity(
 }
 
 fn add_liquidity(
-    clp: ContractAccount<NearCLPContract>,
-    token_contract: ContractAccount<FungibleTokenContract>,
-    liquidity_provider: UserAccount,
-    token: UserAccount,
+    clp: &ContractAccount<NearCLPContract>,
+    token_contract: &ContractAccount<FungibleTokenContract>,
+    liquidity_provider: &UserAccount,
+    token: &UserAccount,
     near_amount: u128,
     token_amount: u128,
 ) {
@@ -152,8 +155,10 @@ fn add_liquidity(
     let res = call!(
         liquidity_provider,
         token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_amount.into()),
-        deposit = STORAGE_AMOUNT
+        deposit = 2 * NEP21_STORAGE_DEPOSIT
     );
+    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    assert!(res.is_ok());
     /*call(
         r,
         &liquidity_provider,
@@ -169,7 +174,7 @@ fn add_liquidity(
     let res1 = call!(
         liquidity_provider,
         clp.add_liquidity(token.account_id(), U128(token_amount), U128(near_amount)),
-        deposit = near_amount + STORAGE_AMOUNT
+        deposit = near_amount + NEP21_STORAGE_DEPOSIT
     );
     /*call(
         r,

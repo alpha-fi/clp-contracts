@@ -14,7 +14,7 @@ use near_sdk_sim::account::AccessKey;
 
 use nearswap::util::*;
 use nearswap::PoolInfo;
-use nearswap::NearCLPContract;
+use nearswap::{NearCLPContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
 //use near_primitives::errors::{ActionErrorKind, TxExecutionError};
 use near_primitives::transaction::ExecutionStatus;

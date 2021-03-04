@@ -1,225 +1,191 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
-use nearswap::util::*;
-use near_primitives::types::{AccountId, Balance};
+#![allow(unused)]
+
 use near_sdk_sim::{
-    runtime::RuntimeStandalone,
-    account::{AccessKey, Account},
-    hash::CryptoHash,
-    errors::{RuntimeError, TxExecutionError},
-    transaction::{ExecutionOutcome, ExecutionStatus, Transaction},
-    near_crypto::{InMemorySigner, KeyType, Signer}
+    call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
+    UserAccount, STORAGE_AMOUNT,
 };
-use near_sdk::json_types::U64;
-use serde::de::DeserializeOwned;
-use serde::ser::Serialize;
+use near_sdk_sim::account::AccessKey;
 
-pub type TxResult = Result<ExecutionOutcome, ExecutionOutcome>;
+use nearswap::util::*;
+use nearswap::PoolInfo;
+use nearswap::NearCLPContract;
+use nep21_mintable::FungibleTokenContract;
+use near_primitives::transaction::ExecutionStatus;
+use near_primitives::types::{AccountId, Balance};
+use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
+use near_sdk::json_types::{U128, U64};
+use serde_json::json;
+use std::convert::TryInto;
 
-pub fn outcome_into_result(outcome: ExecutionOutcome) -> TxResult {
-    match outcome.status {
-        ExecutionStatus::SuccessValue(_) => Ok(outcome),
-        ExecutionStatus::Failure(_) => Err(outcome),
-        ExecutionStatus::SuccessReceiptId(_) => panic!("Unresolved ExecutionOutcome run runitme.resolve(tx) to resolve the filnal outcome of tx"),
-        ExecutionStatus::Unknown => unreachable!()
-    }
+const TOKEN_CONTRACT_ID: &str = "token";
+const NEARSWAP_CONTRACT_ID: &str = "nearswap";
+
+/// Load in contract bytes
+near_sdk_sim::lazy_static! {
+    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
+    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nep21_mintable.wasm").as_ref();
 }
 
-#[derive(Clone)]
-pub struct ExternalUser {
-    pub account_id: AccountId,
-    pub signer: InMemorySigner,
+// Deploy NearCLP Contract
+pub fn deploy_clp() -> (UserAccount, ContractAccount<NearCLPContract>, UserAccount) {
+    let master_account = init_simulator(None);
+    println!("deploy_and_init_CLP");
+    // uses default values for deposit and gas
+    let contract_user = deploy!(
+        // Contract Proxy
+        contract: NearCLPContract,
+        // Contract account id
+        contract_id: NEARSWAP_CONTRACT_ID,
+        // Bytes of contract
+        bytes: &CLP_WASM_BYTES,
+        // User deploying the contract,
+        signer_account: master_account,
+        // init method
+        init_method: new(master_account.account_id().try_into().unwrap())
+    );
+    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
+    (master_account, contract_user, alice)
 }
 
-impl ExternalUser {
-    #[allow(dead_code)]
-    pub fn new(account_id: AccountId, signer: InMemorySigner) -> Self {
-        Self { account_id, signer }
-    }
+// Deploy NEP-21 Contract
+pub fn deploy_nep21(total_supply: U128) -> (UserAccount, ContractAccount<FungibleTokenContract>, UserAccount) {
+    let master_account = init_simulator(None);
+    println!("deploy_nep21");
+    // uses default values for deposit and gas
+    let contract_user = deploy!(
+        // Contract Proxy
+        contract: FungibleTokenContract,
+        // Contract account id
+        contract_id: TOKEN_CONTRACT_ID,
+        // Bytes of contract
+        bytes: &FUNGIBLE_TOKEN_BYTES,
+        // User deploying the contract,
+        signer_account: master_account,
+        // init method
+        init_method: new(master_account.account_id(), total_supply, 24)
+    );
 
-    #[allow(dead_code)]
-    pub fn account_id(&self) -> &AccountId {
-        &self.account_id
-    }
-
-    #[allow(dead_code)]
-    pub fn signer(&self) -> &InMemorySigner {
-        &self.signer
-    }
-
-    #[allow(dead_code)]
-    pub fn account(&self, runtime: &mut RuntimeStandalone) -> Account {
-        runtime
-            .view_account(&self.account_id)
-            .expect("Account should be there")
-    }
-
-    pub fn create_external(
-        &self,
-        runtime: &mut RuntimeStandalone,
-        new_account_id: &AccountId,
-        amount: Balance,
-    ) -> Result<ExternalUser, ExecutionOutcome> {
-        let new_signer =
-            InMemorySigner::from_seed(&new_account_id, KeyType::ED25519, &new_account_id);
-        let tx = self
-            .new_tx(runtime, new_account_id)
-            .create_account()
-            .add_key(new_signer.public_key(), AccessKey::full_access())
-            .transfer(amount)
-            .sign(&self.signer);
-        let res = runtime.resolve_tx(tx);
-
-        // This logic be rewritten, FYI
-        if let Err(err) = res.clone() {
-            if let RuntimeError::InvalidTxError(tx_err) = err {
-                let mut out = ExecutionOutcome::default();
-                out.status = ExecutionStatus::Failure(TxExecutionError::InvalidTxError(tx_err));
-                return Err(out);
-            } else {
-                unreachable!();
-            }
-        } else {
-            outcome_into_result(res.unwrap().1)?;
-            runtime.process_all().unwrap();
-            Ok(ExternalUser {
-                account_id: new_account_id.clone(),
-                signer: new_signer,
-            })
-        }
-    }
-
-    pub fn new_tx(&self, runtime: &RuntimeStandalone, receiver_id: &AccountId) -> Transaction {
-        let nonce = runtime
-            .view_access_key(&self.account_id, &self.signer.public_key())
-            .unwrap()
-            .nonce
-            + 1;
-        Transaction::new(
-            self.account_id.clone(),
-            self.signer.public_key(),
-            receiver_id.clone(),
-            nonce,
-            CryptoHash::default(),
-        )
-    }
+    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
+    (master_account, contract_user, alice)
 }
 
-pub fn near_view<I: ToString, O: DeserializeOwned>(
-    runtime: &RuntimeStandalone,
-    contract_id: &AccountId,
-    method: &str,
-    args: I,
-) -> O {
-    let args = args.to_string();
-    let result = runtime
-        .view_method_call(contract_id, method, args.as_bytes())
-        .unwrap();
-    let output: O = serde_json::from_reader(result.as_slice()).unwrap();
-    output
+fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &UserAccount) -> PoolInfo {
+    let val = view!(clp.pool_info(&(token.account_id())));
+    let value: PoolInfo = val.unwrap_json();
+    return value;
 }
 
-pub fn near_call<I: Sized + Serialize>(
-    runtime: &mut RuntimeStandalone,
-    sending_account: &ExternalUser,
-    contract_id: &AccountId,
-    method: &str,
-    args: I,
-    gas: U64,
-    deposit: Balance,
-) -> TxResult {
-    let args = serde_json::to_vec(&args).unwrap();
-    let tx = sending_account
-        .new_tx(runtime, contract_id)
-        .function_call(method.into(), args, gas.into(), deposit)
-        .sign(&sending_account.signer);
-    let ex_outcome = runtime.resolve_tx(tx).unwrap().1;
-    runtime.process_all().unwrap();
-    outcome_into_result(ex_outcome)
+fn get_nep21_balance(
+    token_contract: ContractAccount<FungibleTokenContract>, account: &UserAccount
+) -> U128 {
+    //near_view(&r, &token, "get_balance", &json!({ "owner_id": account }));
+    let val = view!(token_contract.get_balance(account.account_id()));
+    let value: U128 = val.unwrap_json();
+    return value;
 }
 
-/**utility fn schedule a call in the simulator, execute it, and all its receipts
- * report errors and lgos from all receipts
- *
- */
-pub fn call<I: Sized + Serialize>(
-    runtime: &mut RuntimeStandalone,
-    sending_account: &ExternalUser,
-    contract: &ExternalUser,
-    method: &str,
-    args: I,
-    attached_amount: u128,
+fn show_nep21_bal(
+    token_contract: ContractAccount<FungibleTokenContract>, account: &UserAccount
+) -> u128 {
+    let bal: u128 = get_nep21_balance(token_contract, account).into();
+    println!("Balance check: {} has {}", account.account_id(), bal);
+    return bal;
+}
+
+fn create_pool_add_liquidity(
+    clp: ContractAccount<NearCLPContract>,
+    token_contract: ContractAccount<FungibleTokenContract>,
+    owner: UserAccount,
+    token: UserAccount,
+    near_amount: u128,
+    token_amount: u128,
 ) {
-    let gas = MAX_GAS;
-    let args = serde_json::to_vec(&args).unwrap();
+    println!("{} creates a pool", owner.account_id());
 
-    let tx = sending_account
-        .new_tx(runtime, contract.account_id())
-        .function_call(method.into(), args.clone(), gas.into(), attached_amount)
-        .sign(&sending_account.signer);
-
-    let execution_outcome = runtime.resolve_tx(tx).unwrap().1; //first TXN - unwraps to ExecutionOutcome
-    runtime.process_all().unwrap(); //proces until there's no more generated receipts
-
-    /* THE ABOVE CODE REPLACED THIS: near_call(runtime, //runtime
-        sending_account, //sending account
-        contract, //contract
-        method,
-        args.as_bytes(),
-        U64(MAX_GAS),
-        attached_amount
-    )
-    .unwrap();
-    */
-
-    println!("\n================================");
-    println!(
-        "-- {}.{}({}) --",
-        contract.account_id(),
-        method,
-        String::from_utf8(args).unwrap()
+    // Uses default gas amount, `near_sdk_sim::DEFAULT_GAS`
+    let res = call!(
+        owner,
+        clp.create_pool(token.account_id().try_into().unwrap()),
+        deposit = STORAGE_AMOUNT
     );
-    println!("execution_outcome.status {:?}", execution_outcome.status);
-    println!("execution_outcome {:?}", execution_outcome);
-    match execution_outcome.status {
-        ExecutionStatus::Failure(msg) => panic!(msg),
-        ExecutionStatus::SuccessValue(value) => {
-            println!("execution_outcome.status => success {:?}", value)
-        }
-        ExecutionStatus::SuccessReceiptId(_) => {
-            panic!("thre are pending receipts! call runtime.process_all() to complete all txns")
-        }
-        ExecutionStatus::Unknown => unreachable!(),
-    }
-    println!(
-        "--------- RECEIPTS ({})",
-        execution_outcome.receipt_ids.len()
+    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
+    assert!(res.is_ok());
+
+    assert_eq!(
+        get_pool_info(&clp, &token),
+        PoolInfo {
+            ynear: 0.into(),
+            reserve: 0.into(),
+            total_shares: 0.into()
+        },
+        "new pool should be empty"
     );
-    let mut count_failed = 0;
-    let mut inx = 0;
-    for elem in execution_outcome.receipt_ids {
-        let outcome2 = runtime.outcome(&elem);
-        println!("---- Receipt {} outcome: {:?}", inx, outcome2);
-        match outcome2 {
-            Some(outcome2) => {
-                println!("receipt {} logs: {:?}", inx, outcome2.logs);
-                match outcome2.status {
-                    ExecutionStatus::Failure(txresult) => {
-                        println!("receipt {} failure: {:?}", inx, txresult);
-                        count_failed+=1;
-                    },
-                    ExecutionStatus::SuccessValue(value) => println!("receipt {} success {:?}",inx,value),
-                    ExecutionStatus::SuccessReceiptId(_) => panic!("there are pending receipts! call runtime.process_all() to complete all txns"),
-                    ExecutionStatus::Unknown => unreachable!(),
-                }
-            }
-            None => println!("None"),
-        }
-        inx += 1;
-    }
-    if count_failed > 0 {
-        panic!(format!("{} RECEIPT(S) FAILED", count_failed));
-    }
-    println!("================================\n");
+
+    println!("Making sure owner has token before adding liq");
+    let res1 = call!(
+        token,
+        token_contract.transfer(owner.account_id(), token_amount.into()),
+        deposit = STORAGE_AMOUNT
+    );
+    println!("{:#?}\n Cost:\n{:#?}", res1.status(), res1.profile_data());
+    assert!(res1.is_ok());
+
+    add_liquidity(clp, token_contract, owner, token, near_amount, token_amount);
+}
+
+fn add_liquidity(
+    clp: ContractAccount<NearCLPContract>,
+    token_contract: ContractAccount<FungibleTokenContract>,
+    liquidity_provider: UserAccount,
+    token: UserAccount,
+    near_amount: u128,
+    token_amount: u128,
+) {
+    println!(
+        "{} adds liquidity to {}",
+        liquidity_provider.account_id(), token.account_id()
+    );
+    println!("creating allowance for CLP");
+    let res = call!(
+        liquidity_provider,
+        token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_amount.into()),
+        deposit = STORAGE_AMOUNT
+    );
+    /*call(
+        r,
+        &liquidity_provider,
+        &token,
+        "inc_allowance",
+        &json!({"escrow_account_id": CLP_ACC, "amount": token_amount.to_string()}),
+        2 * NEP21_STORAGE_DEPOSIT, //refundable, required if nep21 or clp needs more storage
+    );*/
+
+    //show_nep21_bal(r, &token.account_id, &liquidity_provider.account_id);
+
+    //add_liquidity
+    let res1 = call!(
+        liquidity_provider,
+        clp.add_liquidity(token.account_id(), U128(token_amount), U128(near_amount)),
+        deposit = near_amount + STORAGE_AMOUNT
+    );
+    /*call(
+        r,
+        &liquidity_provider,
+        &clp,
+        "add_liquidity",
+        &json!({"token": token.account_id,
+                "max_tokens": token_amount.to_string(),
+                "min_shares": near_amount.to_string()}),
+        (near_amount + NEP21_STORAGE_DEPOSIT).into(), //send NEAR
+    );*/
+
+    let after_adding_info = get_pool_info(&clp, &token);
+    println!(
+        "pool after add liq: {} {:?}",
+        &token.account_id(),
+        after_adding_info
+    );
 }

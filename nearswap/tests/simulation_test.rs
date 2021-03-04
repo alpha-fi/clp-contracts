@@ -7,7 +7,7 @@ mod ctrtypes;
 use crate::ctrtypes::*;
 
 mod test_utils;
-use crate::test_utils::*;
+use test_utils::*;
 
 use near_sdk_sim::{
     call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
@@ -26,61 +26,6 @@ use near_sdk_sim::runtime::{init_runtime, RuntimeStandalone};
 use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use std::convert::TryInto;
-
-const TOKEN_CONTRACT_ID: &str = "token";
-const NEARSWAP_CONTRACT_ID: &str = "nearswap";
-
-/// Load in contract bytes
-near_sdk_sim::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nep21_mintable.wasm").as_ref();
-}
-
-// Deploy NearCLP Contract
-pub fn deploy_clp() -> (UserAccount, ContractAccount<NearCLPContract>, UserAccount) {
-    let master_account = init_simulator(None);
-    println!("deploy_and_init_CLP");
-    // uses default values for deposit and gas
-    let contract_user = deploy!(
-        // Contract Proxy
-        contract: NearCLPContract,
-        // Contract account id
-        contract_id: NEARSWAP_CONTRACT_ID,
-        // Bytes of contract
-        bytes: &CLP_WASM_BYTES,
-        // User deploying the contract,
-        signer_account: master_account,
-        // init method
-        init_method: new(master_account.account_id().try_into().unwrap())
-    );
-    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    (master_account, contract_user, alice)
-}
-
-// Deploy NEP-21 Contract
-pub fn deploy_nep21(total_supply: U128) -> (UserAccount, ContractAccount<FungibleTokenContract>, UserAccount) {
-    let master_account = init_simulator(None);
-    println!("deploy_nep21");
-    // uses default values for deposit and gas
-    let contract_user = deploy!(
-        // Contract Proxy
-        contract: FungibleTokenContract,
-        // Contract account id
-        contract_id: TOKEN_CONTRACT_ID,
-        // Bytes of contract
-        bytes: &FUNGIBLE_TOKEN_BYTES,
-        // User deploying the contract,
-        signer_account: master_account,
-        // init method
-        init_method: new(master_account.account_id(), total_supply, 24)
-    );
-
-    //let supply = view!(contract_user.get_total_supply(master_account.account_id()));
-    //assert_eq!(supply.0, total_supply);
-
-    let alice = master_account.create_user("alice".to_string(), to_yocto("100"));
-    (master_account, contract_user, alice)
-}
 
 #[test]
 fn test_nep21_transer() {
@@ -101,102 +46,14 @@ fn test_nep21_transer() {
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
-    let value = view!(contract.get_balance(alice.account_id()));
-    let value: U128 = value.unwrap_json();
+    let val = view!(contract.get_balance(alice.account_id()));
+    let value: U128 = val.unwrap_json();
     assert_eq!(initial_balance + transfer_amount, value.0);
 }
 
 // utility, get pool info from CLP
-/*fn get_pool_info(r: &RuntimeStandalone, token: &str) -> PoolInfo {
-    return near_view(r, &CLP_ACC.into(), "pool_info", &json!({ "token": token }));
-}
-
-//-------------------------
-fn create_pool_add_liquidity(
-    r: &mut RuntimeStandalone,
-    clp: &ExternalUser,
-    owner: &ExternalUser,
-    token: &ExternalUser,
-    near_amount: u128,
-    token_amount: u128,
-) {
-    println!("{} creates a pool", owner.account_id());
-
-    call(
-        r,
-        &owner,
-        &clp,
-        "create_pool",
-        &json!({"token": token.account_id()}),
-        0,
-    );
-
-    assert_eq!(
-        get_pool_info(&r, &token.account_id()),
-        PoolInfo {
-            ynear: 0.into(),
-            reserve: 0.into(),
-            total_shares: 0.into()
-        },
-        "new pool should be empty"
-    );
-
-    println!("Making sure owner has token before adding liq");
-    call(
-        r,
-        &token,
-        &token,
-        "transfer",
-        &json!({"new_owner_id": owner.account_id(), "amount": token_amount.to_string()}),
-        NEP21_STORAGE_DEPOSIT, //refundable, required if the fun-contract needs more storage
-    );
-
-    add_liquidity(r, clp, owner, token, near_amount, token_amount);
-}
-
-fn add_liquidity(
-    r: &mut RuntimeStandalone,
-    clp: &ExternalUser,
-    liquidity_provider: &ExternalUser,
-    token: &ExternalUser,
-    near_amount: u128,
-    token_amount: u128,
-) {
-    println!(
-        "{} adds liquidity to {}",
-        liquidity_provider.account_id, token.account_id
-    );
-    println!("creating allowance for CLP");
-    call(
-        r,
-        &liquidity_provider,
-        &token,
-        "inc_allowance",
-        &json!({"escrow_account_id": CLP_ACC, "amount": token_amount.to_string()}),
-        2 * NEP21_STORAGE_DEPOSIT, //refundable, required if nep21 or clp needs more storage
-    );
-
-    show_nep21_bal(r, &token.account_id, &liquidity_provider.account_id);
-
-    //add_liquidity
-    call(
-        r,
-        &liquidity_provider,
-        &clp,
-        "add_liquidity",
-        &json!({"token": token.account_id,
-                "max_tokens": token_amount.to_string(),
-                "min_shares": near_amount.to_string()}),
-        (near_amount + NEP21_STORAGE_DEPOSIT).into(), //send NEAR
-    );
-
-    let after_adding_info = get_pool_info(&r, &token.account_id());
-    println!(
-        "pool after add liq: {} {:?}",
-        &token.account_id(),
-        after_adding_info
-    );
-}
+/*
+//------------------------
 
 #[test]
 fn test_clp_add_liquidity_and_swap() {
@@ -358,16 +215,6 @@ fn test_clp_add_liquidity_and_swap() {
     println!("{} {:?}", &NEP21_ACC, get_pool_info(&ctx.r, &NEP21_ACC));
     println!("{} {:?}", &NEP21_ACC2, get_pool_info(&ctx.r, &NEP21_ACC2));
     //TODO check balances
-}
-
-fn get_nep21_balance(r: &mut RuntimeStandalone, token: &AccountId, account: &AccountId) -> U128 {
-    near_view(&r, &token, "get_balance", &json!({ "owner_id": account }))
-}
-
-fn show_nep21_bal(r: &mut RuntimeStandalone, token: &AccountId, acc: &AccountId) -> u128 {
-    let bal: u128 = get_nep21_balance(r, token, acc).into();
-    println!("Balance check: {} has {} {}", acc, token, bal);
-    return bal;
 }
 
 pub const CLP_ACC: &str = "nearclp";

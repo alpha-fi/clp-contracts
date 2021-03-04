@@ -62,7 +62,7 @@ fn test_clp_add_liquidity_and_swap() {
     //---------------
 
     // get pool state before swap
-    let pooli_before = get_pool_info(&clp_contract, &token);
+    let pooli_before = get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string());
     assert_eq!(
         pooli_before,
         PoolInfo {
@@ -82,24 +82,24 @@ fn test_clp_add_liquidity_and_swap() {
     );
 
     let carol_t_balance_pre =
-        show_nep21_bal(&token_contract, &carol);
+        show_nep21_bal(&token_contract, &carol.account_id());
 
     println!("carol swaps some near for tokens");
     let carol_deposit_yoctos: u128 = to_yocto("10");
     let min_token_expected: u128 = to_yocto("98"); //1-10 relation near/token
     let res = call!(
         carol,
-        clp_contract.swap_near_to_token_exact_in(token.account_id(), U128(min_token_expected)),
+        clp_contract.swap_near_to_token_exact_in(TOKEN_CONTRACT_ID.to_string(), U128(min_token_expected)),
         deposit = carol_deposit_yoctos.into()
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     let log = res.logs();
 
     assert!(res.is_ok());
-    println!("pool_info:{}", get_pool_info(&clp_contract, &token));
+    println!("pool_info:{}", get_pool_info(&clp_contract, &TOKEN_CONTRACT_ID.to_string()));
     println!("let's see how many token carol has after the swap");
     let carol_t_balance_post =
-        show_nep21_bal(&token_contract, &carol);
+        show_nep21_bal(&token_contract, &carol.account_id());
 
     let carol_received = carol_t_balance_post - carol_t_balance_pre;
     assert!(

@@ -20,8 +20,8 @@ use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use std::convert::TryInto;
 
-const TOKEN_CONTRACT_ID: &str = "token";
-const NEARSWAP_CONTRACT_ID: &str = "nearswap";
+pub const TOKEN_CONTRACT_ID: &str = "token";
+pub const NEARSWAP_CONTRACT_ID: &str = "nearswap";
 
 /// Load in contract bytes
 near_sdk_sim::lazy_static! {
@@ -75,26 +75,26 @@ pub fn deploy_nep21(
     contract_user
 }
 
-pub fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &UserAccount) -> PoolInfo {
-    let val = view!(clp.pool_info(&(token.account_id())));
+pub fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &AccountId) -> PoolInfo {
+    let val = view!(clp.pool_info(token));
     let value: PoolInfo = val.unwrap_json();
     return value;
 }
 
 pub fn get_nep21_balance(
-    token_contract: &ContractAccount<FungibleTokenContract>, account: &UserAccount
+    token_contract: &ContractAccount<FungibleTokenContract>, account: &AccountId
 ) -> U128 {
     //near_view(&r, &token, "get_balance", &json!({ "owner_id": account }));
-    let val = view!(token_contract.get_balance(account.account_id()));
+    let val = view!(token_contract.get_balance(account.to_string()));
     let value: U128 = val.unwrap_json();
     return value;
 }
 
 pub fn show_nep21_bal(
-    token_contract: &ContractAccount<FungibleTokenContract>, account: &UserAccount
+    token_contract: &ContractAccount<FungibleTokenContract>, account: &AccountId
 ) -> u128 {
     let bal: u128 = get_nep21_balance(token_contract, account).into();
-    println!("Balance check: {} has {}", account.account_id(), bal);
+    println!("Balance check: {} has {}", account, bal);
     return bal;
 }
 
@@ -111,14 +111,14 @@ pub fn create_pool_add_liquidity(
     // Uses default gas amount, `near_sdk_sim::DEFAULT_GAS`
     let res = call!(
         owner,
-        clp.create_pool(token.account_id().try_into().unwrap()),
+        clp.create_pool(TOKEN_CONTRACT_ID.to_string().try_into().unwrap()),
         deposit = STORAGE_AMOUNT
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
 
     assert_eq!(
-        get_pool_info(&clp, &token),
+        get_pool_info(&clp, &TOKEN_CONTRACT_ID.to_string()),
         PoolInfo {
             ynear: 0.into(),
             reserve: 0.into(),
@@ -159,35 +159,23 @@ fn add_liquidity(
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
-    /*call(
-        r,
-        &liquidity_provider,
-        &token,
-        "inc_allowance",
-        &json!({"escrow_account_id": CLP_ACC, "amount": token_amount.to_string()}),
-        2 * NEP21_STORAGE_DEPOSIT, //refundable, required if nep21 or clp needs more storage
-    );*/
-
-    //show_nep21_bal(r, &token.account_id, &liquidity_provider.account_id);
+    let val = view!(token_contract.get_allowance(
+        liquidity_provider.account_id(), NEARSWAP_CONTRACT_ID.to_string())
+    );
+    let value: U128 = val.unwrap_json();
+    println!("{:?} jsjdjks", value);
 
     //add_liquidity
     let res1 = call!(
         liquidity_provider,
-        clp.add_liquidity(token.account_id(), U128(token_amount), U128(near_amount)),
+        clp.add_liquidity(TOKEN_CONTRACT_ID.to_string(), U128(token_amount), U128(near_amount)),
         deposit = near_amount + NEP21_STORAGE_DEPOSIT
     );
-    /*call(
-        r,
-        &liquidity_provider,
-        &clp,
-        "add_liquidity",
-        &json!({"token": token.account_id,
-                "max_tokens": token_amount.to_string(),
-                "min_shares": near_amount.to_string()}),
-        (near_amount + NEP21_STORAGE_DEPOSIT).into(), //send NEAR
-    );*/
+    show_nep21_bal(&token_contract, &"nearswap".to_string());
+    // TODO: Add separate test for add liquidity and pool creation
+    // make setup function with pool creation and added liquidity
 
-    let after_adding_info = get_pool_info(&clp, &token);
+    let after_adding_info = get_pool_info(&clp, &"token".to_string());
     println!(
         "pool after add liq: {} {:?}",
         &token.account_id(),

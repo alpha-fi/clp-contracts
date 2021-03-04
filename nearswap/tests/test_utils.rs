@@ -48,9 +48,9 @@ pub fn deploy_clp() -> (
         // init method
         init_method: new(master_account.account_id().try_into().unwrap())
     );
-    let token = master_account.create_user("nep_21_token".to_string(), to_yocto("10000"));
-    let alice = master_account.create_user("alice".to_string(), to_yocto("10000"));
-    let carol = master_account.create_user("carol".to_string(), to_yocto("10000"));
+    let token = master_account.create_user("nep_21_token".to_string(), to_yocto("1000000"));
+    let alice = master_account.create_user("alice".to_string(), to_yocto("1000000"));
+    let carol = master_account.create_user("carol".to_string(), to_yocto("1000000"));
     (master_account, contract_user, token, alice, carol)
 }
 

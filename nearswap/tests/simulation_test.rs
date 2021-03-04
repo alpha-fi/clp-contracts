@@ -74,7 +74,7 @@ fn test_clp_add_liquidity_and_swap() {
     );
     println!("pool_info:{}", pooli_before);
 
-    /*println!("Sending nep21 to Carol");
+    println!("Sending nep21 to Carol");
     call!(
         token,
         token_contract.transfer(carol.account_id(), U128(to_yocto("19000"))),
@@ -88,7 +88,7 @@ fn test_clp_add_liquidity_and_swap() {
     let carol_deposit_yoctos: u128 = to_yocto("10");
     let min_token_expected: u128 = to_yocto("98"); //1-10 relation near/token
     let res = call!(
-        master_account,
+        carol,
         clp_contract.swap_near_to_token_exact_in(token.account_id(), U128(min_token_expected)),
         deposit = carol_deposit_yoctos.into()
     );
@@ -100,12 +100,12 @@ fn test_clp_add_liquidity_and_swap() {
     println!("let's see how many token carol has after the swap");
     let carol_t_balance_post =
         show_nep21_bal(&token_contract, &carol);
-        show_nep21_bal(&token_contract, &master_account);
+
     let carol_received = carol_t_balance_post - carol_t_balance_pre;
     assert!(
         carol_received >= min_token_expected,
         "carol should have received at least min_token_expected"
-    );*/
+    );
 
     /*let pooli_after = get_pool_info(&ctx.r, &NEP21_ACC);
     assert_eq!(

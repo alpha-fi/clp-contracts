@@ -1,27 +1,25 @@
 #![allow(unused)]
 
-use near_sdk_sim::{
-  STORAGE_AMOUNT,
-  to_yocto,
-  call,
-  view,
-  init_simulator,
-  UserAccount,
-  ContractAccount,
-  deploy
-};
 use near_sdk::json_types::{U128, U64};
+use near_sdk_sim::{
+    call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount, STORAGE_AMOUNT,
+};
 
 use nep21_mintable::FungibleTokenContract;
 
-/// Load in contract bytes
-near_sdk_sim::lazy_static! {
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../../target/wasm32-unknown-unknown/release/nep21_mintable.wasm").as_ref();
+// Load in contract bytes at runtime. Current directory = closes Cargo.toml file location
+near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
+    NEP21_BYTES => "../../res/nep21_mintable.wasm"
 }
+
 // Deploy NEP-21 Contract
 pub fn deploy_nep21(
-    total_supply: U128
-) -> (UserAccount, ContractAccount<FungibleTokenContract>, UserAccount) {
+    total_supply: U128,
+) -> (
+    UserAccount,
+    ContractAccount<FungibleTokenContract>,
+    UserAccount,
+) {
     let master_account = init_simulator(None);
     println!("deploy_nep21");
     // uses default values for deposit and gas
@@ -31,7 +29,7 @@ pub fn deploy_nep21(
         // Contract account id
         contract_id: "token",
         // Bytes of contract
-        bytes: &FUNGIBLE_TOKEN_BYTES,
+        bytes: &NEP21_BYTES,
         // User deploying the contract,
         signer_account: master_account,
         // init method

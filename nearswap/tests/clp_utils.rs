@@ -3,30 +3,34 @@
 
 #![allow(unused)]
 
+use near_sdk_sim::account::AccessKey;
 use near_sdk_sim::{
     call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
     UserAccount, STORAGE_AMOUNT,
 };
-use near_sdk_sim::account::AccessKey;
 
+use near_primitives::types::{AccountId, Balance};
+use near_sdk::json_types::{ValidAccountId, U128, U64};
 use nearswap::util::*;
 use nearswap::{NearCLPContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
-use near_primitives::types::{AccountId, Balance};
-use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use std::convert::TryInto;
 
 pub const NEARSWAP_CONTRACT_ID: &str = "nearswap";
 
-/// Load in contract bytes
-near_sdk_sim::lazy_static! {
-    static ref CLP_WASM_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nearswap.wasm").as_ref();
+// Load in contract bytes at runtime. Current directory = closes Cargo.toml file location
+near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
+    CLP_WASM_BYTES => "../res/nearswap.wasm"
 }
 
 // Deploy NearCLP Contract
 pub fn deploy_clp() -> (
-    UserAccount, ContractAccount<NearCLPContract>, UserAccount, UserAccount, UserAccount
+    UserAccount,
+    ContractAccount<NearCLPContract>,
+    UserAccount,
+    UserAccount,
+    UserAccount,
 ) {
     let master_account = init_simulator(None);
     println!("deploy_and_init_CLP");
@@ -71,27 +75,30 @@ pub fn create_pool_add_liquidity(
         owner,
         clp.create_pool(token_id.to_string().try_into().unwrap()),
         deposit = STORAGE_AMOUNT
-    );
+    )
+    .assert_success();
 
-    // Fund tokens
-    println!("Making sure owner has token before adding liq");
+    // Fund owner account with tokens
     call!(
         token,
         token_contract.transfer(owner.account_id(), token_amount.into()),
         deposit = STORAGE_AMOUNT
-    );
+    )
+    .assert_success();
 
     // increase allowance
     call!(
         owner,
         token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_amount.into()),
         deposit = 2 * NEP21_STORAGE_DEPOSIT
-    );
-    
+    )
+    .assert_success();
+
     //add_liquidity
     call!(
         owner,
         clp.add_liquidity(token_id.to_string(), U128(token_amount), U128(near_amount)),
         deposit = near_amount + NEP21_STORAGE_DEPOSIT
-    );
+    )
+    .assert_success();
 }

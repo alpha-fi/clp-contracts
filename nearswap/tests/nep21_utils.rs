@@ -5,22 +5,24 @@ use near_sdk_sim::{
     UserAccount, STORAGE_AMOUNT,
 };
 
+use near_primitives::types::{AccountId, Balance};
+use near_sdk::json_types::{U128, U64};
 use nearswap::util::*;
 use nearswap::{NearCLPContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
-use near_primitives::types::{AccountId, Balance};
-use near_sdk::json_types::{U128, U64};
 use serde_json::json;
 use std::convert::TryInto;
 
-/// Load in contract bytes
-near_sdk_sim::lazy_static! {
-    static ref FUNGIBLE_TOKEN_BYTES: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/nep21_mintable.wasm").as_ref();
+// Load in contract bytes at runtime. Current directory = closes Cargo.toml file location
+near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
+    NEP21_BYTES => "../res/nep21_mintable.wasm"
 }
 
 // Deploy NEP-21 Contract
 pub fn deploy_nep21(
-    master_account: &UserAccount, contract: AccountId, total_supply: U128
+    master_account: &UserAccount,
+    contract: AccountId,
+    total_supply: U128,
 ) -> ContractAccount<FungibleTokenContract> {
     println!("deploy_nep21");
     // uses default values for deposit and gas
@@ -30,7 +32,7 @@ pub fn deploy_nep21(
         // Contract account id
         contract_id: contract,
         // Bytes of contract
-        bytes: &FUNGIBLE_TOKEN_BYTES,
+        bytes: &NEP21_BYTES,
         // User deploying the contract,
         signer_account: master_account,
         // init method
@@ -40,7 +42,8 @@ pub fn deploy_nep21(
 }
 
 pub fn get_nep21_balance(
-    token_contract: &ContractAccount<FungibleTokenContract>, account: &AccountId
+    token_contract: &ContractAccount<FungibleTokenContract>,
+    account: &AccountId,
 ) -> U128 {
     //near_view(&r, &token, "get_balance", &json!({ "owner_id": account }));
     let val = view!(token_contract.get_balance(account.to_string()));
@@ -49,7 +52,8 @@ pub fn get_nep21_balance(
 }
 
 pub fn show_nep21_bal(
-    token_contract: &ContractAccount<FungibleTokenContract>, account: &AccountId
+    token_contract: &ContractAccount<FungibleTokenContract>,
+    account: &AccountId,
 ) -> u128 {
     let bal: u128 = get_nep21_balance(token_contract, account).into();
     println!("Balance check: {} has {}", account, bal);

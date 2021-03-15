@@ -8,7 +8,7 @@ test-debug:
 	@RUST_BACKTRACE=1 cargo test  -- --nocapture
 
 test-unit:
-	@cargo test --lib -- --nocapture
+	@cargo test --lib
 # run specific tests: cargo test --lib <testname>  -- --nocapture
 
 

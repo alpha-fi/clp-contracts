@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
-// a way to optimize memory management
-#[cfg(feature = "wee_alloc")]
-#[cfg(target = "wasm32")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::{ValidAccountId, U128};
@@ -20,6 +14,9 @@ use crate::types::*;
 use crate::util::*;
 
 mod internal;
+
+// a way to optimize memory management
+near_sdk::setup_alloc!();
 
 // Errors
 // E1: pool already exists
@@ -726,8 +723,7 @@ impl NearCLP {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use near_sdk::MockedBlockchain;
-    use near_sdk::{testing_env, VMContext};
+    use near_sdk::{testing_env, MockedBlockchain, VMContext};
     use std::convert::TryInto;
 
     struct Accounts {

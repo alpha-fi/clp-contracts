@@ -8,7 +8,7 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-near-sdk = { git = "https://github.com/near/near-sdk-rs.git", rev="b8c8589" } # tag=""
+near-sdk = { git = "https://github.com/near/near-sdk-rs.git", rev="c926d85" } # tag=""
 
 [dev-dependencies]
 #required for integration tests (simulation)
@@ -17,4 +17,4 @@ log = "0.4"
 env_logger = { version = "0.7.1", default-features = false }
 near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
 funty = "=1.1.0"
-near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", rev="b8c8589" }
+near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", rev="c926d85" }

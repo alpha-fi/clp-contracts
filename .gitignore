@@ -39,3 +39,4 @@ private[.-]*
 
 # editor files
 .dir-locals.el
+.vscode

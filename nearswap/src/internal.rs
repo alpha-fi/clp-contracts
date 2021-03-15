@@ -360,10 +360,7 @@ impl NearSwap {
         assert!(amount_u > 0, "E2: amount must be >0");
         let mut p = self.must_get_pool(&token);
         let shares = p.shares.get(&sender).unwrap_or(0);
-        assert!(
-            shares >= amount_u,
-            "E11: Insufficient amount of shares balance"
-        );
+        assert!(shares >= amount_u, ERR11_NOT_ENOUGH_SHARES);
         let initial_storage = env::storage_usage();
         p.shares.insert(&sender, &(shares - amount_u));
         p.shares.insert(

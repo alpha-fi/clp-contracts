@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-near-sdk = { git = "https://github.com/near/near-sdk-rs.git", rev="c926d85" } # tag="contract_cache_v0"
+near-sdk = { git = "https://github.com/near/near-sdk-rs.git", rev="c926d85" } # ver=v3.0.0-pre.3
 near-contract-standards = { git = "https://github.com/near/near-sdk-rs", rev = "c926d85" }
 uint = { version = "0.9.0", default-features = false }
 

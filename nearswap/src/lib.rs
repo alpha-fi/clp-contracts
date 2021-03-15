@@ -4,12 +4,18 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
+mod deposit;
+pub mod errors;
+mod ft_token;
+pub mod pool;
 pub mod types;
 pub mod util;
 
+use crate::deposit::*;
+use crate::errors::*;
+use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
 
@@ -17,71 +23,6 @@ mod internal;
 
 // a way to optimize memory management
 near_sdk::setup_alloc!();
-
-// Errors
-// E1: pool already exists
-// E2: all token arguments must be positive.
-// E3: required amount of tokens to transfer is bigger then specified max.
-// E4: computed amount of shares to receive is smaller then the minimum required by the user.
-// E5: can't withdraw more shares then currently owned
-// E6: computed amount of near or reserve tokens is smaller than user required minimums for shares redeemption.
-// E7: computed amount of buying tokens is smaller than user required minimum.
-// E8: computed amount of selling tokens is bigger than user required maximum.
-// E9: assets (tokens) must be different in token to token swap.
-// E10: Pool is empty and can't make a swap.
-// E11: Insufficient amount of shares balance.
-// E12: Insufficient amount of NEAR attached
-
-/// PoolInfo is a helper structure to extract public data from a Pool
-#[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
-pub struct PoolInfo {
-    /// balance in yoctoNEAR
-    pub ynear: U128,
-    pub reserve: U128,
-    /// total amount of participation shares. Shares are represented using the same amount of
-    /// tailing decimals as the NEAR token, which is 24
-    pub total_shares: U128,
-}
-
-use std::fmt;
-
-impl fmt::Display for PoolInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return write!(
-            f,
-            "({}, {}, {})",
-            self.ynear.0, self.reserve.0, self.total_shares.0
-        );
-    }
-}
-
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct Pool {
-    ynear: Balance,
-    reserve: Balance,
-    shares: LookupMap<AccountId, Balance>,
-    /// check `PoolInfo.total_shares`
-    total_shares: Balance,
-}
-
-impl Pool {
-    pub fn new(pool_id: Vec<u8>) -> Self {
-        Self {
-            ynear: 0,
-            reserve: 0,
-            shares: LookupMap::new(pool_id),
-            total_shares: 0,
-        }
-    }
-
-    pub fn pool_info(&self) -> PoolInfo {
-        PoolInfo {
-            ynear: self.ynear.into(),
-            reserve: self.reserve.into(),
-            total_shares: self.total_shares.into(),
-        }
-    }
-}
 
 /// NearSwap is the main contract for managing the swap pools and liquidity.
 /// It implements the NEARswap functionality.
@@ -92,6 +33,9 @@ pub struct NearSwap {
     pub owner: AccountId,
     // we are using unordered map because it allows to iterate over the pools
     pools: UnorderedMap<AccountId, Pool>,
+
+    // user deposits
+    deposits: LookupMap<AccountId, AccountDeposit>,
 }
 
 //-------------------------
@@ -106,7 +50,8 @@ impl NearSwap {
         Self {
             fee_dst: o.clone(),
             owner: o,
-            pools: UnorderedMap::new("pools".as_bytes().to_vec()),
+            pools: UnorderedMap::new("p".into()),
+            deposits: LookupMap::new("d".into()),
         }
     }
 
@@ -719,7 +664,6 @@ impl NearSwap {
 // END CONTRACT PUBLIC API
 //-------------------------
 
-//#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
     use super::*;

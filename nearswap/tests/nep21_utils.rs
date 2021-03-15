@@ -8,7 +8,7 @@ use near_sdk_sim::{
 use near_primitives::types::{AccountId, Balance};
 use near_sdk::json_types::{U128, U64};
 use nearswap::util::*;
-use nearswap::{NearCLPContract, PoolInfo};
+use nearswap::{NearSwapContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
 use serde_json::json;
 use std::convert::TryInto;

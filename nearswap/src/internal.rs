@@ -6,7 +6,7 @@ use near_sdk::StorageUsage;
 
 // use near_sdk::Gas;
 
-impl NearCLP {
+impl NearSwap {
     #[inline]
     pub(crate) fn assert_owner(&self) {
         assert!(

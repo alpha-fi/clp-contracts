@@ -83,11 +83,11 @@ impl Pool {
     }
 }
 
-/// NearCLP is the main contract for managing the swap pools and liquidity.
+/// NearSwap is the main contract for managing the swap pools and liquidity.
 /// It implements the NEARswap functionality.
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct NearCLP {
+pub struct NearSwap {
     pub fee_dst: AccountId,
     pub owner: AccountId,
     // we are using unordered map because it allows to iterate over the pools
@@ -98,7 +98,7 @@ pub struct NearCLP {
 // CONTRACT PUBLIC API
 //-------------------------
 #[near_bindgen]
-impl NearCLP {
+impl NearSwap {
     #[init]
     pub fn new(owner: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
@@ -784,17 +784,17 @@ mod tests {
         }
     }
 
-    fn _init(attached_near: Balance) -> (Ctx, NearCLP) {
+    fn _init(attached_near: Balance) -> (Ctx, NearSwap) {
         let mut ctx = Ctx::new(vec![], false);
         ctx.vm.attached_deposit = attached_near;
         testing_env!(ctx.vm.clone());
-        let contract = NearCLP::new("clp_owner".try_into().unwrap());
+        let contract = NearSwap::new("clp_owner".try_into().unwrap());
         return (ctx, contract);
     }
-    fn init() -> (Ctx, NearCLP) {
+    fn init() -> (Ctx, NearSwap) {
         _init(0)
     }
-    fn init_with_storage_deposit() -> (Ctx, NearCLP) {
+    fn init_with_storage_deposit() -> (Ctx, NearSwap) {
         _init(NEP21_STORAGE_DEPOSIT * 120)
     }
 
@@ -803,7 +803,7 @@ mod tests {
     // #[should_panic]
     // fn test_new_twice_fails() {
     //     let (ctx, _c) = init();
-    //     NearCLP::new(ctx.accounts.current);
+    //     NearSwap::new(ctx.accounts.current);
     // }
 
     #[test]
@@ -842,7 +842,7 @@ mod tests {
         c.create_pool("token1".try_into().unwrap());
     }
 
-    fn check_and_create_pool(c: &mut NearCLP, token: &AccountId) {
+    fn check_and_create_pool(c: &mut NearSwap, token: &AccountId) {
         c.create_pool(token.to_string().try_into().unwrap());
         match c.pool_info(token) {
             None => panic!("Pool for {} token is expected", token),

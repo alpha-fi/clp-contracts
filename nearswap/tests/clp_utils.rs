@@ -12,7 +12,7 @@ use near_sdk_sim::{
 use near_primitives::types::{AccountId, Balance};
 use near_sdk::json_types::{ValidAccountId, U128, U64};
 use nearswap::util::*;
-use nearswap::{NearCLPContract, PoolInfo};
+use nearswap::{NearSwapContract, PoolInfo};
 use nep21_mintable::FungibleTokenContract;
 use serde_json::json;
 use std::convert::TryInto;
@@ -24,10 +24,10 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     CLP_WASM_BYTES => "../res/nearswap.wasm"
 }
 
-// Deploy NearCLP Contract
+// Deploy NearSwap Contract
 pub fn deploy_clp() -> (
     UserAccount,
-    ContractAccount<NearCLPContract>,
+    ContractAccount<NearSwapContract>,
     UserAccount,
     UserAccount,
     UserAccount,
@@ -37,7 +37,7 @@ pub fn deploy_clp() -> (
     // uses default values for deposit and gas
     let contract_user = deploy!(
         // Contract Proxy
-        contract: NearCLPContract,
+        contract: NearSwapContract,
         // Contract account id
         contract_id: NEARSWAP_CONTRACT_ID,
         // Bytes of contract
@@ -53,14 +53,14 @@ pub fn deploy_clp() -> (
     (master_account, contract_user, token, alice, carol)
 }
 
-pub fn get_pool_info(clp: &ContractAccount<NearCLPContract>, token: &AccountId) -> PoolInfo {
+pub fn get_pool_info(clp: &ContractAccount<NearSwapContract>, token: &AccountId) -> PoolInfo {
     let val = view!(clp.pool_info(token));
     let value: PoolInfo = val.unwrap_json();
     return value;
 }
 
 pub fn create_pool_add_liquidity(
-    clp: &ContractAccount<NearCLPContract>,
+    clp: &ContractAccount<NearSwapContract>,
     token_contract: &ContractAccount<FungibleTokenContract>,
     owner: &UserAccount,
     token: &UserAccount,

@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn assert_storage_works() {
-        let mut deposit = AccountDeposit {
+        let deposit = AccountDeposit {
             near: 990000000000000000000,
             storage_used: 10,
             tokens:[("token1".to_string(), 100),
@@ -270,7 +270,7 @@ mod tests {
         expected = r#"E21: Not enough NEAR to cover storage. Deposit more NEAR"#
     )]
     fn assert_storage_low() {
-        let mut deposit = AccountDeposit {
+        let deposit = AccountDeposit {
             near: 10,
             storage_used: 10,
             tokens:[("token1".to_string(), 100),
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn assert_near_works() {
-        let mut deposit = AccountDeposit {
+        let deposit = AccountDeposit {
             near: 990000000000000000000,
             storage_used: 10,
             tokens:[("token1".to_string(), 100),
@@ -299,7 +299,7 @@ mod tests {
         expected = r#"E14: Insufficient amount of NEAR in deposit"#
     )]
     fn assert_near_insufficient() {
-        let mut deposit = AccountDeposit {
+        let deposit = AccountDeposit {
             near: 12,
             storage_used: 10,
             tokens:[("token1".to_string(), 100),

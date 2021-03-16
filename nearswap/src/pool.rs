@@ -7,7 +7,7 @@ use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
-//use std::fmt;
+use std::fmt;
 
 // use crate::types::*;
 // use crate::util::*;

@@ -49,11 +49,14 @@ impl NearSwap {
     Deposits attached NEAR.
     Panics if the sender account is not registered. */
     #[payable]
-    pub fn deposit_near(&mut self) {
+    pub fn deposit_near(&mut self, registration_only: Option<bool>) {
         let sender = env::predecessor_account_id();
+        let registration_only = registration_only.unwrap_or(false);
         let mut d = self.get_deposit(&sender);
         let amount = env::attached_deposit();
-        d.near += amount;
+        if !registration_only {
+            d.near += amount;
+        }
         self.deposits.insert(&sender, &d);
         env_log!("Deposit, {} yNEAR", amount);
     }

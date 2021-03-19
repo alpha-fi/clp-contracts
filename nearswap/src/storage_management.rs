@@ -52,7 +52,7 @@ impl StorageManagement for NearSwap {
         
         // storagre available
         let available = account_deposit.near - self.storage_usage();
-        let amount = amount.map(|a| a.0).unwrap_or(available);
+        let amount = if let Some(a) = amount { a.0 } else { available };
         assert!(amount <= available, ERR14_NOT_ENOUGH_NEAR_DEPOSITED);
         Promise::new(account_id.clone()).transfer(amount);
         self.storage_balance_of(account_id.try_into().unwrap())

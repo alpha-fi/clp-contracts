@@ -195,15 +195,19 @@ impl AccountDeposit {
 mod tests {
     use super::AccountDeposit;
     
-    #[test]
-    fn add_works() {
-        let mut deposit = AccountDeposit {
+    fn new_account_deposit() -> AccountDeposit {
+        AccountDeposit {
             near: 12,
             storage_used: 10,
             tokens:[("token1".to_string(), 100),
             ("token2".to_string(), 50)]
             .iter().cloned().collect()
-        };
+        }
+    }
+    
+    #[test]
+    fn add_works() {
+        let mut deposit = new_account_deposit();
 
         AccountDeposit::add(&mut deposit, &"token1".to_string(), 10);
         assert_eq!(deposit.tokens.get(&"token1".to_string()), Some(&110));
@@ -211,12 +215,7 @@ mod tests {
 
     #[test]
     fn add_new_works() {
-        let mut deposit = AccountDeposit {
-            near: 12,
-            storage_used: 10,
-            tokens:[("token1".to_string(), 100)]
-            .iter().cloned().collect()
-        };
+        let mut deposit = new_account_deposit();
 
         AccountDeposit::add(&mut deposit, &"token33".to_string(), 100);
         assert_eq!(deposit.tokens.get(&"token33".to_string()), Some(&100));
@@ -224,13 +223,7 @@ mod tests {
 
     #[test]
     fn remove_works() {
-        let mut deposit = AccountDeposit {
-            near: 12,
-            storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
-            .iter().cloned().collect()
-        };
+        let mut deposit = new_account_deposit();
 
         AccountDeposit::remove(&mut deposit, &"token2".to_string(), 10);
         assert_eq!(deposit.tokens.get(&"token2".to_string()), Some(&40));
@@ -241,13 +234,7 @@ mod tests {
         expected = r#"E13: Insufficient amount of tokens in deposit"#
     )]
     fn remove_deposit_low() {
-        let mut deposit = AccountDeposit {
-            near: 12,
-            storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
-            .iter().cloned().collect()
-        };
+        let mut deposit = new_account_deposit();
 
         AccountDeposit::remove(&mut deposit, &"token2".to_string(), 1000);
     }
@@ -257,8 +244,7 @@ mod tests {
         let deposit = AccountDeposit {
             near: 990000000000000000000,
             storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
+            tokens:[("token1".to_string(), 100)]
             .iter().cloned().collect()
         };
 
@@ -270,13 +256,7 @@ mod tests {
         expected = r#"E21: Not enough NEAR to cover storage. Deposit more NEAR"#
     )]
     fn assert_storage_low() {
-        let deposit = AccountDeposit {
-            near: 10,
-            storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
-            .iter().cloned().collect()
-        };
+        let deposit = new_account_deposit();
 
         AccountDeposit::assert_storage(&deposit);
     }
@@ -286,8 +266,7 @@ mod tests {
         let deposit = AccountDeposit {
             near: 990000000000000000000,
             storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
+            tokens:[("token1".to_string(), 100)]
             .iter().cloned().collect()
         };
 
@@ -299,13 +278,7 @@ mod tests {
         expected = r#"E14: Insufficient amount of NEAR in deposit"#
     )]
     fn assert_near_insufficient() {
-        let deposit = AccountDeposit {
-            near: 12,
-            storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
-            .iter().cloned().collect()
-        };
+        let deposit = new_account_deposit();
 
         AccountDeposit::assert_near(&deposit, 1);
     }

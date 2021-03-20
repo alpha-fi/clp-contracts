@@ -7,10 +7,8 @@ use near_sdk::{env, near_bindgen, AccountId, Balance, PromiseOrValue, StorageUsa
 
 //use crate::errors::*;
 use crate::ft_token::*;
+use crate::constants::*;
 use crate::*;
-
-// TODO: move to other place
-const STORAGE_PRICE_PER_BYTE: Balance = env::STORAGE_PRICE_PER_BYTE;
 
 /**********************
    DEPOSIT AND STORAGE
@@ -171,6 +169,11 @@ impl AccountDeposit {
         }
     }
 
+    pub fn storage_usage(&self) -> Balance {
+        (MIN_ACCOUNT_DEPOSIT_LENGTH + self.tokens.len() as u128 * (MAX_ACCOUNT_LENGTH + 16))
+            * env::storage_byte_cost()
+    }
+
     #[inline]
     pub(crate) fn assert_storage(&self) {
         assert!(
@@ -196,4 +199,9 @@ impl AccountDeposit {
 
 // TODO make unit tests for AccountDeposit
 #[cfg(test)]
-mod tests {}
+mod tests {
+    #[test]
+    fn works() {
+
+    }
+}

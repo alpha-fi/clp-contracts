@@ -1,7 +1,11 @@
 use near_contract_standards::storage_management::{
     StorageBalance, StorageBalanceBounds, StorageManagement,
 };
+use near_sdk::{assert_one_yocto, env, near_bindgen, AccountId, Balance};
+use std::convert::TryInto;
+
 use crate::*;
+use crate::constants::*;
 
 /// Implements users storage management for NearSwap.
 #[near_bindgen]
@@ -11,31 +15,33 @@ impl StorageManagement for NearSwap {
     #[payable]
     fn storage_deposit(
         &mut self,
+        account_id: Option<ValidAccountId>,
         registration_only: Option<bool>,
     ) -> StorageBalance {
         let amount = env::attached_deposit();
-        let account_id = env::predecessor_account_id();
+        let account_id = account_id
+            .map(|a| a.into())
+            .unwrap_or_else(|| env::predecessor_account_id());
         let registration_only = registration_only.unwrap_or(false);
         let min_balance = self.storage_balance_bounds().min.0;
         if amount < min_balance {
-            env::panic(ERR12_NOT_ENOUGH_NEAR);
+            panic!(ERR12_NOT_ENOUGH_NEAR);
         }
         if registration_only {
             // Registration only setups the account but doesn't leave space for tokens.
             if self.deposits.contains_key(&account_id) {
-                log!(ERR22_ACC_ALREADY_REGISTERED);
                 if amount > 0 {
                     Promise::new(env::predecessor_account_id()).transfer(amount);
                 }
             } else {
-                self.deposit_near(registration_only);
+                self.deposit_near(registration_only.into());
                 let refund = amount - min_balance;
                 if refund > 0 {
                     Promise::new(env::predecessor_account_id()).transfer(refund);
                 }
             }
         } else {
-            self.deposit_near(registration_only);
+            self.deposit_near(registration_only.into());
         }
         self.storage_balance_of(account_id.try_into().unwrap())
             .unwrap()
@@ -51,7 +57,7 @@ impl StorageManagement for NearSwap {
             .expect(ERR20_ACC_NOT_REGISTERED);
         
         // storagre available
-        let available = account_deposit.near - self.storage_usage();
+        let available = account_deposit.near - account_deposit.storage_usage();
         let amount = if let Some(a) = amount { a.0 } else { available };
         assert!(amount <= available, ERR14_NOT_ENOUGH_NEAR_DEPOSITED);
         Promise::new(account_id.clone()).transfer(amount);
@@ -59,9 +65,26 @@ impl StorageManagement for NearSwap {
             .unwrap()
     }
 
+    #[allow(unused_variables)]
+    fn storage_unregister(&mut self, force: Option<bool>) -> bool {
+        assert_one_yocto();
+        let account_id = env::predecessor_account_id();
+        if let Some(account_deposit) = self.deposits.get(&account_id) {
+            assert!(
+                account_deposit.tokens.is_empty(),
+                "ERR_STORAGE_UNREGISTER_TOKENS_NOT_EMPTY"
+            );
+            self.deposits.remove(&account_id);
+            Promise::new(account_id.clone()).transfer(account_deposit.near);
+            true
+        } else {
+            false
+        }
+    }
+
     fn storage_balance_bounds(&self) -> StorageBalanceBounds {
         StorageBalanceBounds {
-            min: AccountDeposit::min_storage_usage().into(),
+            min: U128(MIN_ACCOUNT_DEPOSIT_LENGTH * (env::storage_byte_cost())),
             max: None,
         }
     }
@@ -73,8 +96,8 @@ impl StorageManagement for NearSwap {
             .get(account_id.as_ref())
             .expect(ERR20_ACC_NOT_REGISTERED);
         Some(StorageBalance {
-            total: U128(acc_deposits.amount),
-            available: U128(acc_deposits.storage_available()),
+            total: U128(acc_deposits.near),
+            available: U128(acc_deposits.near - acc_deposits.storage_usage()),
         })
     }
 }

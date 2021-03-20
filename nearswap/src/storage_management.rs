@@ -94,8 +94,8 @@ impl StorageManagement for NearSwap {
         let acc_deposits = self
             .deposits
             .get(account_id.as_ref())
-            .expect(ERR20_ACC_NOT_REGISTERED);
-        Some(StorageBalance {
+            .unwrap_or(return None);
+        return Some(StorageBalance {
             total: U128(acc_deposits.near),
             available: U128(acc_deposits.near - acc_deposits.storage_usage()),
         })

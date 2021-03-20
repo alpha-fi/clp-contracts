@@ -197,11 +197,95 @@ impl AccountDeposit {
 //   we don't do the storage refunds, instead we shold accumulate what storage has been used and keeping the following invariant all the time: account_deposit.amount >= account_deposit.storage  * STORAGE_PRICE_PER_BYTE
 // +
 
-// TODO make unit tests for AccountDeposit
 #[cfg(test)]
 mod tests {
+    use super::AccountDeposit;
+    
+    fn new_account_deposit() -> AccountDeposit {
+        AccountDeposit {
+            near: 12,
+            storage_used: 10,
+            tokens:[("token1".to_string(), 100),
+            ("token2".to_string(), 50)]
+            .iter().cloned().collect()
+        }
+    }
+    
     #[test]
-    fn works() {
+    fn add_works() {
+        let mut deposit = new_account_deposit();
 
+        AccountDeposit::add(&mut deposit, &"token1".to_string(), 10);
+        assert_eq!(deposit.tokens.get(&"token1".to_string()), Some(&110));
+    }
+
+    #[test]
+    fn add_new_works() {
+        let mut deposit = new_account_deposit();
+
+        AccountDeposit::add(&mut deposit, &"token33".to_string(), 100);
+        assert_eq!(deposit.tokens.get(&"token33".to_string()), Some(&100));
+    }
+
+    #[test]
+    fn remove_works() {
+        let mut deposit = new_account_deposit();
+
+        AccountDeposit::remove(&mut deposit, &"token2".to_string(), 10);
+        assert_eq!(deposit.tokens.get(&"token2".to_string()), Some(&40));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = r#"E13: Insufficient amount of tokens in deposit"#
+    )]
+    fn remove_deposit_low() {
+        let mut deposit = new_account_deposit();
+
+        AccountDeposit::remove(&mut deposit, &"token2".to_string(), 1000);
+    }
+
+    #[test]
+    fn assert_storage_works() {
+        let deposit = AccountDeposit {
+            near: 990000000000000000000,
+            storage_used: 10,
+            tokens:[("token1".to_string(), 100)]
+            .iter().cloned().collect()
+        };
+
+        AccountDeposit::assert_storage(&deposit);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = r#"E21: Not enough NEAR to cover storage. Deposit more NEAR"#
+    )]
+    fn assert_storage_low() {
+        let deposit = new_account_deposit();
+
+        AccountDeposit::assert_storage(&deposit);
+    }
+
+    #[test]
+    fn assert_near_works() {
+        let deposit = AccountDeposit {
+            near: 990000000000000000000,
+            storage_used: 10,
+            tokens:[("token1".to_string(), 100)]
+            .iter().cloned().collect()
+        };
+
+        AccountDeposit::assert_near(&deposit, 10);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = r#"E14: Insufficient amount of NEAR in deposit"#
+    )]
+    fn assert_near_insufficient() {
+        let deposit = new_account_deposit();
+
+        AccountDeposit::assert_near(&deposit, 1);
     }
 }

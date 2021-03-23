@@ -140,7 +140,6 @@ mod tests {
 
             deposits: LookupMap::new("d".into()),
         };
-
         near.deposits.insert(&"owner".to_string(), &ac);
 
         return near;

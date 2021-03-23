@@ -49,7 +49,6 @@ impl NearSwap {
     #[payable]
     pub fn deposit_near(&mut self) {
         let sender = env::predecessor_account_id();
-        let registration_only = registration_only.unwrap_or(false);
         let mut d = self.get_deposit(&sender);
         let amount = env::attached_deposit();
         d.near += amount;

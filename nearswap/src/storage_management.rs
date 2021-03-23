@@ -113,13 +113,19 @@ mod tests {
     use super::StorageManagement;
     use super::*;
 
+    use near_sdk::test_utils::{accounts, VMContextBuilder};
+    use near_sdk::{testing_env, BlockHeight, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
+
     fn new_near_swap() -> NearSwap {
         let ac = AccountDeposit {
             near: 12,
             storage_used: 10,
-            tokens:[("token1".to_string(), 100),
-            ("token2".to_string(), 50)]
-            .iter().cloned().collect()
+            tokens: HashMap::new(),
         };
 
         let mut near = NearSwap {
@@ -138,9 +144,16 @@ mod tests {
 
     #[test]
     fn storage_balance_works() {
+        init_blockchain();
+
         let near_swap = new_near_swap();
 
-        let x = StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap());
-        //assert!(x, "");
+        let res = StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap());
+        let expected = StorageBalance {
+            total: U128(12),
+            available: U128(12),
+        };
+        //println!("Here {:?}", Some(res));
+        //assert_eq!(res, expected);
     }
 }

@@ -97,14 +97,27 @@ impl StorageManagement for NearSwap {
 
     // check if a user is registered by calling
     fn storage_balance_of(&self, account_id: ValidAccountId) -> Option<StorageBalance> {
-        let acc_deposits = self
+        println!("HERE {}", account_id.as_ref());
+        if self.deposits.contains_key(account_id.as_ref()) {
+            let acc_deposits = self
             .deposits
             .get(account_id.as_ref())
-            .unwrap_or(return None);
+            .unwrap_or_default();
+            return Some(StorageBalance {
+                total: U128(acc_deposits.near),
+                available: U128(acc_deposits.near - acc_deposits.storage_usage()),
+            })
+        } else {
+            return None;
+        }
+        /*let acc_deposits = self
+            .deposits
+            .get(account_id.as_ref())
+            .unwrap_or_default();
         return Some(StorageBalance {
             total: U128(acc_deposits.near),
             available: U128(acc_deposits.near - acc_deposits.storage_usage()),
-        })
+        })*/
     }
 }
 
@@ -123,7 +136,7 @@ mod tests {
 
     fn new_near_swap() -> NearSwap {
         let ac = AccountDeposit {
-            near: 12,
+            near: 9900000000000000000000,
             storage_used: 10,
             tokens: HashMap::new(),
         };
@@ -148,12 +161,10 @@ mod tests {
 
         let near_swap = new_near_swap();
 
-        let res = StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap());
-        let expected = StorageBalance {
-            total: U128(12),
-            available: U128(12),
-        };
-        //println!("Here {:?}", Some(res));
-        //assert_eq!(res, expected);
+        StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap()).unwrap();
+
+        // unwrapping this value will result in error because `owner1` is not in deposits map
+        // therefore function returns None
+        StorageManagement::storage_balance_of(&near_swap, "owner1".to_string().try_into().unwrap());
     }
 }

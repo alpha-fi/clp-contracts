@@ -97,7 +97,6 @@ impl StorageManagement for NearSwap {
 
     // check if a user is registered by calling
     fn storage_balance_of(&self, account_id: ValidAccountId) -> Option<StorageBalance> {
-        println!("HERE {}", account_id.as_ref());
         if self.deposits.contains_key(account_id.as_ref()) {
             let acc_deposits = self
             .deposits

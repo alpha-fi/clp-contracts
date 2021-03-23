@@ -110,14 +110,6 @@ impl StorageManagement for NearSwap {
         } else {
             return None;
         }
-        /*let acc_deposits = self
-            .deposits
-            .get(account_id.as_ref())
-            .unwrap_or_default();
-        return Some(StorageBalance {
-            total: U128(acc_deposits.near),
-            available: U128(acc_deposits.near - acc_deposits.storage_usage()),
-        })*/
     }
 }
 

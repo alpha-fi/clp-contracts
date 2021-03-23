@@ -25,12 +25,11 @@ impl StorageManagement for NearSwap {
             .unwrap_or_else(|| env::predecessor_account_id());
         let registration_only = registration_only.unwrap_or(false);
         let min_balance = self.storage_balance_bounds().min.0;
-        if amount < min_balance {
-            panic!(ERR12_NOT_ENOUGH_NEAR);
-        }
+        assert!(amount < min_balance, ERR12_NOT_ENOUGH_NEAR);
         if registration_only {
             // Registration only setups the account but doesn't leave space for tokens.
             if self.deposits.contains_key(&account_id) {
+               env::log("Account already registered");
                 if amount > 0 {
                     Promise::new(env::predecessor_account_id()).transfer(amount);
                 }
@@ -40,12 +39,13 @@ impl StorageManagement for NearSwap {
                     Promise::new(env::predecessor_account_id()).transfer(refund);
                 }
 
-                let _acc_deposit = AccountDeposit {
+                let acc_deposit = AccountDeposit {
                     near: 0,
                     storage_used: 0,
                     tokens: HashMap::new()
                 };
                 self.deposits.insert(&account_id, &_acc_deposit);
+                return StorageBalance { min_balance, None };
             }
         } else {
             self.deposit_near();

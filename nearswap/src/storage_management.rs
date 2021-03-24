@@ -135,9 +135,7 @@ mod tests {
         let mut near = NearSwap {
             fee_dst: "owner".to_string(),
             owner: "owner".to_string(),
-            
             pools: UnorderedMap::new("p".into()),
-
             deposits: LookupMap::new("d".into()),
         };
         near.deposits.insert(&"owner".to_string(), &ac);
@@ -148,7 +146,6 @@ mod tests {
     #[test]
     fn storage_balance_works() {
         init_blockchain();
-
         let near_swap = new_near_swap();
 
         StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap()).unwrap();

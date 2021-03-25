@@ -9,6 +9,7 @@
 // E8: computed amount of selling tokens is bigger than user required maximum.
 // E9: assets (tokens) must be different in token to token swap.
 // E10: Pool is empty and can't make a swap.
+// E22: Only owner can call this function
 
 pub const ERR11_NOT_ENOUGH_SHARES: &str = "E11: Insufficient amount of shares balance";
 pub const ERR12_NOT_ENOUGH_NEAR: &str = "E12: Insufficient amount of NEAR attached";

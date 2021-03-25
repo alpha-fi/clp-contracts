@@ -11,7 +11,7 @@ impl NearSwap {
     pub(crate) fn assert_owner(&self) {
         assert!(
             env::predecessor_account_id() == self.owner,
-            "Only the owner can call this function"
+            "E22: Only owner can call this function"
         );
     }
 

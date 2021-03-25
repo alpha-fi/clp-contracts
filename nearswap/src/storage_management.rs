@@ -101,7 +101,7 @@ impl StorageManagement for NearSwap {
             let acc_deposits = self
             .deposits
             .get(account_id.as_ref())
-            .unwrap_or_default();
+            .unwrap();
             return Some(StorageBalance {
                 total: U128(acc_deposits.near),
                 available: U128(acc_deposits.near - acc_deposits.storage_usage()),
@@ -148,10 +148,18 @@ mod tests {
         init_blockchain();
         let near_swap = new_near_swap();
 
-        StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap()).unwrap();
+        let result = StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap()).unwrap();
 
-        // unwrapping this value will result in error because `owner1` is not in deposits map
-        // therefore function returns None
-        StorageManagement::storage_balance_of(&near_swap, "owner1".to_string().try_into().unwrap());
+        assert_eq!(result.total.0, 9900000000000000000000);
+    }
+
+    #[test]
+    fn storage_balance_error() {
+        init_blockchain();
+        let near_swap = new_near_swap();
+
+        let result = StorageManagement::storage_balance_of(&near_swap, "owner1".to_string().try_into().unwrap()).is_none();
+        
+        assert!(result, true);
     }
 }

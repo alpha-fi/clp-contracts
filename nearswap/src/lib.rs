@@ -47,7 +47,6 @@ pub struct NearSwap {
 impl NearSwap {
     #[init]
     pub fn new(owner: ValidAccountId) -> Self {
-        assert!(!env::state_exists(), "Already initialized");
         let o = AccountId::from(owner);
         Self {
             fee_dst: o.clone(),
@@ -766,7 +765,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Only the owner can call this function")]
+    #[should_panic(expected = "E22: Only owner can call this function")]
     fn change_owner_other_account() {
         let (_, mut c) = init();
         let owner2: ValidAccountId = "new_owner_near".try_into().unwrap();

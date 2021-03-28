@@ -11,9 +11,12 @@ use near_sdk::{AccountId, Balance};
 
 use crate::*;
 
+#[cfg(test)]
+use std::fmt;
+
 /// PoolInfo is a helper structure to extract public data from a Pool
+#[cfg(not(test))]
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
-#[cfg_attr(feature = "test", derive(Debug, PartialEq))]
 pub struct PoolInfo {
     /// balance in yNEAR
     pub ynear: U128,
@@ -22,6 +25,16 @@ pub struct PoolInfo {
     /// tailing decimals as the NEAR token, which is 24
     pub total_shares: U128,
 }
+
+
+#[cfg(test)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
+pub struct PoolInfo {
+    pub ynear: U128,
+    pub tokens: U128,
+    pub total_shares: U128,
+}
+
 
 #[cfg(test)]
 impl fmt::Display for PoolInfo {

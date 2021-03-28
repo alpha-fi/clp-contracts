@@ -1,3 +1,8 @@
+/**********************
+  DEPOSIT AND STORAGE
+  MANAGEMENT
+***********************/
+
 use std::collections::HashMap;
 use std::convert::TryInto;
 
@@ -11,11 +16,6 @@ use near_sdk::{
 use crate::constants::*;
 use crate::ft_token::*;
 use crate::*;
-
-/**********************
-   DEPOSIT AND STORAGE
-       MANAGEMENT
-***********************/
 
 // token deposits are done through NEP-141 ft_transfer_call to the NEARswap contract.
 #[near_bindgen]
@@ -192,6 +192,13 @@ impl AccountDeposit {
             self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
             ERR21_ACC_STORAGE_TOO_LOW
         )
+    }
+
+    // TODO: add unit tests
+    pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {
+        let s = env::storage_usage();
+        self.storage_used += s - tx_start_storage;
+        self.assert_storage();
     }
 }
 

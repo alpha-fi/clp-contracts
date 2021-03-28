@@ -128,7 +128,7 @@ impl NearSwap {
         max_tokens: U128,
         min_shares: U128,
     ) -> U128 {
-        // TODO: update storage
+        let start_storage = env::storage_usage();
         let mut p = self.get_pool(&token);
         let caller = env::predecessor_account_id();
         let ynear: Balance = ynear.into();
@@ -142,6 +142,7 @@ impl NearSwap {
             p.add_liquidity(&caller, ynear, max_tokens, min_shares.into());
         d.remove(&token, added_tokens);
         d.remove_near(ynear);
+        d.update_storage(start_storage);
         self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
 
@@ -400,34 +401,6 @@ impl NearSwap {
         self._price_swap_tokens_out(&from, &to, tokens_out.into())
             .3
             .into()
-    }
-
-    pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
-        println!("enter add_liquidity_transfer_callback");
-        // TODO: handle refund from nep21
-        assert_eq!(
-            env::current_account_id(),
-            env::predecessor_account_id(),
-            "Can be called only as a callback"
-        );
-
-        // TODO: simulation doesn't allow using a promise inside callbacks.
-        // For now we just log result
-        if !is_promise_success() {
-            env_log!(
-                "add_liquidity_transfer_callback: token {} transfer FAILED!",
-                token
-            );
-            panic!("callback");
-            //TODO ROLLBACK add_liquidity
-        }
-        println!("PromiseResult  transfer succeeded");
-
-        // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
-        /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
-            Promise::new(env::current_account_id()).stake(0, self.stake_public_key.clone());
-        }
-         */
     }
 
     /**********************

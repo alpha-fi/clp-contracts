@@ -129,7 +129,7 @@ impl NearSwap {
         min_shares: U128,
     ) -> U128 {
         // TODO: update storage
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let caller = env::predecessor_account_id();
         let ynear: Balance = ynear.into();
         let max_tokens: Balance = max_tokens.into();
@@ -173,7 +173,7 @@ impl NearSwap {
         );
 
         let caller = env::predecessor_account_id();
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
             current_shares >= shares_,
@@ -369,7 +369,7 @@ impl NearSwap {
     pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: U128) -> U128 {
         let tokens_in: u128 = tokens_in.into();
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
+        let p = self.get_pool(&token);
         return self.calc_out_amount(tokens_in, p.tokens, p.ynear).into();
     }
 
@@ -378,7 +378,7 @@ impl NearSwap {
     pub fn price_token_to_near_out(&self, token: AccountId, ynear_out: U128) -> U128 {
         let ynear_out: u128 = ynear_out.into();
         assert!(ynear_out > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
+        let p = self.get_pool(&token);
         return self.calc_in_amount(ynear_out, p.tokens, p.ynear).into();
     }
 
@@ -464,7 +464,7 @@ impl NearSwap {
 
     /// Returns the `owner` shares balance of a pool identified by the `token`.
     pub fn balance_of(&self, token: AccountId, holder: AccountId) -> U128 {
-        self.must_get_pool(&token)
+        self.get_pool(&token)
             .shares
             .get(&holder)
             .unwrap_or(0)

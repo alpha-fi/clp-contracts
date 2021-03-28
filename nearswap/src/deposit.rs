@@ -3,7 +3,9 @@ use std::convert::TryInto;
 
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, PromiseOrValue, StorageUsage};
+use near_sdk::{
+    assert_one_yocto, env, near_bindgen, AccountId, Balance, PromiseOrValue, StorageUsage,
+};
 
 //use crate::errors::*;
 use crate::constants::*;
@@ -31,6 +33,7 @@ impl FungibleTokenReceiver for NearSwap {
     ) -> PromiseOrValue<U128> {
         let token = env::predecessor_account_id();
         let sender_id = AccountId::from(sender_id);
+        // TODO: chekc if token is whitelisted to avoid spam attacks.
 
         let mut d = self.get_deposit(&sender_id);
         d.add(&token, amount.into());
@@ -56,11 +59,12 @@ impl NearSwap {
         env_log!("Deposit, {} yNEAR", amount);
     }
 
-    pub fn withdraw_near_deposit(
-        &mut self,
-        amount: U128,
-        recipient: Option<ValidAccountId>,
-    ) -> Promise {
+    /**
+    Withdraws near from deposit.
+    Requires payment of exactly one yNEAR to enforce wallet confirmation. */
+    #[payable]
+    pub fn withdraw_near(&mut self, amount: U128, recipient: Option<ValidAccountId>) -> Promise {
+        assert_one_yocto();
         let sender = env::predecessor_account_id();
         let recipient = if let Some(a) = recipient {
             AccountId::from(a)
@@ -75,25 +79,30 @@ impl NearSwap {
         Promise::new(recipient).transfer(amount)
     }
 
-    pub fn withdraw_token_deposit(
+    /**
+    Withdraws tokens from deposit.
+    Requires payment of exactly one yNEAR to enforce wallet confirmation.
+    Note: `token` doesn't need to be ValidAccountId because it's already registered. */
+    #[payable]
+    pub fn withdraw_token(
         &mut self,
-        token: ValidAccountId,
+        token: AccountId,
         amount: U128,
         recipient: Option<ValidAccountId>,
         is_contract: bool,
         tx_call_msg: String,
     ) {
+        assert_one_yocto();
         let sender = env::predecessor_account_id();
         let recipient = if let Some(a) = recipient {
             AccountId::from(a)
         } else {
             sender.clone()
         };
-        let token_acc = AccountId::from(token.clone());
-        env_log!("Deposit withdraw, {} {}", amount.0, token_acc);
+        env_log!("Deposit withdraw, {} {}", amount.0, token);
         let mut d = self.get_deposit(&sender);
         let amount = u128::from(amount);
-        d.remove(&token_acc, amount);
+        d.remove(&token, amount);
         self.deposits.insert(&sender, &d);
 
         if is_contract {
@@ -101,7 +110,7 @@ impl NearSwap {
                 recipient.try_into().unwrap(),
                 amount.into(),
                 Some("NEARswap withdraw".to_string()),
-                token.as_ref(),
+                &token,
                 1, // required 1yNEAR for transfers
                 GAS_FOR_FT_TRANSFER,
             );
@@ -111,7 +120,7 @@ impl NearSwap {
                 amount.into(),
                 Some("NEARswap withdraw".to_string()),
                 tx_call_msg,
-                token.as_ref(),
+                &token,
                 1, // required 1yNEAR for transfers
                 GAS_FOR_FT_TRANSFER,
             );

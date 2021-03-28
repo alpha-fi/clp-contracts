@@ -16,7 +16,7 @@ impl NearSwap {
     }
 
     #[inline]
-    pub(crate) fn must_get_pool(&self, ref token: &AccountId) -> Pool {
+    pub(crate) fn get_pool(&self, ref token: &AccountId) -> Pool {
         self.pools
             .get(token)
             .expect("Pool for this token doesn't exist")
@@ -76,7 +76,7 @@ impl NearSwap {
         ynear_in: u128,
     ) -> (Pool, u128) {
         assert!(ynear_in > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
+        let p = self.get_pool(&token);
         let out = self.calc_out_amount(ynear_in, p.ynear, p.tokens).into();
         (p, out)
     }
@@ -87,7 +87,7 @@ impl NearSwap {
         tokens_out: u128,
     ) -> (Pool, U128) {
         assert!(tokens_out > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
+        let p = self.get_pool(&token);
         let in_amount = self.calc_in_amount(tokens_out, p.ynear, p.tokens).into();
         (p, in_amount)
     }
@@ -100,8 +100,8 @@ impl NearSwap {
     ) -> (Pool, Pool, Balance, Balance) {
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
-        let p_in = self.must_get_pool(t_in);
-        let p_out = self.must_get_pool(t_out);
+        let p_in = self.get_pool(t_in);
+        let p_out = self.get_pool(t_out);
         let near_swap = self.calc_out_amount(tokens_in, p_in.tokens, p_in.ynear);
         let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.tokens);
         println!(
@@ -119,8 +119,8 @@ impl NearSwap {
     ) -> (Pool, Pool, Balance, Balance) {
         assert!(tokens_out > 0, "E2: balance arguments must be >0");
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
-        let p_in = self.must_get_pool(&t_in);
-        let p_out = self.must_get_pool(&t_out);
+        let p_in = self.get_pool(&t_in);
+        let p_out = self.get_pool(&t_out);
         let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.tokens);
         let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.tokens, p_in.ynear);
         println!(
@@ -176,7 +176,7 @@ impl NearSwap {
             tokens_out > 0 && max_near_paid > 0,
             "E2: balance arguments must be >0"
         );
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
 
         if max_near_paid < near_to_pay {
@@ -230,7 +230,7 @@ impl NearSwap {
             tokens_paid > 0 && min_near > 0,
             "E2: balance arguments must be >0"
         );
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_near);
         self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
@@ -250,7 +250,7 @@ impl NearSwap {
             near_out > 0 && max_tokens_paid > 0,
             "E2: balance arguments must be >0"
         );
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let tokens_to_pay = self.calc_in_amount(near_out, p.tokens, p.ynear);
         assert_max_pay(tokens_to_pay, max_tokens_paid);
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
@@ -355,7 +355,7 @@ impl NearSwap {
         util::assert_account_is_valid(&recipient);
         let amount_u = u128::from(amount);
         assert!(amount_u > 0, "E2: amount must be >0");
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let shares = p.shares.get(&sender).unwrap_or(0);
         assert!(shares >= amount_u, ERR11_NOT_ENOUGH_SHARES);
         let initial_storage = env::storage_usage();

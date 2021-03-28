@@ -153,6 +153,9 @@ pub struct AccountDeposit {
 }
 
 impl AccountDeposit {
+    /**
+    deposit `token`s. If this is a first depoisit, a new record is created and the minimum
+    required storage is increased. */
     pub(crate) fn add(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
             *x = *x + amount;
@@ -202,10 +205,6 @@ impl AccountDeposit {
     }
 }
 
-// TODO:
-// + finish storage tracking, example: https://github.com/robert-zaremba/vostok-dao/blob/master/src/lib.rs#L97
-//   we don't do the storage refunds, instead we shold accumulate what storage has been used and keeping the following invariant all the time: account_deposit.amount >= account_deposit.storage  * STORAGE_PRICE_PER_BYTE
-// +
 
 #[cfg(test)]
 mod tests {

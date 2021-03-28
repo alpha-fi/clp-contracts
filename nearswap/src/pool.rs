@@ -15,7 +15,7 @@ use crate::*;
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[cfg_attr(feature = "test", derive(Debug, PartialEq))]
 pub struct PoolInfo {
-    /// balance in yoctoNEAR
+    /// balance in yNEAR
     pub ynear: U128,
     pub tokens: U128,
     /// total amount of participation shares. Shares are represented using the same amount of
@@ -93,6 +93,7 @@ impl Pool {
             let p_ynear_256 = u256::from(self.ynear); // ynear in pool
             added_tokens = (ynear_256 * u256::from(self.tokens) / p_ynear_256 + 1).as_u128();
             shares_minted = (ynear_256 * u256::from(self.total_shares) / p_ynear_256).as_u128();
+            // TODO: adjust ynear to max_tokens instead of panicing
             assert!(
                 max_tokens >= added_tokens,
                 "E3: needs to transfer {} of tokens and it's bigger then specified  maximum={}",

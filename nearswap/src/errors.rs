@@ -11,6 +11,8 @@
 // E10: Pool is empty and can't make a swap.
 // E22: Only owner can call this function
 
+pub const ERR02_POSITIVE_ARGS: &str = "E2: balance arguments must be >0";
+
 pub const ERR11_NOT_ENOUGH_SHARES: &str = "E11: Insufficient amount of shares balance";
 pub const ERR12_NOT_ENOUGH_NEAR: &str = "E12: Insufficient amount of NEAR attached";
 pub const ERR13_NOT_ENOUGH_TOKENS_DEPOSITED: &str = "E13: Insufficient amount of tokens in deposit";

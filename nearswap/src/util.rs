@@ -9,14 +9,11 @@ use uint::construct_uint;
 pub const NDENOM: u128 = 1_000_000_000_000_000_000_000_000;
 const NDENOM_ROUNDING: u128 = 500_000_000_000_000_000_000_000;
 
-/// TGas denomination 1 Tera Gas => 1e12 yocto Nears
+/// TGas denomination 1 Tera Gas => 1e12 yNEAR
 pub const TGAS: Gas = 1_000_000_000_000;
 
 /// Prepaid gas costs. TODO: we need to adjust this value properly.
 pub const MAX_GAS: Gas = 200 * TGAS;
-
-/// nep21 may require NEAR deposit for storage to create a new balance
-pub const NEP21_STORAGE_DEPOSIT: u128 = 4 * NDENOM / 100; //0.04 NEAR
 
 // TODO: should we make it customizable?
 /// Price per 1 byte of storage from mainnet genesis config. 100e18
@@ -49,7 +46,7 @@ pub fn is_promise_success() -> bool {
     }
 }
 
-/// yoctoNEAR to NEAR. Rounds to nearest.
+/// yoctoNEAR to NEAR. Rounds down.
 #[inline]
 pub fn yton(yocto_amount: u128) -> u128 {
     (yocto_amount + NDENOM_ROUNDING) / NDENOM

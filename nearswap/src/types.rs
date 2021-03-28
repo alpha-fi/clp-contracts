@@ -10,10 +10,3 @@ pub trait MFTRecipient {
     fn on_mft_receive(&mut self, token: String, from: AccountId, amount: U128, msg: String)
         -> bool;
 }
-
-/// External interface of NEP-21 contracts.
-#[ext_contract(ext_nep21)]
-pub trait NEP21 {
-    fn transfer_from(&mut self, owner_id: AccountId, new_owner_id: AccountId, amount: U128);
-    fn transfer(&mut self, new_owner_id: AccountId, amount: U128);
-}

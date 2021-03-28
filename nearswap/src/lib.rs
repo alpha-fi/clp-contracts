@@ -6,14 +6,14 @@ use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
+mod constants;
 mod deposit;
 pub mod errors;
 mod ft_token;
 pub mod pool;
+mod storage_management;
 pub mod types;
 pub mod util;
-mod storage_management;
-mod constants;
 
 use crate::deposit::*;
 use crate::errors::*;
@@ -76,7 +76,7 @@ impl NearSwap {
     *********************/
 
     /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
-    /// account - which we call the Pool Reserve Token.
+    /// account - which we call the Pool Token.
     /// If a pool for give token exists then "E1" assert exception is thrown.
     /// TODO: charge user for a storage created!
     #[payable]
@@ -98,97 +98,64 @@ impl NearSwap {
         }
     }
 
-    /// Returns list of pools identified as their reserve token AccountId.
+    /// Returns list of pools identified by token AccountId.
     pub fn list_pools(&self) -> Vec<AccountId> {
         return self.pools.keys().collect();
     }
 
-    /// Increases Near and the Reserve token liquidity.
-    /// The supplied funds must preserve current ratio of the liquidity pool.
-    /// Returns amount of LP Shares is minted for the user.
+    /**
+    Transfer $NEAR and tokens from deposit to a pool.
+    The supplied funds must preserve current ratio of the liquidity pool.
+    Arguments:
+     * `ynear` - amount of yNEAR liquidity to add to the `token` pool. If it will require
+       more tokens than `max_tokens`, then the `ynear` will be adjusted (lowerred) to meet
+       the `max_tokens` constraint.
+     * `max_tokens` - max amount of tokens to add to the liquidity
+     * `min_shares` - minimum amount of shares to be minted to make the transaction successful.
+        If 0, then min_shares constraint won't be checked.
+    Returns: amount of LP Shares minted for the user.
+    Panics when:
+     * not enough tokens or NEAR in deposit
+     * not enough NEAR to cover storage fees
+     * `min_shares > 0` and the operation will mint less shares than required.
+    Notes:
+     * `token` - we don't need to use ValidAccountId because token is already registered. */
     #[payable]
-    pub fn add_liquidity(&mut self, token: AccountId, max_tokens: U128, min_shares: U128) -> U128 {
+    pub fn add_liquidity(
+        &mut self,
+        token: AccountId,
+        ynear: U128,
+        max_tokens: U128,
+        min_shares: U128,
+    ) -> U128 {
+        // TODO: update storage
         let mut p = self.must_get_pool(&token);
         let caller = env::predecessor_account_id();
-        let shares_minted;
-        let ynear_amount = env::attached_deposit() - NEP21_STORAGE_DEPOSIT;
-        let added_reserve;
+        let ynear: Balance = ynear.into();
         let max_tokens: Balance = max_tokens.into();
+        let mut d = self.get_deposit(&caller);
         assert!(
-            ynear_amount > 0 && max_tokens > 0,
-            "E2: balance arguments must be >0"
+            ynear > 0 && max_tokens > 0,
+            "E2: added liquidity must be >0"
         );
-
-        // the very first deposit -- we define the constant ratio
-        if p.total_shares == 0 {
-            p.ynear = ynear_amount;
-            shares_minted = p.ynear;
-            p.total_shares = shares_minted;
-            added_reserve = max_tokens;
-            p.reserve = added_reserve;
-            p.shares.insert(&caller, &shares_minted);
-        } else {
-            let ynear_256 = u256::from(ynear_amount);
-            let p_ynear_256 = u256::from(p.ynear);
-            added_reserve = (ynear_256 * u256::from(p.reserve) / p_ynear_256 + 1).as_u128();
-            shares_minted = (ynear_256 * u256::from(p.total_shares) / p_ynear_256).as_u128();
-            env_log!(
-                "shares_to_mint={}, min_shares={}; attached_ynear={}, added_reserve={}, max_added_reserve={}",
-                shares_minted,
-                min_shares.0,
-                ynear_amount,
-                added_reserve, max_tokens
-            );
-            assert!(
-                max_tokens >= added_reserve,
-                "E3: needs to transfer {} of tokens and it's bigger then specified  maximum={}",
-                added_reserve,
-                max_tokens
-            );
-            assert!(
-                u128::from(min_shares) <= shares_minted,
-                "E4: amount minted shares ({}) is smaller then the required minimum",
-                shares_minted
-            );
-            p.shares.insert(
-                &caller,
-                &(p.shares.get(&caller).unwrap_or(0) + shares_minted),
-            );
-            p.reserve += added_reserve;
-            p.ynear += ynear_amount;
-            p.total_shares += shares_minted;
-        }
-
-        env_log!(
-            "Minting {} of shares for {} yNEAR and {} reserve tokens",
-            shares_minted,
-            ynear_amount,
-            added_reserve
-        );
+        let (ynear, added_tokens, shares_minted) =
+            p.add_liquidity(&caller, ynear, max_tokens, min_shares.into());
+        d.remove(&token, added_tokens);
+        d.remove_near(ynear);
+        self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
 
-        // TODO: do proper rollback
-        // Prepare a callback for liquidity transfer rollback which we will attach later on.
-        let callback_args = format!(r#"{{ "token":"{}" }}"#, token).into();
-        let callback = Promise::new(env::current_account_id()).function_call(
-            "add_liquidity_transfer_callback".into(),
-            callback_args,
-            0,
-            5 * TGAS,
+        env_log!(
+            "Minting {} of shares for {} yNEAR and {} tokens",
+            shares_minted,
+            ynear,
+            added_tokens
         );
-        self.schedule_nep21_tx(&token, caller, env::current_account_id(), added_reserve)
-            .then(callback); //after that, the callback will check success/failure
-
-        // TODO:
-        // Handling exception is work-in-progress in NEAR runtime
-        // 1. rollback `p` on changes or move the pool update to a promise
-        // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
-
         return shares_minted.into();
     }
 
     /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    /// `min_ynear` of Near and `min_tokens` of reserve tokens (`token`). Shares are note
+    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are note
     /// exchengable between different pools.
     pub fn withdraw_liquidity(
         &mut self,
@@ -218,26 +185,26 @@ impl NearSwap {
 
         let total_shares2 = u256::from(p.total_shares);
         let shares2 = u256::from(shares_);
-        let ynear_amount = (shares2 * u256::from(p.ynear) / total_shares2).as_u128();
-        let token_amount = (shares2 * u256::from(p.reserve) / total_shares2).as_u128();
+        let ynear = (shares2 * u256::from(p.ynear) / total_shares2).as_u128();
+        let token_amount = (shares2 * u256::from(p.tokens) / total_shares2).as_u128();
         assert!(
-            ynear_amount >= min_ynear && token_amount >= min_tokens,
+            ynear >= min_ynear && token_amount >= min_tokens,
             format!(
                 "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
-                ynear_amount, token_amount
+                ynear, token_amount
             )
         );
 
         env_log!(
-            "Reedeming {:?} shares for {} NEAR and {} reserve tokens",
+            "Reedeming {:?} shares for {} NEAR and {} tokens",
             shares,
-            ynear_amount,
+            ynear,
             token_amount,
         );
         p.shares.insert(&caller, &(current_shares - shares_));
         p.total_shares -= shares_;
-        p.reserve -= token_amount;
-        p.ynear -= ynear_amount;
+        p.tokens -= token_amount;
+        p.ynear -= ynear;
 
         // let prepaid_gas = env::prepaid_gas();
         self.schedule_nep21_tx(
@@ -246,7 +213,7 @@ impl NearSwap {
             caller.clone(),
             token_amount,
         )
-        .then(Promise::new(caller).transfer(ynear_amount));
+        .then(Promise::new(caller).transfer(ynear));
 
         //TODO COMPLEX-CALLBACKS
         self.set_pool(&token, &p);
@@ -256,7 +223,7 @@ impl NearSwap {
      CLP market functions
     **********************/
 
-    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Swaps NEAR to `token` and transfers the tokens to the caller.
     /// Caller attaches near tokens he wants to swap to the transacion under a condition of
     /// receving at least `min_tokens` of `token`.
     #[payable]
@@ -269,24 +236,7 @@ impl NearSwap {
         );
     }
 
-    /// Same as `swap_near_to_token_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_near_to_token_exact_in_xfr(
-        &mut self,
-        token: AccountId,
-        min_tokens: U128,
-        recipient: AccountId,
-    ) {
-        self._swap_n2t_exact_in(
-            &token,
-            env::attached_deposit(),
-            min_tokens.into(),
-            recipient,
-        );
-    }
-
-    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Swaps NEAR to `token` and transfers the tokens to the caller.
     /// Caller attaches maximum amount of NEAR he is willing to swap to receive `tokens_out`
     /// of `token` wants to swap to the transacion. Surplus of NEAR tokens will be returned.
     /// Transaction will panic if the caller doesn't attach enough NEAR tokens.
@@ -299,24 +249,6 @@ impl NearSwap {
             env::attached_deposit(),
             b.clone(),
             b,
-        );
-    }
-
-    /// Same as `swap_near_to_token_exact_out`, but user additionly specifies the `recipient`
-    /// who will receive the reserve tokens after the swap.
-    #[payable]
-    pub fn swap_near_to_token_exact_out_xfr(
-        &mut self,
-        token: AccountId,
-        tokens_out: U128,
-        recipient: AccountId,
-    ) {
-        self._swap_n2t_exact_out(
-            &token,
-            tokens_out.into(),
-            env::attached_deposit(),
-            env::predecessor_account_id(),
-            recipient,
         );
     }
 
@@ -334,20 +266,6 @@ impl NearSwap {
     ) {
         let b = env::predecessor_account_id();
         self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b.clone(), b);
-    }
-
-    /// Same as `swap_token_to_near_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_token_to_near_exact_in_xfr(
-        &mut self,
-        token: AccountId,
-        tokens_paid: U128,
-        min_ynear: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b, recipient);
     }
 
     /// Swaps `token` to NEAR and transfers NEAR to the caller.
@@ -406,28 +324,6 @@ impl NearSwap {
         );
     }
 
-    /// Same as `swap_tokens_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_tokens_exact_in_xfr(
-        &mut self,
-        from: AccountId,
-        to: AccountId,
-        tokens_in: U128,
-        min_tokens_out: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_in(
-            &from,
-            &to,
-            tokens_in.into(),
-            min_tokens_out.into(),
-            b,
-            recipient,
-        );
-    }
-
     /// Swaps two different tokens.
     /// Caller defines the amount of tokens he wants to receive under a condiiton
     /// of not spending more than `max_from_tokens`.
@@ -453,28 +349,6 @@ impl NearSwap {
         );
     }
 
-    /// Same as `swap_tokens_exact_out`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_tokens_exact_out_xfr(
-        &mut self,
-        from: AccountId,
-        to: AccountId,
-        tokens_out: U128,
-        max_tokens_in: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_out(
-            &from,
-            &to,
-            tokens_out.into(),
-            max_tokens_in.into(),
-            b,
-            recipient,
-        );
-    }
-
     /// Calculates amount of tokens user will recieve when swapping `ynear_in` for `token`
     /// assets
     pub fn price_near_to_token_in(&self, token: AccountId, ynear_in: U128) -> U128 {
@@ -496,7 +370,7 @@ impl NearSwap {
         let tokens_in: u128 = tokens_in.into();
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
-        return self.calc_out_amount(tokens_in, p.reserve, p.ynear).into();
+        return self.calc_out_amount(tokens_in, p.tokens, p.ynear).into();
     }
 
     /// Calculates amount of tokens user will need to swap if he wants to receive
@@ -505,7 +379,7 @@ impl NearSwap {
         let ynear_out: u128 = ynear_out.into();
         assert!(ynear_out > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
-        return self.calc_in_amount(ynear_out, p.reserve, p.ynear).into();
+        return self.calc_in_amount(ynear_out, p.tokens, p.ynear).into();
     }
 
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
@@ -795,7 +669,7 @@ mod tests {
                 p,
                 PoolInfo {
                     ynear: 0.into(),
-                    reserve: 0.into(),
+                    tokens: 0.into(),
                     total_shares: 0.into()
                 }
             ),
@@ -834,7 +708,7 @@ mod tests {
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
             ynear: ynear_deposit.into(),
-            reserve: token_deposit.into(),
+            tokens: token_deposit.into(),
             total_shares: ynear_deposit.into(),
         };
         assert_eq!(p, expected_pool, "pool_info should be correct");
@@ -862,7 +736,7 @@ mod tests {
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
-            reserve: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            tokens: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
             total_shares: (ynear_deposit * 2).into(),
         };
         assert_eq!(p, expected_pool, "pool_info should be correct");
@@ -893,7 +767,7 @@ mod tests {
         shares_map.insert(&a, &initial_ynear);
         let p = Pool {
             ynear: initial_ynear,
-            reserve: 10 * NDENOM,
+            tokens: 10 * NDENOM,
             total_shares: 30 * NDENOM,
             shares: shares_map,
         };
@@ -904,7 +778,7 @@ mod tests {
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (ynear_deposit + p.ynear).into(),
-            reserve: (token_deposit + p.reserve).into(),
+            tokens: (token_deposit + p.tokens).into(),
             total_shares: (ynear_deposit + p.ynear).into(),
         };
         assert_eq!(p_info, expected_pool, "pool_info should be correct");
@@ -927,7 +801,7 @@ mod tests {
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
-            reserve: 3 * NDENOM,
+            tokens: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
         };
@@ -940,7 +814,7 @@ mod tests {
         let pi = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: U128::from(shares_bal - amount),
-            reserve: U128::from(2 * NDENOM),
+            tokens: U128::from(2 * NDENOM),
             total_shares: U128::from(shares_bal - amount),
         };
         assert_eq!(pi, expected_pool, "pool_info should be correct");
@@ -968,7 +842,7 @@ mod tests {
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
-            reserve: 22 * NDENOM,
+            tokens: 22 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
         };
@@ -1074,14 +948,14 @@ mod tests {
         let p1 = Pool {
             // 1:4
             ynear: G,
-            reserve: p1_factor * G,
+            tokens: p1_factor * G,
             total_shares: 0,
             shares: LookupMap::new("1".as_bytes().to_vec()),
         };
         let p2 = Pool {
             // 2:1
             ynear: 2 * G,
-            reserve: G,
+            tokens: G,
             total_shares: 0,
             shares: LookupMap::new("2".as_bytes().to_vec()),
         };
@@ -1091,7 +965,7 @@ mod tests {
         let amount: u128 = 1_000_000;
         let amount_net: u128 = 997_000;
         let mut v = c.price_near_to_token_in(t1.clone(), amount.into());
-        let v_expected = amount_net * p1.reserve / (p1.ynear + amount_net);
+        let v_expected = amount_net * p1.tokens / (p1.ynear + amount_net);
         assert_eq!(to_num(v), v_expected);
         let mut v2 = c.price_near_to_token_out(t1.clone(), v.into());
         assert_eq!(to_num(v2), amount, "price_out(price_in) must be identity");

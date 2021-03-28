@@ -15,11 +15,11 @@ impl NearSwap {
         );
     }
 
+    #[inline]
     pub(crate) fn must_get_pool(&self, ref token: &AccountId) -> Pool {
-        match self.pools.get(token) {
-            None => env::panic(b"Pool for this token doesn't exist"),
-            Some(p) => return p,
-        }
+        self.pools
+            .get(token)
+            .expect("Pool for this token doesn't exist")
     }
 
     #[inline]
@@ -77,7 +77,7 @@ impl NearSwap {
     ) -> (Pool, u128) {
         assert!(ynear_in > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
-        let out = self.calc_out_amount(ynear_in, p.ynear, p.reserve).into();
+        let out = self.calc_out_amount(ynear_in, p.ynear, p.tokens).into();
         (p, out)
     }
 
@@ -88,7 +88,7 @@ impl NearSwap {
     ) -> (Pool, U128) {
         assert!(tokens_out > 0, "E2: balance arguments must be >0");
         let p = self.must_get_pool(&token);
-        let in_amount = self.calc_in_amount(tokens_out, p.ynear, p.reserve).into();
+        let in_amount = self.calc_in_amount(tokens_out, p.ynear, p.tokens).into();
         (p, in_amount)
     }
 
@@ -102,8 +102,8 @@ impl NearSwap {
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
         let p_in = self.must_get_pool(t_in);
         let p_out = self.must_get_pool(t_out);
-        let near_swap = self.calc_out_amount(tokens_in, p_in.reserve, p_in.ynear);
-        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.reserve);
+        let near_swap = self.calc_out_amount(tokens_in, p_in.tokens, p_in.ynear);
+        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.tokens);
         println!(
             "Swapping_in {} {} -> {} ynear -> {} {}",
             tokens_in, t_in, near_swap, tokens2_out, t_out
@@ -121,8 +121,8 @@ impl NearSwap {
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
         let p_in = self.must_get_pool(&t_in);
         let p_out = self.must_get_pool(&t_out);
-        let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.reserve);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.reserve, p_in.ynear);
+        let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.tokens);
+        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.tokens, p_in.ynear);
         println!(
             "Swapping_out {} {} -> {} ynear -> {} {}",
             tokens1_to_pay, t_in, near_swap, tokens_out, t_out
@@ -135,23 +135,20 @@ impl NearSwap {
         p: &mut Pool,
         token: &AccountId,
         near: Balance,
-        reserve: Balance,
+        tokens: Balance,
         recipient: AccountId,
     ) {
-        println!(
-            "User purchased {} {} for {} yoctoNEAR",
-            reserve, token, near
-        );
-        p.reserve -= reserve;
+        println!("User purchased {} {} for {} yoctoNEAR", tokens, token, near);
+        p.tokens -= tokens;
         p.ynear += near;
 
-        self.schedule_nep21_tx(token, env::current_account_id(), recipient, reserve);
+        self.schedule_nep21_tx(token, env::current_account_id(), recipient, tokens);
         // TODO: this updated should be done after nep21 transfer
         self.set_pool(token, p);
     }
 
-    /// Pool sells reserve token for `near_paid` NEAR tokens. Asserts that a user buys at least
-    /// `min_tokens` of reserve tokens.
+    /// Pool sells token for `near_paid` NEAR tokens. Asserts that a user buys at least
+    /// `min_tokens` of tokens.
     pub(crate) fn _swap_n2t_exact_in(
         &mut self,
         token: &AccountId,
@@ -165,7 +162,7 @@ impl NearSwap {
         self._swap_near(&mut p, &token, near_paid, tokens_out, recipient);
     }
 
-    /// Pool sells `tokens_out` reserve token for NEAR tokens. Asserts that a user pays no more
+    /// Pool sells `tokens_out` token for NEAR tokens. Asserts that a user pays no more
     /// than `max_near_paid`.
     pub(crate) fn _swap_n2t_exact_out(
         &mut self,
@@ -180,7 +177,7 @@ impl NearSwap {
             "E2: balance arguments must be >0"
         );
         let mut p = self.must_get_pool(&token);
-        let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.reserve);
+        let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
 
         if max_near_paid < near_to_pay {
             env::panic(
@@ -201,25 +198,25 @@ impl NearSwap {
         p: &mut Pool,
         token: &AccountId,
         near: Balance,
-        reserve: Balance,
+        tokens: Balance,
         buyer: AccountId,
         recipient: AccountId,
     ) {
         println!(
-            "User {} purchased {} NEAR tokens for {} reserve tokens to {}",
-            buyer, near, reserve, recipient
+            "User {} purchased {} NEAR tokens for {} tokens to {}",
+            buyer, near, tokens, recipient
         );
-        p.reserve += reserve;
+        p.tokens += tokens;
         p.ynear -= near;
 
         // firstly get tokens from the buyer, then send NEAR to recipient
-        self.schedule_nep21_tx(token, buyer, env::current_account_id(), reserve)
+        self.schedule_nep21_tx(token, buyer, env::current_account_id(), tokens)
             .then(Promise::new(recipient).transfer(near));
         // TODO - this should be in a promise.
         self.set_pool(&token, p);
     }
 
-    /// Pool sells NEAR for `tokens_paid` reserve tokens. Asserts that a user buys at least
+    /// Pool sells NEAR for `tokens_paid` tokens. Asserts that a user buys at least
     /// `min_near`.
     pub(crate) fn _swap_t2n_exact_in(
         &mut self,
@@ -234,12 +231,12 @@ impl NearSwap {
             "E2: balance arguments must be >0"
         );
         let mut p = self.must_get_pool(&token);
-        let near_out = self.calc_out_amount(tokens_paid, p.reserve, p.ynear);
+        let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_near);
         self._swap_reserve(&mut p, token, tokens_paid, near_out, buyer, recipient);
     }
 
-    /// Pool sells `tokens_out` reserve tokens for NEAR tokens. Asserts that a user pays
+    /// Pool sells `tokens_out` tokens for NEAR tokens. Asserts that a user pays
     /// no more than `max_near_paid`.
     pub(crate) fn _swap_t2n_exact_out(
         &mut self,
@@ -254,7 +251,7 @@ impl NearSwap {
             "E2: balance arguments must be >0"
         );
         let mut p = self.must_get_pool(&token);
-        let tokens_to_pay = self.calc_in_amount(near_out, p.reserve, p.ynear);
+        let tokens_to_pay = self.calc_in_amount(near_out, p.tokens, p.ynear);
         assert_max_pay(tokens_to_pay, max_tokens_paid);
         self._swap_reserve(&mut p, token, tokens_to_pay, near_out, buyer, recipient);
     }
@@ -275,9 +272,9 @@ impl NearSwap {
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
-        p1.reserve += token1_in;
+        p1.tokens += token1_in;
         p1.ynear -= near_swap;
-        p2.reserve -= token2_out;
+        p2.tokens -= token2_out;
         p2.ynear += near_swap;
 
         let caller = env::current_account_id();

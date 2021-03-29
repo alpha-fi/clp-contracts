@@ -95,7 +95,7 @@ impl StorageManagement for NearSwap {
 
     fn storage_balance_bounds(&self) -> StorageBalanceBounds {
         StorageBalanceBounds {
-            min: U128(MIN_ACCOUNT_DEPOSIT_LENGTH * (env::storage_byte_cost())),
+            min: U128(INIT_ACCOUNT_STORAGE as u128 * env::storage_byte_cost()),
             max: None,
         }
     }

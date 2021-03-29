@@ -185,14 +185,14 @@ impl AccountDeposit {
     }
 
     pub fn storage_usage(&self) -> Balance {
-        (MIN_ACCOUNT_DEPOSIT_LENGTH + self.tokens.len() as u128 * (MAX_ACCOUNT_LENGTH + 16))
-            * env::storage_byte_cost()
+        self.storage_used as Balance * env::storage_byte_cost()
     }
 
     #[inline]
     pub(crate) fn assert_storage(&self) {
         assert!(
-            self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
+            self.storage_used >= INIT_ACCOUNT_STORAGE
+                && self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
             ERR21_ACC_STORAGE_TOO_LOW
         )
     }
@@ -204,7 +204,6 @@ impl AccountDeposit {
         self.assert_storage();
     }
 }
-
 
 #[cfg(test)]
 mod tests {

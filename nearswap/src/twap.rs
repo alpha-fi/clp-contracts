@@ -1,28 +1,23 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{U128, WrappedTimestamp};
+use near_sdk::json_types::{U128, U64};
+use near_sdk::collections::{LookupMap, Vector};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance, Timestamp};
 use std::convert::{TryFrom,TryInto};
 
 use std::fmt;
+use crate::constants::*;
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(Clone, BorshSerialize, BorshDeserialize, Serialize, Deserialize, Copy)]
 pub struct Twap {
     // timestamp
-    pub block_timestamp: WrappedTimestamp,
+    pub block_timestamp: U64,
     // Number of observations till block_timestamp
     pub num_of_observations: U128,
     // cumulative price of token0 till block_timestamp
     pub price0cumulative: U128,
     // cumulative price of token1 till block_timestamp
     pub price1cumulative: U128,
-    // price at block_timestamp(to know, open, close at time of querying)
-
-    //pub mean_1min: (U128, U128),
-    //pub mean_5min: (U128, U128),
-   // pub mean_1h: (U128, U128),
-    //pub mean_12h: (U128, U128),
-    // move to PoolInfo
 }
 
 impl Twap {
@@ -30,10 +25,12 @@ impl Twap {
     /// @dev block_timestamp _must_ be chronologically equal to or greater than last.block_timestamp, safe for 0 or 1 overflows
     /// @param last The specified observation to be transformed
     /// @param block_timestamp The timestamp of the new observation
+    /// @param price0 price of first token
+    /// @param price1 price of second token
     /// @return Observation The newly populated observation
     pub fn transform(
         last: &Twap,
-        block_timestamp: WrappedTimestamp,
+        block_timestamp: u64,
         price0: u128,
         price1: u128
     ) -> Twap {
@@ -41,27 +38,38 @@ impl Twap {
         let price1cumu = u128::try_from(last.price1cumulative).unwrap();
         return
             Twap {
-                block_timestamp: block_timestamp,
+                block_timestamp: U64(block_timestamp),
                 num_of_observations: U128(u128::try_from(last.num_of_observations).unwrap() + 1),
                 price0cumulative: U128(price0cumu + price0),
                 price1cumulative: U128(price1cumu + price1),
             };
     }
 
-    /// @notice Initialize the oracle array by writing the first slot. Called once for the lifecycle of the observations array
-    /// @param observation The stored oracle array
-    /// @param time The time of the oracle initialization, via block.timestamp truncated to uint32
-    /// @return length of TWAP array
-    pub fn initialize(observation: &mut [Twap; 60000], time: WrappedTimestamp)
-        -> U128
-    {
-        observation[0] = Twap {
-            block_timestamp: time,
+    /// @return instance of Twap structure
+    pub fn new() -> Self {
+        return Self {
+            block_timestamp: U64(1),
             num_of_observations: U128(0),
             price0cumulative: U128(0),
             price1cumulative: U128(0),
+        }
+    }
+    /// @notice Initialize the oracle array by writing the first slot. Called once for the lifecycle of the observations array
+    /// @param observation The stored oracle array
+    /// @param time The time of the oracle initialization
+    /// @return last updated index
+    pub fn initialize(
+        observation: &mut Vec<Twap>, time: u64,
+        price0: u128, price1: u128
+    ) -> usize
+    {
+        observation[0] = Twap {
+            block_timestamp: U64(time),
+            num_of_observations: U128(1),
+            price0cumulative: U128(price0),
+            price1cumulative: U128(price1),
         };
-        return U128(1);
+        return 0;
     }
 
     /// @notice Writes an oracle observation to the array
@@ -73,9 +81,9 @@ impl Twap {
     /// @param max_length The length of TWAP array
     /// @return updated index
     pub fn write(
-        observation: &mut [Twap; 60000],
+        observation: &mut Vec<Twap>,
         index: usize,
-        block_timestamp: WrappedTimestamp,
+        block_timestamp: u64,
         price0: u128,
         price1: u128,
         max_length: usize
@@ -83,8 +91,12 @@ impl Twap {
         let last: &Twap = &observation[index];
 
         let updated_index: usize = (index + 1) % max_length;
-        observation[updated_index] = Twap::transform(last, block_timestamp, price0, price1);
-        
+        if index + 1 >= max_length {
+            observation[updated_index] = Twap::transform(last, block_timestamp, price0, price1);
+        } else {
+            observation.push(Twap::transform(last, block_timestamp, price0, price1));
+        }
+
         return updated_index;
     }
 
@@ -93,10 +105,10 @@ impl Twap {
     // @param timestamp given timestamp
     // @returns index of first timestamp that is greater than or equal to given timestamp
     pub fn binary_search(
-        observation: [Twap; 60000],
+        observation: Vec<Twap>,
         last_updated_index: usize,
         max_length: usize,
-        block_timestamp: WrappedTimestamp,
+        block_timestamp: u64,
         pivoted: bool
     ) -> U128 {
         let mut start: usize = 0;

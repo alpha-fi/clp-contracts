@@ -87,7 +87,6 @@ impl FungibleToken {
     #[init]
     pub fn new(owner_id: AccountId, total_supply: U128, decimals: u8) -> Self {
         let total_supply = total_supply.into();
-        assert!(!env::state_exists(), "Already initialized");
         let mut ft = Self {
             accounts: UnorderedMap::new(b"a".to_vec()),
             total_supply,

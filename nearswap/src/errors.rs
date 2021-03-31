@@ -19,3 +19,4 @@ pub const ERR14_NOT_ENOUGH_NEAR_DEPOSITED: &str = "E14: Insufficient amount of N
 pub const ERR20_ACC_NOT_REGISTERED: &str = "E20: Account not registered";
 pub const ERR21_ACC_STORAGE_TOO_LOW: &str =
     "E21: Not enough NEAR to cover storage. Deposit more NEAR";
+pub const ERR22_ACC_ALREADY_REGISTERED: &str = "E22: Account already registered";

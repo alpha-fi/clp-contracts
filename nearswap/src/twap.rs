@@ -21,7 +21,7 @@ pub struct Twap {
 }
 
 impl Twap {
-    /// @notice Transforms a previous observation into a new observation, given the passage of time and the current tick and liquidity values
+    /// @notice Transforms a previous observation into a new observation.
     /// @dev block_timestamp _must_ be chronologically equal to or greater than last.block_timestamp, safe for 0 or 1 overflows
     /// @param last The specified observation to be transformed
     /// @param block_timestamp The timestamp of the new observation

@@ -43,9 +43,9 @@ pub struct Pool {
     /// check `PoolInfo.total_shares`
     pub total_shares: Balance,
 
-    pub populated: usize,
-    pub last_updated_index: usize,
-    pub pivoted: bool,
+    populated: usize,
+    last_updated_index: usize,
+    pivoted: bool,
     pub observation: Vec<Twap>,
 
     pub mean_1min: (U128, U128),
@@ -86,6 +86,7 @@ impl Pool {
         let reserve = u128::try_from(self.reserve).unwrap();
         let price0: u128 = near / reserve;
         let price1: u128 = reserve / near;
+
         // update current index
         if self.populated == 0 {
             self.last_updated_index = Twap::initialize(&mut self.observation, env::block_timestamp(), price0, price1);
@@ -100,6 +101,29 @@ impl Pool {
                 MAX_LENGTH
             );
         }
+
         // update mean
+        let mut len: usize;
+        if self.pivoted == true {
+            len = MAX_LENGTH.into();
+        } else {
+            len = self.observation.len();
+        }
+
+        self.mean_1min = Twap::calculate_mean(
+            &self.observation, "1min", self.last_updated_index, len, self.pivoted
+        );
+
+        self.mean_5min = Twap::calculate_mean(
+            &self.observation, "5min", self.last_updated_index, len, self.pivoted
+        );
+
+        self.mean_1h = Twap::calculate_mean(
+            &self.observation, "1h", self.last_updated_index, len, self.pivoted
+        );
+
+        self.mean_12h = Twap::calculate_mean(
+            &self.observation, "12h", self.last_updated_index, len, self.pivoted
+        );
     }
 }

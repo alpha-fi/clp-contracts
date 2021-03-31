@@ -63,12 +63,12 @@ impl Twap {
         price0: u128, price1: u128
     ) -> usize
     {
-        observation[0] = Twap {
+        observation.push( Twap {
             block_timestamp: U64(time),
             num_of_observations: U128(1),
             price0cumulative: U128(price0),
             price1cumulative: U128(price1),
-        };
+        });
         return 0;
     }
 
@@ -105,12 +105,12 @@ impl Twap {
     // @param timestamp given timestamp
     // @returns index of first timestamp that is greater than or equal to given timestamp
     pub fn binary_search(
-        observation: Vec<Twap>,
+        observation: &Vec<Twap>,
         last_updated_index: usize,
         max_length: usize,
         block_timestamp: u64,
         pivoted: bool
-    ) -> U128 {
+    ) -> usize {
         let mut start: usize = 0;
         let mut end: usize = last_updated_index + 1;
 
@@ -143,14 +143,47 @@ impl Twap {
                 start = res;
             }
 
-            return U128(u128::try_from(start).unwrap());
+            return start;
         }
 
-        return U128(u128::try_from(start).unwrap());
+        return start;
     }
 
     // function which will calculate mean using str "1min, 5min, 1h, 12h"
-    //pub fn calculateMean(observation: [Twap; 60000], time: str, lastIndex: U128) -> U128 {
-        
-    //}
+    pub fn calculate_mean(
+        observation: &Vec<Twap>, time: &str, last_index: usize,
+        max_length: usize, pivoted: bool
+    ) -> (U128, U128) {
+        let timeDiff: u64;
+        match time {
+            "1min" => timeDiff = 6000_000_0000, // 1 minute in nanoseconds
+            "5min" => timeDiff = 3000_0000_0000, // 5 minute in nanoseconds
+            "1h" => timeDiff = 3600_000_000_000,
+            "12h" => timeDiff = 43200_000_000_000,
+            _ => timeDiff = 0
+        }
+        let req_timestamp = u64::try_from(observation[last_index].block_timestamp).unwrap() - timeDiff;
+
+        let left_index = Twap::binary_search(observation, last_index, max_length, req_timestamp, pivoted);
+
+        //let cmp = u64::try_from(observation[left_index].block_timestamp).unwrap();
+        if left_index == 0 {
+            let total_observe: u128 = u128::try_from(observation[last_index].num_of_observations).unwrap();
+            let price0cumu: u128 = u128::try_from(observation[last_index].price0cumulative).unwrap();
+            let price1cumu: u128 = u128::try_from(observation[last_index].price1cumulative).unwrap();
+            let mean0: u128 = price0cumu / total_observe;
+            let mean1: u128 = price1cumu / total_observe;
+            return (U128(mean0), U128(mean1));
+        } else {
+            let total_observe: u128 = u128::try_from(observation[last_index].num_of_observations).unwrap()
+                                    - u128::try_from(observation[left_index - 1].num_of_observations).unwrap();
+            let price0cumu: u128 = u128::try_from(observation[last_index].price0cumulative).unwrap()
+                                    - u128::try_from(observation[left_index - 1].price0cumulative).unwrap();
+            let price1cumu: u128 = u128::try_from(observation[last_index].price1cumulative).unwrap()
+                                    - u128::try_from(observation[left_index - 1].price1cumulative).unwrap();
+            let mean0: u128 = price0cumu / total_observe;
+            let mean1: u128 = price1cumu / total_observe;
+            return (U128(mean0), U128(mean1));
+        }
+    }
 }

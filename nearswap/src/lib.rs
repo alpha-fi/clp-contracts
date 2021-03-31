@@ -12,11 +12,13 @@ mod ft_token;
 pub mod pool;
 pub mod types;
 pub mod util;
+pub mod twap;
 mod storage_management;
 mod constants;
 
 use crate::deposit::*;
 use crate::errors::*;
+use crate::twap::*;
 use crate::pool::*;
 use crate::types::*;
 use crate::util::*;

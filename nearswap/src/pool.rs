@@ -8,6 +8,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
 use std::fmt;
+use crate::*;
 
 // use crate::types::*;
 // use crate::util::*;
@@ -41,6 +42,8 @@ pub struct Pool {
     pub shares: LookupMap<AccountId, Balance>,
     /// check `PoolInfo.total_shares`
     pub total_shares: Balance,
+    //pub LengthOfObservations: U128,
+    //pub observation[Twap; 60000],
 }
 
 impl Pool {

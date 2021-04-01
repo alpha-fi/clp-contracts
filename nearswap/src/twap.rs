@@ -6,6 +6,7 @@ use near_sdk::{AccountId, Balance, Timestamp};
 use std::convert::{TryFrom,TryInto};
 
 use std::fmt;
+use crate::*;
 use crate::constants::*;
 
 #[derive(Clone, BorshSerialize, BorshDeserialize, Serialize, Deserialize, Copy)]
@@ -29,7 +30,7 @@ impl Twap {
     /// @param price1 price of second token
     /// @return Observation The newly populated observation
     pub fn transform(
-        last: &Twap,
+        last: Twap,
         block_timestamp: u64,
         price0: u128,
         price1: u128
@@ -88,7 +89,7 @@ impl Twap {
         price1: u128,
         max_length: usize
     ) -> usize {
-        let last: &Twap = &observation[index];
+        let last: Twap = observation[index];
 
         let updated_index: usize = (index + 1) % max_length;
         if index + 1 >= max_length {
@@ -149,7 +150,7 @@ impl Twap {
         return start;
     }
 
-    // function which will calculate mean using str "1min, 5min, 1h, 12h"
+    // function which calculates mean using str "1min, 5min, 1h, 12h"
     pub fn calculate_mean(
         observation: &Vec<Twap>, time: &str, last_index: usize,
         max_length: usize, pivoted: bool
@@ -185,5 +186,36 @@ impl Twap {
             let mean1: u128 = price1cumu / total_observe;
             return (U128(mean0), U128(mean1));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Twap;
+    use super::*;
+
+    use near_sdk::test_utils::{accounts, VMContextBuilder};
+    use near_sdk::{testing_env, BlockHeight, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
+
+    #[test]
+    fn write_works() {
+        init_blockchain();
+
+        let mut observation: Vec<Twap> = Vec::new();
+        let last_updated_index = Twap::initialize(&mut observation, env::block_timestamp(), 1, 1);
+        
+        assert!(observation.len() == 1, "Mismatch");
+
+        assert!(observation[0].price0cumulative == U128(1), "Mismatch");
+    }
+
+    #[test]
+    fn binary_search_works() {
+        init_blockchain();
     }
 }

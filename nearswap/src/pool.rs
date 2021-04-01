@@ -43,9 +43,9 @@ pub struct Pool {
     /// check `PoolInfo.total_shares`
     pub total_shares: Balance,
 
-    populated: usize,
-    last_updated_index: usize,
-    pivoted: bool,
+    pub populated: usize,
+    pub last_updated_index: usize,
+    pub pivoted: bool,
     pub observation: Vec<Twap>,
 
     pub mean_1min: (U128, U128),

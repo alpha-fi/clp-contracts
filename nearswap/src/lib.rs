@@ -819,17 +819,19 @@ mod tests {
 
     #[test]
     fn add_liquidity_happy_path() {
-        let (mut ctx, mut c) = init();
+        let ynear_deposit = 3 * NDENOM;
+        let token_deposit = 1 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+
+        let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let ynear_deposit = 30 * NDENOM;
-        let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
-        ctx.set_deposit(ynear_deposit_with_storage);
+        // Problem: Setting value directly in ctx results in failure of test
+        //ctx.set_deposit(ynear_deposit_with_storage);
 
         c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 

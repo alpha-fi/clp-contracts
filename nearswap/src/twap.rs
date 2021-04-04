@@ -91,8 +91,13 @@ impl Twap {
     ) -> usize {
         let last: Twap = observation[index];
 
+        if(block_timestamp == u64::try_from(last.block_timestamp).unwrap()) {
+            observation[index] = Twap::transform(last, block_timestamp, price0, price1);
+            return index;
+        }
+
         let updated_index: usize = (index + 1) % max_length;
-        if index + 1 >= max_length {
+        if updated_index < observation.len() {
             observation[updated_index] = Twap::transform(last, block_timestamp, price0, price1);
         } else {
             observation.push(Twap::transform(last, block_timestamp, price0, price1));
@@ -203,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn write_works() {
+    fn initialize_works() {
         init_blockchain();
 
         let mut observation: Vec<Twap> = Vec::new();
@@ -212,6 +217,98 @@ mod tests {
         assert!(observation.len() == 1, "Mismatch");
 
         assert!(observation[0].price0cumulative == U128(1), "Mismatch");
+        assert!(observation[0].price1cumulative == U128(1), "Mismatch");
+    }
+
+    #[test]
+    fn write_works() {
+        init_blockchain();
+
+        let mut observation: Vec<Twap> = Vec::new();
+        let mut last_updated_index = Twap::initialize(&mut observation, env::block_timestamp(), 1, 1);
+        let max_length = 10;
+
+        let timestamp = env::block_timestamp() + 12;
+        last_updated_index = Twap::write(&mut observation,
+            last_updated_index,
+            timestamp,
+            100, 2,
+            max_length
+        );
+
+        assert!(observation.len() == 2, "Mismatch");
+
+        assert!(observation[1].price0cumulative == U128(101), "Mismatch");
+        assert!(observation[1].price1cumulative == U128(3), "Mismatch");
+
+        // write on same timestamp
+        last_updated_index = Twap::write(&mut observation,
+            last_updated_index,
+            timestamp,
+            10, 10,
+            max_length
+        );
+
+        // verify number of observations is 3 but observation length should be 2
+        assert!(observation.len() == 2, "Mismatch");
+
+        assert!(observation[0].num_of_observations == U128(1));
+        assert!(observation[1].num_of_observations == U128(3));
+
+        // verify cumulative prices
+        assert!(observation[1].price0cumulative == U128(111), "Mismatch");
+        assert!(observation[1].price1cumulative == U128(13), "Mismatch");
+    }
+
+    #[test]
+    fn overwrite_works() {
+        init_blockchain();
+
+        let mut observation: Vec<Twap> = Vec::new();
+        let mut last_updated_index = Twap::initialize(&mut observation, env::block_timestamp(), 1, 1);
+
+        let max_length = 10;
+        // fill all places
+        for i in 1..10 {
+            let timestamp = env::block_timestamp() + i;
+            last_updated_index = Twap::write(&mut observation,
+                last_updated_index,
+                timestamp,
+                1, 1,
+                max_length
+            );
+        }
+
+        assert!(observation.len() == 10, "Mismatch");
+
+        // next observation should be written on 0th Index
+        let mut last_timestamp = env::block_timestamp() + 10;
+        last_updated_index = Twap::write(&mut observation,
+            last_updated_index,
+            last_timestamp,
+            1, 1,
+            max_length
+        );
+
+        assert!(observation.len() == 10, "Mismatch");
+        assert!(observation[0].block_timestamp == U64(last_timestamp), "Mismatch");
+        assert!(observation[0].num_of_observations == U128(11));
+
+        // next observation should be written on 1st Index
+        last_timestamp = env::block_timestamp() + 11;
+        last_updated_index = Twap::write(&mut observation,
+            last_updated_index,
+            last_timestamp,
+            1, 1,
+            max_length
+        );
+
+        env_log!("as {}", observation.len());
+        assert!(observation.len() == 10, "Mismatch");
+        assert!(last_updated_index == 1, "current index mismatch");
+
+        assert!(observation[1].block_timestamp == U64(last_timestamp), "Mismatch");
+        assert!(observation[1].num_of_observations == U128(12));
     }
 
     #[test]

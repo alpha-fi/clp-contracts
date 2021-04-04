@@ -117,6 +117,13 @@ impl Twap {
         block_timestamp: u64,
         pivoted: bool
     ) -> usize {
+
+        // edge case when all values are less than required
+        if u64::try_from(observation[last_updated_index].block_timestamp).unwrap() 
+            < u64::try_from(block_timestamp).unwrap() {
+                panic!("Observation after this timestamp doesn't exist");
+        }
+
         let mut start: usize = 0;
         let mut end: usize = last_updated_index + 1;
 
@@ -205,6 +212,26 @@ mod tests {
     fn init_blockchain() {
         let context = VMContextBuilder::new();
         testing_env!(context.build());
+    }
+
+    // returns observation vector with timestamp [1, 2, 3, 4, 5, 6, 7, 9, 10]
+    fn get_observations() -> (Vec<Twap>, usize) {
+        let mut observation: Vec<Twap> = Vec::new();
+        let mut last_updated_index = Twap::initialize(&mut observation, 1, 1, 1);
+
+        let max_length = 10;
+        // fill all places
+        for i in 2..11 {
+            let timestamp = i;
+            last_updated_index = Twap::write(&mut observation,
+                last_updated_index,
+                timestamp,
+                1, 1,
+                max_length
+            );
+        }
+
+        return (observation, last_updated_index);
     }
 
     #[test]
@@ -312,7 +339,133 @@ mod tests {
     }
 
     #[test]
-    fn binary_search_works() {
+    fn simple_binary_search_works() {
         init_blockchain();
+
+        let (observation, last_updated_index) = get_observations();
+        let max_length = 10;
+
+        // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let mut returned_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            5,
+            false
+        );
+
+        assert!(returned_index == 4, "Wrong Index");
+
+        returned_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            0,
+            false
+        );
+
+        assert!(returned_index == 0, "Wrong Index");
+
+        returned_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            10,
+            false
+        );
+
+        assert!(returned_index == 9, "Wrong Index");
+    }
+
+    #[test]
+    #[should_panic(expected = "Observation after this timestamp doesn't exist")]
+    fn binary_edge_case_works() {
+        init_blockchain();
+
+        let (observation, last_updated_index) = get_observations();
+        let max_length = 10;
+
+        // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            122,
+            false
+        );
+    }
+
+    #[test]
+    fn pivoted_binary_search_works() {
+        init_blockchain();
+
+        let (mut observation, mut last_updated_index) = get_observations();
+        let max_length = 10;
+
+        // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
+        // add more value (that should overwrite last updated value)
+
+        last_updated_index = Twap::write(
+            &mut observation,
+            last_updated_index,
+            13,
+            10, 10,
+            max_length
+        );
+        last_updated_index = Twap::write(
+            &mut observation,
+            last_updated_index,
+            20,
+            10, 10,
+            max_length
+        );
+        last_updated_index = Twap::write(
+            &mut observation,
+            last_updated_index,
+            21,
+            10, 10,
+            max_length
+        );
+        // Updated array [13, 20, 21, 4, 5, 6, 7, 8, 9, 10]
+
+        let mut result_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            3,
+            true
+        );
+
+        assert!(result_index == 3, "Wrong Index");
+
+        result_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            15,
+            true
+        );
+
+        assert!(result_index == 1, "Wrong Index");
+
+        result_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            21,
+            true
+        );
+
+        assert!(result_index == 2, "Wrong Index");
+
+        result_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            10,
+            true
+        );
+
+        assert!(result_index == 9, "Wrong Index");
     }
 }

@@ -151,8 +151,8 @@ impl Twap {
                     start = mid + 1;
                 }
             }
-            if start == max_length - 1 
-                && u64::try_from(observation[start].block_timestamp).unwrap() < u64::try_from(block_timestamp).unwrap() {
+
+            if start == max_length {
                 start = res;
             }
 
@@ -404,7 +404,6 @@ mod tests {
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
         // add more value (that should overwrite last updated value)
-
         last_updated_index = Twap::write(
             &mut observation,
             last_updated_index,
@@ -412,6 +411,17 @@ mod tests {
             10, 10,
             max_length
         );
+
+        let mut result_index = Twap::binary_search(
+            &observation,
+            last_updated_index,
+            max_length,
+            11,
+            true
+        );
+        env_log!("SSS {} {}", result_index, last_updated_index);
+        assert!(result_index == 0, "Wrong Index");
+
         last_updated_index = Twap::write(
             &mut observation,
             last_updated_index,
@@ -428,7 +438,7 @@ mod tests {
         );
         // Updated array [13, 20, 21, 4, 5, 6, 7, 8, 9, 10]
 
-        let mut result_index = Twap::binary_search(
+        result_index = Twap::binary_search(
             &observation,
             last_updated_index,
             max_length,

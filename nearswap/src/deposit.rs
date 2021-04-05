@@ -173,8 +173,7 @@ impl AccountDeposit {
         }
     }
 
-    // TODO: add test
-    /// asserts that the account has anough NEAR to cover storage and use of `amout` NEAR.
+    // asserts that the account has eough NEAR to cover storage and use of `amount` NEAR.
     #[inline]
     pub(crate) fn remove_near(&mut self, ynear: u128) {
         assert!(
@@ -286,7 +285,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E14: Insufficient amount of NEAR in deposit"#)]
     fn remove_near_insufficient() {
-        let d = new_account_deposit();
+        let mut d = new_account_deposit();
         d.remove_near(10);
     }
 }

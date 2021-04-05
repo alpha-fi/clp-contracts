@@ -22,6 +22,7 @@ use crate::errors::*;
 use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
+use crate::constants::*;
 
 // a way to optimize memory management
 near_sdk::setup_alloc!();
@@ -696,7 +697,7 @@ mod tests {
         let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
         ctx.set_deposit(ynear_deposit_with_storage);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
@@ -725,7 +726,7 @@ mod tests {
 
         println!(">> adding liquidity - second time");
 
-        c.add_liquidity(t.clone(), (token_deposit * 10).into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
@@ -766,7 +767,7 @@ mod tests {
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(),token_deposit.into(), ynear_deposit.into(), U128(0));
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {

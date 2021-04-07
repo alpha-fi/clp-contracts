@@ -196,7 +196,6 @@ impl AccountDeposit {
         )
     }
 
-    // TODO: add unit tests
     pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {
         let s = env::storage_usage();
         self.storage_used += s - tx_start_storage;

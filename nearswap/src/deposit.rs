@@ -207,6 +207,14 @@ impl AccountDeposit {
 #[cfg(test)]
 mod tests {
     use super::AccountDeposit;
+    use near_sdk::env;
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
 
     fn new_account_deposit() -> AccountDeposit {
         AccountDeposit {
@@ -287,5 +295,19 @@ mod tests {
     fn remove_near_insufficient() {
         let mut d = new_account_deposit();
         d.remove_near(10);
+    }
+
+    #[test]
+    fn update_storage_works() {
+        init_blockchain();
+        let mut d = new_account_deposit();
+        d.ynear = 1000_0000_0000_0000_0000_0000_0000;
+        d.storage_used = 84;
+
+        let initial = env::storage_usage();
+        d.update_storage(2);
+
+        let expected = initial - 2 + 84;
+        assert!(d.storage_used == expected, "Storage Mismatch");
     }
 }

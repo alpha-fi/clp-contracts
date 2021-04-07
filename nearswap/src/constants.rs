@@ -1,5 +1,3 @@
-use near_sdk::{env, Balance};
-
 // pub const STORAGE_PRICE_PER_BYTE: Balance = env::STORAGE_PRICE_PER_BYTE;
 
 /// Minimum Account Storage used for account registration.

@@ -697,6 +697,16 @@ mod tests {
         let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
         ctx.set_deposit(ynear_deposit_with_storage);
 
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
         c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
@@ -748,13 +758,23 @@ mod tests {
 
     #[test]
     fn add_liquidity2_happy_path() {
-        let ynear_deposit = 3 * NDENOM;
-        let token_deposit = 1 * NDENOM + 1;
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
         let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
+
+        let account_deposit = AccountDeposit {
+            ynear: ynear_deposit + NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
 
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
@@ -762,17 +782,17 @@ mod tests {
         let p = Pool {
             ynear: initial_ynear,
             tokens: 10 * NDENOM,
-            total_shares: 30 * NDENOM,
+            total_shares: initial_ynear,
             shares: shares_map,
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(),token_deposit.into(), ynear_deposit.into(), U128(0));
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (ynear_deposit + p.ynear).into(),
-            tokens: (token_deposit + p.tokens).into(),
+            tokens: (token_deposit + p.tokens + 1).into(), // 1 is added as a minimum token transfer
             total_shares: (ynear_deposit + p.ynear).into(),
         };
         assert_eq!(p_info, expected_pool, "pool_info should be correct");

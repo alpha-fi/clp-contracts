@@ -173,7 +173,7 @@ impl AccountDeposit {
         }
     }
 
-    // asserts that the account has eough NEAR to cover storage and use of `amount` NEAR.
+    // asserts that the account has enough NEAR to cover storage and use of `amount` NEAR.
     #[inline]
     pub(crate) fn remove_near(&mut self, ynear: u128) {
         assert!(
@@ -254,8 +254,8 @@ mod tests {
     #[test]
     fn assert_storage_works() {
         let deposit = AccountDeposit {
-            ynear: 990000000000000000000,
-            storage_used: 10,
+            ynear: 9900000000000000000000,
+            storage_used: 100,
             tokens: [("token1".to_string(), 100)].iter().cloned().collect(),
         };
 

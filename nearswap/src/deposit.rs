@@ -164,6 +164,11 @@ impl AccountDeposit {
         }
     }
 
+    // add near to current deposit
+    pub(crate) fn add_near(&mut self, amount: u128) {
+        self.ynear += amount;
+    }
+
     pub(crate) fn remove(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
             assert!(*x >= amount, ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);

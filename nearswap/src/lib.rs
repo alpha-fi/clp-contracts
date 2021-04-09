@@ -157,45 +157,38 @@ impl NearSwap {
     }
 
     /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are note
-    /// exchengable between different pools.
+    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are not
+    /// exchagable between different pools.
     pub fn withdraw_liquidity(
         &mut self,
         token: AccountId,
-        shares: U128,
         min_ynear: U128,
         min_tokens: U128,
+        shares: U128,
     ) {
-        let shares_: u128 = shares.into();
+        let start_storage = env::storage_usage();
+        let shares: u128 = shares.into();
         let min_ynear: u128 = min_ynear.into();
         let min_tokens: u128 = min_tokens.into();
         assert!(
-            shares_ > 0 && min_ynear > 0 && min_tokens > 0,
-            "E2: balance arguments must be >0"
+            shares > 0 && min_ynear > 0 && min_tokens > 0,
+            "E2: balance arguments must be > 0"
         );
 
         let caller = env::predecessor_account_id();
         let mut p = self.get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
-            current_shares >= shares_,
+            current_shares >= shares,
             format!(
                 "E5: can't withdraw more shares then currently owned ({})",
                 current_shares
             )
         );
 
-        let total_shares2 = u256::from(p.total_shares);
-        let shares2 = u256::from(shares_);
-        let ynear = (shares2 * u256::from(p.ynear) / total_shares2).as_u128();
-        let token_amount = (shares2 * u256::from(p.tokens) / total_shares2).as_u128();
-        assert!(
-            ynear >= min_ynear && token_amount >= min_tokens,
-            format!(
-                "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
-                ynear, token_amount
-            )
-        );
+        let mut d = self.get_deposit(&caller);
+        let (shares, ynear, token_amount) = 
+            p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
 
         env_log!(
             "Reedeming {:?} shares for {} NEAR and {} tokens",
@@ -203,13 +196,11 @@ impl NearSwap {
             ynear,
             token_amount,
         );
-        p.shares.insert(&caller, &(current_shares - shares_));
-        p.total_shares -= shares_;
-        p.tokens -= token_amount;
-        p.ynear -= ynear;
 
-        // .then(Promise::new(caller).transfer(ynear));
-
+        d.add(&token, token_amount);
+        d.add_near(ynear);
+        d.update_storage(start_storage);
+        self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
     }
 

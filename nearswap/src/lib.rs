@@ -805,6 +805,82 @@ mod tests {
     }
 
     #[test]
+    fn add_liquidity_min_shares_path() {
+        let (mut ctx, mut c) = init();
+        let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
+
+        // in unit tests we can't do cross contract calls, so we can't check token1 updates.
+        check_and_create_pool(&mut c, &t);
+
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+ 
+        ctx.set_deposit(ynear_deposit_with_storage);
+
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
+
+        let mut p = c.pool_info(&t).expect("Pool should exist");
+        let mut expected_pool = PoolInfo {
+            ynear: ynear_deposit.into(),
+            tokens: token_deposit.into(),
+            total_shares: ynear_deposit.into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        let a_shares = to_num(c.balance_of(t.clone(), a.clone()));
+        assert_eq!(
+            a_shares, ynear_deposit,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit,
+            "Total supply should be correct"
+        );
+
+        // total supply of an unknown token must be 0
+        assert_eq!(
+            to_num(c.total_supply("unknown-token".to_string())),
+            0,
+            "total supply of other token shouldn't change"
+        );
+
+        println!(">> adding liquidity - second time with minted shares");
+
+        let min_shares = 30000000000000000000000000;
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), min_shares.into());
+        p = c.pool_info(&t).expect("Pool should exist");
+        expected_pool = PoolInfo {
+            ynear: (ynear_deposit * 2).into(),
+            tokens: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            total_shares: (ynear_deposit * 2).into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), a.clone())),
+            ynear_deposit * 2,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit * 2,
+            "Total supply should be correct"
+        );
+    }
+
+    #[test]
     fn withdraw_happy_path() {
         let (ctx, mut c) = init_with_storage_deposit();
         let acc = ctx.accounts.predecessor.clone();

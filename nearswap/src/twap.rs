@@ -85,7 +85,7 @@ impl Twap {
             return self.last_updated_index;
         }
 
-        if self.last_updated_index + 1 >= MAX_LENGTH {
+        if self.last_updated_index + 1 >= max_length {
             self.pivoted = true;
         }
 
@@ -113,6 +113,13 @@ impl Twap {
         max_length: usize,
         block_timestamp: u64,
     ) -> usize {
+
+        // edge case when all values are less than required
+        if u64::try_from(self.observations[self.last_updated_index].block_timestamp).unwrap() 
+            < u64::try_from(block_timestamp).unwrap() {
+            panic!("Observation after this timestamp doesn't exist");
+        }
+
         let mut start: usize = 0;
         let mut end: usize = self.last_updated_index + 1;
 
@@ -140,8 +147,7 @@ impl Twap {
                     start = mid + 1;
                 }
             }
-            if start == max_length - 1 
-                && u64::try_from(self.observations[start].block_timestamp).unwrap() < u64::try_from(block_timestamp).unwrap() {
+            if start == max_length {
                 start = res;
             }
 
@@ -460,7 +466,7 @@ mod tests {
         );
     }
 
-    /*#[test]
+    #[test]
     fn pivoted_binary_search_works() {
         init_blockchain();
 
@@ -499,6 +505,10 @@ mod tests {
             3,
         );
 
+        env_log!("RESULT {}", result_index);
+        assert!(twap.observations[0].block_timestamp == U64(13), "First timestamp wrong");
+        assert!(twap.observations[1].block_timestamp == U64(20), "Second timestamp wrong");
+        assert!(twap.observations[2].block_timestamp == U64(21), "Second timestamp wrong");
         assert!(result_index == 3, "Wrong Index");
 
         result_index = twap.binary_search(
@@ -521,5 +531,5 @@ mod tests {
         );
 
         assert!(result_index == 9, "Wrong Index");
-    }*/
+    }
 }

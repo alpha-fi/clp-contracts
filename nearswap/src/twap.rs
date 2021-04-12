@@ -7,6 +7,7 @@ use std::convert::{TryFrom,TryInto};
 use std::fmt;
 use crate::constants::*;
 use crate::pool::*;
+use crate::*;
 
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct Twap {
@@ -58,6 +59,7 @@ impl Twap {
             price1_cumulative: U128(price1),
             price2_cumulative: U128(price2),
         });
+        self.last_updated_index = 0;
         return 0;
     }
 
@@ -78,14 +80,23 @@ impl Twap {
         max_length: usize
     ) -> usize {
         let last: &Observation = &self.observations[self.last_updated_index].clone();
+        if(block_timestamp == u64::try_from(last.block_timestamp).unwrap()) {
+            self.observations[self.last_updated_index] = Observation::transform(last, block_timestamp, price1, price2);
+            return self.last_updated_index;
+        }
+
+        if self.last_updated_index + 1 >= MAX_LENGTH {
+            self.pivoted = true;
+        }
 
         let updated_index: usize = (self.last_updated_index + 1) % max_length;
-        if self.last_updated_index + 1 >= max_length {
+        if updated_index < self.observations.len() {
             self.observations[updated_index] = Observation::transform(last, block_timestamp, price1, price2);
         } else {
             self.observations.push(Observation::transform(last, block_timestamp, price1, price2));
         }
 
+        self.last_updated_index = updated_index;
         return updated_index;
     }
 
@@ -267,4 +278,248 @@ impl Observation {
             price2_cumulative: U128(0),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Twap;
+    use super::Observation;
+    use super::*;
+
+    use near_sdk::test_utils::{accounts, VMContextBuilder};
+    use near_sdk::{testing_env, BlockHeight, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
+
+    // returns twap with observation vector with timestamp [1, 2, 3, 4, 5, 6, 7, 9, 10]
+    fn get_twap() -> Twap {
+
+        let mut twap: Twap = Twap::new();
+        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+
+        let max_length = 10;
+        // fill all places
+        for i in 2..11 {
+            let timestamp = i;
+            last_updated_index = twap.write(
+                timestamp,
+                1, 1,
+                max_length
+            );
+        }
+
+        return twap;
+    }
+
+    #[test]
+    fn initialize_works() {
+        init_blockchain();
+
+        let mut twap: Twap = Twap::new();
+        let last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+
+        assert!(twap.observations.len() == 1, "Mismatch");
+
+        assert!(twap.observations[0].price1_cumulative == U128(1), "Mismatch");
+        assert!(twap.observations[0].price2_cumulative == U128(1), "Mismatch");
+    }
+
+    #[test]
+    fn write_works() {
+        init_blockchain();
+
+        let mut twap: Twap = Twap::new();
+        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+        let max_length = 10;
+
+        let timestamp = env::block_timestamp() + 12;
+        last_updated_index = twap.write(
+            timestamp,
+            100, 2,
+            max_length
+        );
+
+        assert!(twap.observations.len() == 2, "Length Mismatch");
+
+        assert!(twap.observations[1].num_of_observations == U128(2));
+
+        assert!(twap.observations[1].price1_cumulative == U128(101), "price 1 Mismatch");
+        assert!(twap.observations[1].price2_cumulative == U128(3), "price 2 Mismatch");
+
+        // write on same timestamp
+        last_updated_index = twap.write(
+            timestamp,
+            10, 10,
+            max_length
+        );
+
+        // verify number of observations is 3 but observation length should be 2
+        assert!(twap.observations.len() == 2, "length 2 Mismatch");
+
+        assert!(twap.observations[0].num_of_observations == U128(1));
+        assert!(twap.observations[1].num_of_observations == U128(3));
+
+        // verify cumulative prices
+        assert!(twap.observations[1].price1_cumulative == U128(111), "updated price 1 Mismatch");
+        assert!(twap.observations[1].price2_cumulative == U128(13), "updated price 2 Mismatch");
+    }
+
+    #[test]
+    fn overwrite_works() {
+        init_blockchain();
+
+        let mut twap: Twap = Twap::new();
+        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+
+        let max_length = 10;
+        // fill all places
+        for i in 1..10 {
+            let timestamp = env::block_timestamp() + i;
+            last_updated_index = twap.write(
+                timestamp,
+                1, 1,
+                max_length
+            );
+        }
+
+        assert!(twap.observations.len() == 10, "Mismatch");
+
+        // next observation should be written on 0th Index
+        let mut last_timestamp = env::block_timestamp() + 10;
+        last_updated_index = twap.write(
+            last_timestamp,
+            1, 1,
+            max_length
+        );
+
+        assert!(twap.observations.len() == 10, "Mismatch");
+        assert!(twap.observations[0].block_timestamp == U64(last_timestamp), "Mismatch");
+        assert!(twap.observations[0].num_of_observations == U128(11));
+
+        // next observation should be written on 1st Index
+        last_timestamp = env::block_timestamp() + 11;
+        last_updated_index = twap.write(
+            last_timestamp,
+            1, 1,
+            max_length
+        );
+
+        env_log!("as {}", twap.observations.len());
+        assert!(twap.observations.len() == 10, "Mismatch");
+        assert!(last_updated_index == 1, "current index mismatch");
+
+        assert!(twap.observations[1].block_timestamp == U64(last_timestamp), "Mismatch");
+        assert!(twap.observations[1].num_of_observations == U128(12));
+    }
+
+    #[test]
+    fn simple_binary_search_works() {
+        init_blockchain();
+
+        let twap: Twap = get_twap();
+        let max_length = 10;
+
+        // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let mut returned_index = twap.binary_search(
+            max_length,
+            5,
+        );
+
+        assert!(returned_index == 4, "Wrong Index");
+
+        returned_index = twap.binary_search(
+            max_length,
+            0,
+        );
+
+        assert!(returned_index == 0, "Wrong Index");
+
+        returned_index = twap.binary_search(
+            max_length,
+            10,
+        );
+
+        assert!(returned_index == 9, "Wrong Index");
+    }
+
+    #[test]
+    #[should_panic(expected = "Observation after this timestamp doesn't exist")]
+    fn binary_edge_case_works() {
+        init_blockchain();
+
+        let twap: Twap = get_twap();
+        let max_length = 10;
+
+        // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        twap.binary_search(
+            max_length,
+            122,
+        );
+    }
+
+    /*#[test]
+    fn pivoted_binary_search_works() {
+        init_blockchain();
+
+        let mut twap: Twap = get_twap();
+        let max_length = 10;
+
+        // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
+        // add more value (that should overwrite last updated value)
+        let mut last_updated_index = twap.write(
+            13,
+            10, 10,
+            max_length
+        );
+
+        let mut result_index = twap.binary_search(
+            max_length,
+            11,
+        );
+        env_log!("SSS {} {}", result_index, last_updated_index);
+        assert!(result_index == 0, "Wrong Index");
+
+        last_updated_index = twap.write(
+            20,
+            10, 10,
+            max_length
+        );
+        last_updated_index = twap.write(
+            21,
+            10, 10,
+            max_length
+        );
+        // Updated array [13, 20, 21, 4, 5, 6, 7, 8, 9, 10]
+
+        result_index = twap.binary_search(
+            max_length,
+            3,
+        );
+
+        assert!(result_index == 3, "Wrong Index");
+
+        result_index = twap.binary_search(
+            max_length,
+            15,
+        );
+
+        assert!(result_index == 1, "Wrong Index");
+
+        result_index = twap.binary_search(
+            max_length,
+            21,
+        );
+
+        assert!(result_index == 2, "Wrong Index");
+
+        result_index = twap.binary_search(
+            max_length,
+            10,
+        );
+
+        assert!(result_index == 9, "Wrong Index");
+    }*/
 }

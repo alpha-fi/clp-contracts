@@ -9,7 +9,7 @@ use crate::constants::*;
 use crate::pool::*;
 use crate::*;
 
-#[derive(Clone, BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize)]
 pub struct Twap {
     // populated is 
     populated: usize,
@@ -177,21 +177,21 @@ impl Twap {
         let left_index = self.binary_search(max_length, req_timestamp);
 
         if left_index == 0 {
-            let total_observe: u128 = u128::try_from(self.observations[last_index].num_of_observations).unwrap();
-            let price1cumu: u128 = u128::try_from(self.observations[last_index].price1_cumulative).unwrap();
-            let price2cumu: u128 = u128::try_from(self.observations[last_index].price2_cumulative).unwrap();
-            let mean1: u128 = price1cumu / total_observe;
-            let mean2: u128 = price2cumu / total_observe;
+            let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap();
+            let price1cumu = u128::try_from(self.observations[last_index].price1_cumulative).unwrap();
+            let price2cumu = u128::try_from(self.observations[last_index].price2_cumulative).unwrap();
+            let mean1 = price1cumu / total_observe;
+            let mean2 = price2cumu / total_observe;
             return (U128(mean1), U128(mean2));
         } else {
-            let total_observe: u128 = u128::try_from(self.observations[last_index].num_of_observations).unwrap()
+            let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap()
                                     - u128::try_from(self.observations[left_index - 1].num_of_observations).unwrap();
-            let price1cumu: u128 = u128::try_from(self.observations[last_index].price1_cumulative).unwrap()
+            let price1cumu = u128::try_from(self.observations[last_index].price1_cumulative).unwrap()
                                     - u128::try_from(self.observations[left_index - 1].price1_cumulative).unwrap();
-            let price2cumu: u128 = u128::try_from(self.observations[last_index].price2_cumulative).unwrap()
+            let price2cumu = u128::try_from(self.observations[last_index].price2_cumulative).unwrap()
                                     - u128::try_from(self.observations[left_index - 1].price2_cumulative).unwrap();
-            let mean1: u128 = price1cumu / total_observe;
-            let mean2: u128 = price2cumu / total_observe;
+            let mean1 = price1cumu / total_observe;
+            let mean2 = price2cumu / total_observe;
             return (U128(mean1), U128(mean2));
         }
     }
@@ -237,7 +237,7 @@ impl Twap {
     }
 }
 
-#[derive(Clone, BorshSerialize, BorshDeserialize, Copy)]
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct Observation {
     // timestamp
     pub block_timestamp: U64,

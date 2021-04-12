@@ -96,7 +96,7 @@ impl Twap {
         price2: u128,
         max_length: usize
     ) -> usize {
-        let last: &Observation = &self.observations[self.last_updated_index].clone();
+        let o = &self.observations[self.last_updated_index].clone();
         if(block_timestamp == u64::try_from(last.block_timestamp).unwrap()) {
             self.observations[self.last_updated_index] = Observation::transform(last, block_timestamp, price1, price2);
             return self.last_updated_index;

@@ -185,14 +185,13 @@ impl Twap {
         time: Mean,
         max_length: usize,
     ) -> (U128, U128) {
-        let time_diff: u64;
-        match time {
-            Mean::M_1MIN => time_diff = self.to_nanoseconds(60), // 1 minute in nanoseconds
-            Mean::M_5MIN => time_diff = self.to_nanoseconds(300), // 5 minute in nanoseconds
-            Mean::M_1H => time_diff = self.to_nanoseconds(60 * 60),
-            Mean::M_12H => time_diff = self.to_nanoseconds(12 * 60 * 60),
-            _ => time_diff = 0
-        }
+        let time_diff: u64 = match time {
+            Mean::M_1MIN => self.to_nanoseconds(60), // 1 minute in nanoseconds
+            Mean::M_5MIN => self.to_nanoseconds(300), // 5 minute in nanoseconds
+            Mean::M_1H => self.to_nanoseconds(60 * 60),
+            Mean::M_12H => self.to_nanoseconds(12 * 60 * 60),
+            _ => 0
+        };
         let last_index = self.last_updated_index;
         let req_timestamp = u64::try_from(self.observations[last_index].block_timestamp).unwrap() - time_diff;
 

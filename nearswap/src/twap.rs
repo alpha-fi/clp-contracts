@@ -8,6 +8,7 @@ use std::fmt;
 use crate::constants::*;
 use crate::pool::*;
 use crate::*;
+use crate::util::*;
 
 #[derive(Debug)]
 pub enum Mean {
@@ -19,9 +20,6 @@ pub enum Mean {
 
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct Twap {
-    // To check if array is populated or not
-    // note: it can be used later when we will have variable length storage array/
-    populated: usize,
     // last updated index in observation array
     current_idx: usize,
     // bool to check if previous values are overwritten by new one
@@ -176,11 +174,6 @@ impl Twap {
         return start;
     }
 
-    // convert seconds into nanoseconds
-    pub fn to_nanoseconds(&self, time: u64) -> u64 {
-        return time * 1000_000_000;
-    } 
-
     // function which will calculate mean using Mean enum
     pub fn calculate_mean(
         &self,
@@ -188,10 +181,10 @@ impl Twap {
         max_length: usize,
     ) -> (u128, u128) {
         let time_diff: u64 = match time {
-            Mean::M_1MIN => self.to_nanoseconds(60), // 1 minute in nanoseconds
-            Mean::M_5MIN => self.to_nanoseconds(300), // 5 minute in nanoseconds
-            Mean::M_1H => self.to_nanoseconds(60 * 60),
-            Mean::M_12H => self.to_nanoseconds(12 * 60 * 60),
+            Mean::M_1MIN => to_nanoseconds(60), // 1 minute in nanoseconds
+            Mean::M_5MIN => to_nanoseconds(300), // 5 minute in nanoseconds
+            Mean::M_1H => to_nanoseconds(60 * 60),
+            Mean::M_12H => to_nanoseconds(12 * 60 * 60),
             _ => 0
         };
         let last_index = self.current_idx;
@@ -226,9 +219,8 @@ impl Twap {
         let price2: u128 = reserve / near;
 
         // update current index
-        if self.populated == 0 {
+        if self.observations.len == 0 {
             self.current_idx = self.initialize(env::block_timestamp(), price1, price2);
-            self.populated += 1;
         } else {
             self.current_idx = self.write(
                 env::block_timestamp(),
@@ -563,7 +555,7 @@ mod tests {
         let mut current_idx = twap.initialize(timestamp, 1, 1);
         let max_length = 10;
 
-        let min_2_timestamp = timestamp + twap.to_nanoseconds(120);
+        let min_2_timestamp = timestamp + to_nanoseconds(120);
 
         twap.write(min_2_timestamp, 3, 3, max_length);
         let mut res = twap.calculate_mean(Mean::M_1MIN, twap.observations.len());
@@ -571,8 +563,8 @@ mod tests {
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");
 
-        let min_8_timestamp = timestamp + twap.to_nanoseconds(480);
-        let min_10_timestamp = timestamp + twap.to_nanoseconds(600);
+        let min_8_timestamp = timestamp + to_nanoseconds(480);
+        let min_10_timestamp = timestamp + to_nanoseconds(600);
 
         twap.write(min_8_timestamp, 12, 12, max_length);
         twap.write(min_10_timestamp, 10, 10, max_length);

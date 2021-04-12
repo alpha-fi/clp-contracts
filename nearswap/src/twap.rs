@@ -179,7 +179,7 @@ impl Twap {
         return time * 1000_000_000;
     } 
 
-    // function which will calculate mean using str "1min, 5min, 1h, 12h"
+    // function which will calculate mean using Mean enum
     pub fn calculate_mean(
         &self,
         time: Mean,

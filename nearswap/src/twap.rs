@@ -9,17 +9,34 @@ use crate::constants::*;
 use crate::pool::*;
 use crate::*;
 
+#[derive(Debug)]
+pub enum Mean {
+    M_1MIN,
+    M_5MIN,
+    M_1H,
+    M_12H,
+}
+
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct Twap {
-    // populated is 
+    // To check if array is populated or not
+    // note: it can be used later when we will have variable length storage array/
     populated: usize,
+    // last updated index in observation array
     last_updated_index: usize,
+    // bool to check if previous values are overwritten by new one
+    // i.e MAX_LENGTH of array is full and we start storing observation from `0` index
     pivoted: bool,
+    // observation array
     pub observations: Vec<Observation>,
 
+    // mean of last 1 minutes of readings
     pub mean_1min: (U128, U128),
+    // mean of last 5 minutes of readings
     pub mean_5min: (U128, U128),
+    // mean of last 1 hour of readings
     pub mean_1h: (U128, U128),
+    // mean of last 12 hours of readings
     pub mean_12h: (U128, U128)
 }
 
@@ -157,22 +174,27 @@ impl Twap {
         return start;
     }
 
+    // convert seconds into nanoseconds
+    pub fn to_nanoseconds(&self, time: u64) -> u64 {
+        return time * 1000_000_000;
+    } 
+
     // function which will calculate mean using str "1min, 5min, 1h, 12h"
     pub fn calculate_mean(
         &self,
-        time: &str,
+        time: Mean,
         max_length: usize,
     ) -> (U128, U128) {
-        let timeDiff: u64;
+        let time_diff: u64;
         match time {
-            "1min" => timeDiff = 6000_000_0000, // 1 minute in nanoseconds
-            "5min" => timeDiff = 3000_0000_0000, // 5 minute in nanoseconds
-            "1h" => timeDiff = 3600_000_000_000,
-            "12h" => timeDiff = 43200_000_000_000,
-            _ => timeDiff = 0
+            Mean::M_1MIN => time_diff = self.to_nanoseconds(60), // 1 minute in nanoseconds
+            Mean::M_5MIN => time_diff = self.to_nanoseconds(300), // 5 minute in nanoseconds
+            Mean::M_1H => time_diff = self.to_nanoseconds(60 * 60),
+            Mean::M_12H => time_diff = self.to_nanoseconds(12 * 60 * 60),
+            _ => time_diff = 0
         }
         let last_index = self.last_updated_index;
-        let req_timestamp = u64::try_from(self.observations[last_index].block_timestamp).unwrap() - timeDiff;
+        let req_timestamp = u64::try_from(self.observations[last_index].block_timestamp).unwrap() - time_diff;
 
         let left_index = self.binary_search(max_length, req_timestamp);
 
@@ -208,9 +230,6 @@ impl Twap {
             self.last_updated_index = self.initialize(env::block_timestamp(), price1, price2);
             self.populated += 1;
         } else {
-            if self.last_updated_index + 1 >= MAX_LENGTH {
-                self.pivoted = true;
-            }
             self.last_updated_index = self.write(
                 env::block_timestamp(),
                 price1,
@@ -227,13 +246,13 @@ impl Twap {
             len = self.observations.len();
         }
 
-        self.mean_1min = self.calculate_mean("1min", len);
+        self.mean_1min = self.calculate_mean(Mean::M_1MIN, len);
 
-        self.mean_5min = self.calculate_mean("5min", len);
+        self.mean_5min = self.calculate_mean(Mean::M_5MIN, len);
 
-        self.mean_1h = self.calculate_mean("1h", len);
+        self.mean_1h = self.calculate_mean(Mean::M_1H, len);
 
-        self.mean_12h = self.calculate_mean("12h", len);
+        self.mean_12h = self.calculate_mean(Mean::M_12H, len);
     }
 }
 

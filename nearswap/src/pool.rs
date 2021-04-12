@@ -9,6 +9,7 @@ use near_sdk::{AccountId, Balance};
 
 use std::fmt;
 use crate::*;
+use crate::twap::*;
 
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]

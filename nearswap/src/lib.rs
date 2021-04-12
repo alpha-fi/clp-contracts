@@ -162,9 +162,9 @@ impl NearSwap {
     pub fn withdraw_liquidity(
         &mut self,
         token: AccountId,
+        shares: U128,
         min_ynear: U128,
         min_tokens: U128,
-        shares: U128,
     ) {
         let start_storage = env::storage_usage();
         let shares: u128 = shares.into();
@@ -187,7 +187,7 @@ impl NearSwap {
         );
 
         let mut d = self.get_deposit(&caller);
-        let (shares, ynear, token_amount) = 
+        let (ynear, token_amount) = 
             p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
 
         env_log!(
@@ -529,6 +529,7 @@ mod tests {
     use super::*;
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
     use std::convert::TryInto;
+    use near_sdk_sim::to_yocto;
 
     struct Accounts {
         current: AccountId,
@@ -848,7 +849,7 @@ mod tests {
 
         println!(">> adding liquidity - second time with minted shares");
 
-        let min_shares = 30000000000000000000000000;
+        let min_shares = to_yocto("30");
 
         c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), min_shares.into());
         p = c.pool_info(&t).expect("Pool should exist");

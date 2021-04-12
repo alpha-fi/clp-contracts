@@ -138,7 +138,7 @@ impl Pool {
         min_ynear: u128,
         min_tokens: u128,
         shares: u128,
-    ) -> (u128, u128, u128) {
+    ) -> (u128, u128) {
         let current_shares = self.shares.get(&caller).unwrap_or(0);
         let total_shares2 = u256::from(self.total_shares);
         let shares2 = u256::from(shares);
@@ -157,6 +157,6 @@ impl Pool {
         self.tokens -= token_amount;
         self.ynear -= ynear;
 
-        return (shares, ynear, token_amount);
+        return (ynear, token_amount);
     }
 }

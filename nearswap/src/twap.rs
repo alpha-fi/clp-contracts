@@ -23,7 +23,7 @@ pub struct Twap {
     // note: it can be used later when we will have variable length storage array/
     populated: usize,
     // last updated index in observation array
-    last_updated_index: usize,
+    current_idx: usize,
     // bool to check if previous values are overwritten by new one
     // i.e MAX_LENGTH of array is full and we start storing observation from `0` index
     pivoted: bool,
@@ -31,12 +31,16 @@ pub struct Twap {
     pub observations: Vec<Observation>,
 
     // mean of last 1 minutes of readings
+    // In Tuple first value indicates mean of token1 and second indicates mean of token2
     pub mean_1min: (u128, u128),
     // mean of last 5 minutes of readings
+    // In Tuple first value indicates mean of token1 and second indicates mean of token2
     pub mean_5min: (u128, u128),
     // mean of last 1 hour of readings
+    // In Tuple first value indicates mean of token1 and second indicates mean of token2
     pub mean_1h: (u128, u128),
     // mean of last 12 hours of readings
+    // In Tuple first value indicates mean of token1 and second indicates mean of token2
     pub mean_12h: (u128, u128)
 }
 
@@ -45,7 +49,7 @@ impl Twap {
     pub fn new() -> Self {
         Self {
             populated: 0,
-            last_updated_index: 0,
+            current_idx: 0,
             pivoted: false,
             observations: Vec::new(),
             mean_1min: (0, 0),
@@ -71,12 +75,12 @@ impl Twap {
     ) -> usize
     {
         self.observations.push( Observation {
-            block_timestamp: U64(time),
-            num_of_observations: U128(1),
-            price1_cumulative: U128(price1),
-            price2_cumulative: U128(price2),
+            block_timestamp: time,
+            num_of_observations: 1,
+            price1_cumulative: price1,
+            price2_cumulative: price2,
         });
-        self.last_updated_index = 0;
+        self.current_idx = 0;
         return 0;
     }
 
@@ -96,24 +100,24 @@ impl Twap {
         price2: u128,
         max_length: usize
     ) -> usize {
-        let o = &self.observations[self.last_updated_index].clone();
-        if(block_timestamp == u64::try_from(last.block_timestamp).unwrap()) {
-            self.observations[self.last_updated_index] = Observation::transform(last, block_timestamp, price1, price2);
-            return self.last_updated_index;
+        let mut o = &self.observations[self.current_idx];
+        if(block_timestamp == o.block_timestamp) {
+            self.observations[self.current_idx] = Observation::transform(o, block_timestamp, price1, price2);
+            return self.current_idx;
         }
 
-        if self.last_updated_index + 1 >= max_length {
+        if self.current_idx + 1 >= max_length {
             self.pivoted = true;
         }
 
-        let updated_index: usize = (self.last_updated_index + 1) % max_length;
+        let updated_index: usize = (self.current_idx + 1) % max_length;
         if updated_index < self.observations.len() {
-            self.observations[updated_index] = Observation::transform(last, block_timestamp, price1, price2);
+            self.observations[updated_index] = Observation::transform(o, block_timestamp, price1, price2);
         } else {
-            self.observations.push(Observation::transform(last, block_timestamp, price1, price2));
+            self.observations.push(Observation::transform(o, block_timestamp, price1, price2));
         }
 
-        self.last_updated_index = updated_index;
+        self.current_idx = updated_index;
         return updated_index;
     }
 
@@ -132,19 +136,19 @@ impl Twap {
     ) -> usize {
 
         // edge case when all values are less than required
-        if u64::try_from(self.observations[self.last_updated_index].block_timestamp).unwrap() 
-            < u64::try_from(block_timestamp).unwrap() {
+        if self.observations[self.current_idx].block_timestamp
+            < block_timestamp {
             panic!("Observation after this timestamp doesn't exist");
         }
 
         let mut start: usize = 0;
-        let mut end: usize = self.last_updated_index + 1;
+        let mut end: usize = self.current_idx + 1;
 
         let mut mid: usize;
 
         while start < end {
             mid = (start + end) / 2;
-            if u64::try_from(block_timestamp).unwrap() <= u64::try_from(self.observations[mid].block_timestamp).unwrap() {
+            if block_timestamp <= self.observations[mid].block_timestamp {
                 end = mid;
             } else {
                 start = mid + 1;
@@ -153,12 +157,12 @@ impl Twap {
 
         if self.pivoted && start == 0 {
             let res = start;
-            start = self.last_updated_index + 1;
+            start = self.current_idx + 1;
             end = max_length;
 
             while start < end {
                 mid = (start + end) / 2;
-                if u64::try_from(block_timestamp).unwrap() <= u64::try_from(self.observations[mid].block_timestamp).unwrap() {
+                if block_timestamp <= self.observations[mid].block_timestamp {
                     end = mid;
                 } else {
                     start = mid + 1;
@@ -190,25 +194,24 @@ impl Twap {
             Mean::M_12H => self.to_nanoseconds(12 * 60 * 60),
             _ => 0
         };
-        let last_index = self.last_updated_index;
-        let req_timestamp = u64::try_from(self.observations[last_index].block_timestamp).unwrap() - time_diff;
-        env_log!("HERE TIME {} INDEX", req_timestamp);
+        let last_index = self.current_idx;
+        let req_timestamp = self.observations[last_index].block_timestamp - time_diff;
         let left_index = self.binary_search(max_length, req_timestamp);
         
         if left_index == 0 {
-            let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap();
-            let price1cumu = u128::try_from(self.observations[last_index].price1_cumulative).unwrap();
-            let price2cumu = u128::try_from(self.observations[last_index].price2_cumulative).unwrap();
+            let total_observe = self.observations[last_index].num_of_observations;
+            let price1cumu = self.observations[last_index].price1_cumulative;
+            let price2cumu = self.observations[last_index].price2_cumulative;
             let mean1 = price1cumu / total_observe;
             let mean2 = price2cumu / total_observe;
             return (mean1, mean2);
         } else {
-            let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap()
-                                    - u128::try_from(self.observations[left_index - 1].num_of_observations).unwrap();
-            let price1cumu = u128::try_from(self.observations[last_index].price1_cumulative).unwrap()
-                                    - u128::try_from(self.observations[left_index - 1].price1_cumulative).unwrap();
-            let price2cumu = u128::try_from(self.observations[last_index].price2_cumulative).unwrap()
-                                    - u128::try_from(self.observations[left_index - 1].price2_cumulative).unwrap();
+            let total_observe = self.observations[last_index].num_of_observations
+                                    - self.observations[left_index - 1].num_of_observations;
+            let price1cumu = self.observations[last_index].price1_cumulative
+                                    - self.observations[left_index - 1].price1_cumulative;
+            let price2cumu = self.observations[last_index].price2_cumulative
+                                    - self.observations[left_index - 1].price2_cumulative;
             let mean1 = price1cumu / total_observe;
             let mean2 = price2cumu / total_observe;
             return (mean1, mean2);
@@ -224,10 +227,10 @@ impl Twap {
 
         // update current index
         if self.populated == 0 {
-            self.last_updated_index = self.initialize(env::block_timestamp(), price1, price2);
+            self.current_idx = self.initialize(env::block_timestamp(), price1, price2);
             self.populated += 1;
         } else {
-            self.last_updated_index = self.write(
+            self.current_idx = self.write(
                 env::block_timestamp(),
                 price1,
                 price2,
@@ -257,16 +260,16 @@ impl Twap {
     }
 }
 
-#[derive(Clone, BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize)]
 pub struct Observation {
     // timestamp
-    pub block_timestamp: U64,
+    pub block_timestamp: u64,
     // Number of observations till block_timestamp
-    pub num_of_observations: U128,
+    pub num_of_observations: u128,
     // cumulative price of token1 till block_timestamp
-    pub price1_cumulative: U128,
+    pub price1_cumulative: u128,
     // cumulative price of token2 till block_timestamp
-    pub price2_cumulative: U128,
+    pub price2_cumulative: u128,
 }
 
 impl Observation {
@@ -284,24 +287,22 @@ impl Observation {
         price1: u128,
         price2: u128
     ) -> Observation {
-        let price1cumu = u128::try_from(last.price1_cumulative).unwrap();
-        let price2cumu = u128::try_from(last.price2_cumulative).unwrap();
         return
             Observation {
-                block_timestamp: U64(block_timestamp),
-                num_of_observations: U128(u128::try_from(last.num_of_observations).unwrap() + 1),
-                price1_cumulative: U128(price1cumu + price1),
-                price2_cumulative: U128(price2cumu + price2),
+                block_timestamp: block_timestamp,
+                num_of_observations: last.num_of_observations + 1,
+                price1_cumulative: last.price1_cumulative + price1,
+                price2_cumulative: last.price2_cumulative + price2,
             };
     }
 
     /// returns instance of Observation structure
     pub fn new() -> Self {
         return Self {
-            block_timestamp: U64(1),
-            num_of_observations: U128(0),
-            price1_cumulative: U128(0),
-            price2_cumulative: U128(0),
+            block_timestamp: 1,
+            num_of_observations: 0,
+            price1_cumulative: 0,
+            price2_cumulative: 0,
         }
     }
 }
@@ -324,13 +325,13 @@ mod tests {
     fn get_twap() -> Twap {
 
         let mut twap: Twap = Twap::new();
-        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+        let mut current_idx = twap.initialize(env::block_timestamp(), 1, 1);
 
         let max_length = 10;
         // fill all places
         for i in 2..11 {
             let timestamp = i;
-            last_updated_index = twap.write(
+            current_idx = twap.write(
                 timestamp,
                 1, 1,
                 max_length
@@ -345,12 +346,12 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = Twap::new();
-        let last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+        let current_idx = twap.initialize(env::block_timestamp(), 1, 1);
 
         assert!(twap.observations.len() == 1, "Mismatch");
 
-        assert!(twap.observations[0].price1_cumulative == U128(1), "Mismatch");
-        assert!(twap.observations[0].price2_cumulative == U128(1), "Mismatch");
+        assert!(twap.observations[0].price1_cumulative == 1, "Mismatch");
+        assert!(twap.observations[0].price2_cumulative == 1, "Mismatch");
     }
 
     #[test]
@@ -358,11 +359,11 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = Twap::new();
-        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+        let mut current_idx = twap.initialize(env::block_timestamp(), 1, 1);
         let max_length = 10;
 
         let timestamp = env::block_timestamp() + 12;
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             timestamp,
             100, 2,
             max_length
@@ -370,13 +371,13 @@ mod tests {
 
         assert!(twap.observations.len() == 2, "Length Mismatch");
 
-        assert!(twap.observations[1].num_of_observations == U128(2));
+        assert!(twap.observations[1].num_of_observations == 2);
 
-        assert!(twap.observations[1].price1_cumulative == U128(101), "price 1 Mismatch");
-        assert!(twap.observations[1].price2_cumulative == U128(3), "price 2 Mismatch");
+        assert!(twap.observations[1].price1_cumulative == 101, "price 1 Mismatch");
+        assert!(twap.observations[1].price2_cumulative == 3, "price 2 Mismatch");
 
         // write on same timestamp
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             timestamp,
             10, 10,
             max_length
@@ -385,12 +386,12 @@ mod tests {
         // verify number of observations is 3 but observation length should be 2
         assert!(twap.observations.len() == 2, "length 2 Mismatch");
 
-        assert!(twap.observations[0].num_of_observations == U128(1));
-        assert!(twap.observations[1].num_of_observations == U128(3));
+        assert!(twap.observations[0].num_of_observations == 1);
+        assert!(twap.observations[1].num_of_observations == 3);
 
         // verify cumulative prices
-        assert!(twap.observations[1].price1_cumulative == U128(111), "updated price 1 Mismatch");
-        assert!(twap.observations[1].price2_cumulative == U128(13), "updated price 2 Mismatch");
+        assert!(twap.observations[1].price1_cumulative == 111, "updated price 1 Mismatch");
+        assert!(twap.observations[1].price2_cumulative == 13, "updated price 2 Mismatch");
     }
 
     #[test]
@@ -398,13 +399,13 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = Twap::new();
-        let mut last_updated_index = twap.initialize(env::block_timestamp(), 1, 1);
+        let mut current_idx = twap.initialize(env::block_timestamp(), 1, 1);
 
         let max_length = 10;
         // fill all places
         for i in 1..10 {
             let timestamp = env::block_timestamp() + i;
-            last_updated_index = twap.write(
+            current_idx = twap.write(
                 timestamp,
                 1, 1,
                 max_length
@@ -415,19 +416,19 @@ mod tests {
 
         // next observation should be written on 0th Index
         let mut last_timestamp = env::block_timestamp() + 10;
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             last_timestamp,
             1, 1,
             max_length
         );
 
         assert!(twap.observations.len() == 10, "Mismatch");
-        assert!(twap.observations[0].block_timestamp == U64(last_timestamp), "Mismatch");
-        assert!(twap.observations[0].num_of_observations == U128(11));
+        assert!(twap.observations[0].block_timestamp == last_timestamp, "Mismatch");
+        assert!(twap.observations[0].num_of_observations == 11);
 
         // next observation should be written on 1st Index
         last_timestamp = env::block_timestamp() + 11;
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             last_timestamp,
             1, 1,
             max_length
@@ -435,10 +436,10 @@ mod tests {
 
         env_log!("as {}", twap.observations.len());
         assert!(twap.observations.len() == 10, "Mismatch");
-        assert!(last_updated_index == 1, "current index mismatch");
+        assert!(current_idx == 1, "current index mismatch");
 
-        assert!(twap.observations[1].block_timestamp == U64(last_timestamp), "Mismatch");
-        assert!(twap.observations[1].num_of_observations == U128(12));
+        assert!(twap.observations[1].block_timestamp == last_timestamp, "Mismatch");
+        assert!(twap.observations[1].num_of_observations == 12);
     }
 
     #[test]
@@ -495,7 +496,7 @@ mod tests {
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
         // add more value (that should overwrite last updated value)
-        let mut last_updated_index = twap.write(
+        let mut current_idx = twap.write(
             13,
             10, 10,
             max_length
@@ -505,15 +506,15 @@ mod tests {
             max_length,
             11,
         );
-        env_log!("SSS {} {}", result_index, last_updated_index);
+        env_log!("SSS {} {}", result_index, current_idx);
         assert!(result_index == 0, "Wrong Index");
 
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             20,
             10, 10,
             max_length
         );
-        last_updated_index = twap.write(
+        current_idx = twap.write(
             21,
             10, 10,
             max_length
@@ -526,9 +527,9 @@ mod tests {
         );
 
         env_log!("RESULT {}", result_index);
-        assert!(twap.observations[0].block_timestamp == U64(13), "First timestamp wrong");
-        assert!(twap.observations[1].block_timestamp == U64(20), "Second timestamp wrong");
-        assert!(twap.observations[2].block_timestamp == U64(21), "Second timestamp wrong");
+        assert!(twap.observations[0].block_timestamp == 13, "First timestamp wrong");
+        assert!(twap.observations[1].block_timestamp == 20, "Second timestamp wrong");
+        assert!(twap.observations[2].block_timestamp == 21, "Second timestamp wrong");
         assert!(result_index == 3, "Wrong Index");
 
         result_index = twap.binary_search(
@@ -559,7 +560,7 @@ mod tests {
 
         let timestamp = env::block_timestamp();
         let mut twap: Twap = Twap::new();
-        let mut last_updated_index = twap.initialize(timestamp, 1, 1);
+        let mut current_idx = twap.initialize(timestamp, 1, 1);
         let max_length = 10;
 
         let min_2_timestamp = timestamp + twap.to_nanoseconds(120);
@@ -577,7 +578,7 @@ mod tests {
         twap.write(min_10_timestamp, 10, 10, max_length);
         res = twap.calculate_mean(Mean::M_5MIN, twap.observations.len());
 
-        assert_eq!(11 , res.0, "Wrong mean - 2")
+        assert_eq!(11 , res.0, "Wrong mean - 2");
         assert_eq!(11, res.1, "Wrong mean - 1");
     }
 }

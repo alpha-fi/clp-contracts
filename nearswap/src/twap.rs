@@ -164,11 +164,9 @@ impl Twap {
                     start = mid + 1;
                 }
             }
-            if start == max_length {
+            if start >= max_length {
                 start = res;
             }
-
-            return start;
         }
 
         return start;

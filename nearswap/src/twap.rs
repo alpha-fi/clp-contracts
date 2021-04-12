@@ -31,13 +31,13 @@ pub struct Twap {
     pub observations: Vec<Observation>,
 
     // mean of last 1 minutes of readings
-    pub mean_1min: (U128, U128),
+    pub mean_1min: (u128, u128),
     // mean of last 5 minutes of readings
-    pub mean_5min: (U128, U128),
+    pub mean_5min: (u128, u128),
     // mean of last 1 hour of readings
-    pub mean_1h: (U128, U128),
+    pub mean_1h: (u128, u128),
     // mean of last 12 hours of readings
-    pub mean_12h: (U128, U128)
+    pub mean_12h: (u128, u128)
 }
 
 impl Twap {
@@ -48,10 +48,10 @@ impl Twap {
             last_updated_index: 0,
             pivoted: false,
             observations: Vec::new(),
-            mean_1min: (U128(0), U128(0)),
-            mean_5min: (U128(0), U128(0)),
-            mean_1h: (U128(0), U128(0)),
-            mean_12h: (U128(0), U128(0))
+            mean_1min: (0, 0),
+            mean_5min: (0, 0),
+            mean_1h: (0, 0),
+            mean_12h: (0, 0)
         }
     }
 
@@ -184,7 +184,7 @@ impl Twap {
         &self,
         time: Mean,
         max_length: usize,
-    ) -> (U128, U128) {
+    ) -> (u128, u128) {
         let time_diff: u64 = match time {
             Mean::M_1MIN => self.to_nanoseconds(60), // 1 minute in nanoseconds
             Mean::M_5MIN => self.to_nanoseconds(300), // 5 minute in nanoseconds
@@ -194,16 +194,16 @@ impl Twap {
         };
         let last_index = self.last_updated_index;
         let req_timestamp = u64::try_from(self.observations[last_index].block_timestamp).unwrap() - time_diff;
-
+        env_log!("HERE TIME {} INDEX", req_timestamp);
         let left_index = self.binary_search(max_length, req_timestamp);
-
+        
         if left_index == 0 {
             let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap();
             let price1cumu = u128::try_from(self.observations[last_index].price1_cumulative).unwrap();
             let price2cumu = u128::try_from(self.observations[last_index].price2_cumulative).unwrap();
             let mean1 = price1cumu / total_observe;
             let mean2 = price2cumu / total_observe;
-            return (U128(mean1), U128(mean2));
+            return (mean1, mean2);
         } else {
             let total_observe = u128::try_from(self.observations[last_index].num_of_observations).unwrap()
                                     - u128::try_from(self.observations[left_index - 1].num_of_observations).unwrap();
@@ -213,7 +213,7 @@ impl Twap {
                                     - u128::try_from(self.observations[left_index - 1].price2_cumulative).unwrap();
             let mean1 = price1cumu / total_observe;
             let mean2 = price2cumu / total_observe;
-            return (U128(mean1), U128(mean2));
+            return (mean1, mean2);
         }
     }
 
@@ -245,6 +245,10 @@ impl Twap {
             len = self.observations.len();
         }
 
+        self.update_mean(len);
+    }
+
+    pub fn update_mean(&mut self, len: usize) {
         self.mean_1min = self.calculate_mean(Mean::M_1MIN, len);
 
         self.mean_5min = self.calculate_mean(Mean::M_5MIN, len);
@@ -549,5 +553,33 @@ mod tests {
         );
 
         assert!(result_index == 9, "Wrong Index");
+    }
+
+    #[test]
+    fn calculate_mean() {
+        init_blockchain();
+
+        let timestamp = env::block_timestamp();
+        let mut twap: Twap = Twap::new();
+        let mut last_updated_index = twap.initialize(timestamp, 1, 1);
+        let max_length = 10;
+
+        let min_2_timestamp = timestamp + twap.to_nanoseconds(120);
+
+        twap.write(min_2_timestamp, 3, 3, max_length);
+        let mut res = twap.calculate_mean(Mean::M_1MIN, twap.observations.len());
+
+        assert_eq!(3, res.0, "Wrong mean - 1");
+        assert_eq!(3, res.1, "Wrong mean - 1");
+
+        let min_8_timestamp = timestamp + twap.to_nanoseconds(480);
+        let min_10_timestamp = timestamp + twap.to_nanoseconds(600);
+
+        twap.write(min_8_timestamp, 12, 12, max_length);
+        twap.write(min_10_timestamp, 10, 10, max_length);
+        res = twap.calculate_mean(Mean::M_5MIN, twap.observations.len());
+
+        assert_eq!(11 , res.0, "Wrong mean - 2")
+        assert_eq!(11, res.1, "Wrong mean - 1");
     }
 }

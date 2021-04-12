@@ -697,7 +697,6 @@ mod tests {
                 .collect(),
         };
         c.set_deposit(&a.clone(), &account_deposit);
-
         c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
 
         let mut p = c.pool_info(&t).expect("Pool should exist");

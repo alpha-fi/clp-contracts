@@ -129,10 +129,9 @@ impl Pool {
         return (ynear, added_tokens, shares_minted);
     }
 
-    /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are not
-    /// exchagable between different pools.
-    /// withdraw liquidity from pool and deposit to account deposit
+    /// Withdraw `shares` for liquidity stored in this pool and transfer them to the caller deposit account. User can require 
+    /// getting at least `min_ynear` of Near and `min_tokens` of tokens. The function panic if the condition is not met. 
+    /// Shares are not exchangeable between different pools.
     pub(crate) fn withdraw_liquidity(
         &mut self,
         caller: &AccountId,

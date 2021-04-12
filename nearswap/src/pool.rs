@@ -128,4 +128,35 @@ impl Pool {
         }
         return (ynear, added_tokens, shares_minted);
     }
+
+    /// Withdraw `shares` for liquidity stored in this pool and transfer them to the caller deposit account. User can require 
+    /// getting at least `min_ynear` of Near and `min_tokens` of tokens. The function panic if the condition is not met. 
+    /// Shares are not exchangeable between different pools.
+    pub(crate) fn withdraw_liquidity(
+        &mut self,
+        caller: &AccountId,
+        min_ynear: u128,
+        min_tokens: u128,
+        shares: u128,
+    ) -> (u128, u128) {
+        let current_shares = self.shares.get(&caller).unwrap_or(0);
+        let total_shares2 = u256::from(self.total_shares);
+        let shares2 = u256::from(shares);
+        let ynear = (shares2 * u256::from(self.ynear) / total_shares2).as_u128();
+        let token_amount = (shares2 * u256::from(self.tokens) / total_shares2).as_u128();
+        assert!(
+            ynear >= min_ynear && token_amount >= min_tokens,
+            format!(
+                "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
+                ynear, token_amount
+            )
+        );
+    
+        self.shares.insert(caller, &(current_shares - shares));
+        self.total_shares -= shares;
+        self.tokens -= token_amount;
+        self.ynear -= ynear;
+
+        return (ynear, token_amount);
+    }
 }

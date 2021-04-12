@@ -164,6 +164,11 @@ impl AccountDeposit {
         }
     }
 
+    // add near to current deposit
+    pub(crate) fn add_near(&mut self, amount: u128) {
+        self.ynear += amount;
+    }
+
     pub(crate) fn remove(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
             assert!(*x >= amount, ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);
@@ -173,8 +178,7 @@ impl AccountDeposit {
         }
     }
 
-    // TODO: add test
-    /// asserts that the account has anough NEAR to cover storage and use of `amout` NEAR.
+    // asserts that the account has enough NEAR to cover storage and use of `amount` NEAR.
     #[inline]
     pub(crate) fn remove_near(&mut self, ynear: u128) {
         assert!(
@@ -197,7 +201,6 @@ impl AccountDeposit {
         )
     }
 
-    // TODO: add unit tests
     pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {
         let s = env::storage_usage();
         self.storage_used += s - tx_start_storage;
@@ -208,6 +211,14 @@ impl AccountDeposit {
 #[cfg(test)]
 mod tests {
     use super::AccountDeposit;
+    use near_sdk::env;
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
 
     fn new_account_deposit() -> AccountDeposit {
         AccountDeposit {
@@ -255,8 +266,8 @@ mod tests {
     #[test]
     fn assert_storage_works() {
         let deposit = AccountDeposit {
-            ynear: 990000000000000000000,
-            storage_used: 10,
+            ynear: 9900000000000000000000,
+            storage_used: 100,
             tokens: [("token1".to_string(), 100)].iter().cloned().collect(),
         };
 
@@ -286,7 +297,21 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E14: Insufficient amount of NEAR in deposit"#)]
     fn remove_near_insufficient() {
-        let d = new_account_deposit();
+        let mut d = new_account_deposit();
         d.remove_near(10);
+    }
+
+    #[test]
+    fn update_storage_works() {
+        init_blockchain();
+        let mut d = new_account_deposit();
+        d.ynear = 1000_0000_0000_0000_0000_0000_0000;
+        d.storage_used = 84;
+
+        let initial = env::storage_usage();
+        d.update_storage(2);
+
+        let expected = initial - 2 + 84;
+        assert!(d.storage_used == expected, "Storage Mismatch");
     }
 }

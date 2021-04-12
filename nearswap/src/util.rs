@@ -5,8 +5,9 @@ use near_sdk::Gas;
 use near_sdk::{env, AccountId, PromiseResult};
 use uint::construct_uint;
 
+use crate::constants::*;
+
 /// Near denomination = 1e24. Usage: { amount: 50*E24 }
-pub const NDENOM: u128 = 1_000_000_000_000_000_000_000_000;
 const NDENOM_ROUNDING: u128 = 500_000_000_000_000_000_000_000;
 
 /// TGas denomination 1 Tera Gas => 1e12 yNEAR

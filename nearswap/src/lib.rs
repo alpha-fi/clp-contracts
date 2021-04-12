@@ -22,6 +22,7 @@ use crate::errors::*;
 use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
+use crate::constants::*;
 
 // a way to optimize memory management
 near_sdk::setup_alloc!();
@@ -156,8 +157,8 @@ impl NearSwap {
     }
 
     /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are note
-    /// exchengable between different pools.
+    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are not
+    /// exchagable between different pools.
     pub fn withdraw_liquidity(
         &mut self,
         token: AccountId,
@@ -165,36 +166,29 @@ impl NearSwap {
         min_ynear: U128,
         min_tokens: U128,
     ) {
-        let shares_: u128 = shares.into();
+        let start_storage = env::storage_usage();
+        let shares: u128 = shares.into();
         let min_ynear: u128 = min_ynear.into();
         let min_tokens: u128 = min_tokens.into();
         assert!(
-            shares_ > 0 && min_ynear > 0 && min_tokens > 0,
-            "E2: balance arguments must be >0"
+            shares > 0 && min_ynear > 0 && min_tokens > 0,
+            "E2: balance arguments must be > 0"
         );
 
         let caller = env::predecessor_account_id();
         let mut p = self.get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
-            current_shares >= shares_,
+            current_shares >= shares,
             format!(
                 "E5: can't withdraw more shares then currently owned ({})",
                 current_shares
             )
         );
 
-        let total_shares2 = u256::from(p.total_shares);
-        let shares2 = u256::from(shares_);
-        let ynear = (shares2 * u256::from(p.ynear) / total_shares2).as_u128();
-        let token_amount = (shares2 * u256::from(p.tokens) / total_shares2).as_u128();
-        assert!(
-            ynear >= min_ynear && token_amount >= min_tokens,
-            format!(
-                "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
-                ynear, token_amount
-            )
-        );
+        let mut d = self.get_deposit(&caller);
+        let (ynear, token_amount) = 
+            p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
 
         env_log!(
             "Reedeming {:?} shares for {} NEAR and {} tokens",
@@ -202,13 +196,11 @@ impl NearSwap {
             ynear,
             token_amount,
         );
-        p.shares.insert(&caller, &(current_shares - shares_));
-        p.total_shares -= shares_;
-        p.tokens -= token_amount;
-        p.ynear -= ynear;
 
-        // .then(Promise::new(caller).transfer(ynear));
-
+        d.add(&token, token_amount);
+        d.add_near(ynear);
+        d.update_storage(start_storage);
+        self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
     }
 
@@ -537,6 +529,7 @@ mod tests {
     use super::*;
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
     use std::convert::TryInto;
+    use near_sdk_sim::to_yocto;
 
     struct Accounts {
         current: AccountId,
@@ -696,7 +689,16 @@ mod tests {
         let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
         ctx.set_deposit(ynear_deposit_with_storage);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
@@ -725,7 +727,7 @@ mod tests {
 
         println!(">> adding liquidity - second time");
 
-        c.add_liquidity(t.clone(), (token_deposit * 10).into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
@@ -747,13 +749,23 @@ mod tests {
 
     #[test]
     fn add_liquidity2_happy_path() {
-        let ynear_deposit = 3 * NDENOM;
-        let token_deposit = 1 * NDENOM + 1;
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
         let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
+
+        let account_deposit = AccountDeposit {
+            ynear: ynear_deposit + NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
 
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
@@ -761,17 +773,17 @@ mod tests {
         let p = Pool {
             ynear: initial_ynear,
             tokens: 10 * NDENOM,
-            total_shares: 30 * NDENOM,
+            total_shares: initial_ynear,
             shares: shares_map,
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (ynear_deposit + p.ynear).into(),
-            tokens: (token_deposit + p.tokens).into(),
+            tokens: (token_deposit + p.tokens + 1).into(), // 1 is added as a minimum token transfer
             total_shares: (ynear_deposit + p.ynear).into(),
         };
         assert_eq!(p_info, expected_pool, "pool_info should be correct");
@@ -780,6 +792,82 @@ mod tests {
             to_num(a_shares),
             ynear_deposit + p.ynear,
             "LP should have correct amount of shares"
+        );
+    }
+
+    #[test]
+    fn add_liquidity_min_shares_path() {
+        let (mut ctx, mut c) = init();
+        let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
+
+        // in unit tests we can't do cross contract calls, so we can't check token1 updates.
+        check_and_create_pool(&mut c, &t);
+
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+ 
+        ctx.set_deposit(ynear_deposit_with_storage);
+
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
+
+        let mut p = c.pool_info(&t).expect("Pool should exist");
+        let mut expected_pool = PoolInfo {
+            ynear: ynear_deposit.into(),
+            tokens: token_deposit.into(),
+            total_shares: ynear_deposit.into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        let a_shares = to_num(c.balance_of(t.clone(), a.clone()));
+        assert_eq!(
+            a_shares, ynear_deposit,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit,
+            "Total supply should be correct"
+        );
+
+        // total supply of an unknown token must be 0
+        assert_eq!(
+            to_num(c.total_supply("unknown-token".to_string())),
+            0,
+            "total supply of other token shouldn't change"
+        );
+
+        println!(">> adding liquidity - second time with minted shares");
+
+        let min_shares = to_yocto("30");
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), min_shares.into());
+        p = c.pool_info(&t).expect("Pool should exist");
+        expected_pool = PoolInfo {
+            ynear: (ynear_deposit * 2).into(),
+            tokens: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            total_shares: (ynear_deposit * 2).into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), a.clone())),
+            ynear_deposit * 2,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit * 2,
+            "Total supply should be correct"
         );
     }
 

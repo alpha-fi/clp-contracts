@@ -821,7 +821,7 @@ mod tests {
     fn add_liquidity_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit;
 
         let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
@@ -886,7 +886,7 @@ mod tests {
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM + 1;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();

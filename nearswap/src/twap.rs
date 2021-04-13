@@ -106,9 +106,10 @@ impl Twap {
 
         if self.current_idx + 1 >= max_length {
             self.pivoted = true;
+            self.current_idx = 0;
+        } else {
+            self.current_idx+=1;
         }
-
-        let updated_index: usize = (self.current_idx + 1) % max_length;
         if updated_index < self.observations.len() {
             self.observations[updated_index] = Observation::transform(o, block_timestamp, price1, price2);
         } else {
@@ -141,7 +142,6 @@ impl Twap {
 
         let mut start: usize = 0;
         let mut end: usize = self.current_idx + 1;
-
         let mut mid: usize;
 
         while start < end {
@@ -191,24 +191,22 @@ impl Twap {
         let req_timestamp = self.observations[last_index].block_timestamp - time_diff;
         let left_index = self.binary_search(max_length, req_timestamp);
         
+        let total_observe, price1cumu, price2cumu;
         if left_index == 0 {
-            let total_observe = self.observations[last_index].num_of_observations;
-            let price1cumu = self.observations[last_index].price1_cumulative;
-            let price2cumu = self.observations[last_index].price2_cumulative;
-            let mean1 = price1cumu / total_observe;
-            let mean2 = price2cumu / total_observe;
-            return (mean1, mean2);
+            total_observe = self.observations[last_index].num_of_observations;
+            price1cumu = self.observations[last_index].price1_cumulative;
+            price2cumu = self.observations[last_index].price2_cumulative;
         } else {
-            let total_observe = self.observations[last_index].num_of_observations
+            total_observe = self.observations[last_index].num_of_observations
                                     - self.observations[left_index - 1].num_of_observations;
-            let price1cumu = self.observations[last_index].price1_cumulative
+            price1cumu = self.observations[last_index].price1_cumulative
                                     - self.observations[left_index - 1].price1_cumulative;
-            let price2cumu = self.observations[last_index].price2_cumulative
+            price2cumu = self.observations[last_index].price2_cumulative
                                     - self.observations[left_index - 1].price2_cumulative;
-            let mean1 = price1cumu / total_observe;
-            let mean2 = price2cumu / total_observe;
-            return (mean1, mean2);
         }
+        let mean1 = price1cumu / total_observe;
+        let mean2 = price2cumu / total_observe;
+        return (mean1, mean2);
     }
 
     pub(crate) fn log_observation(&mut self, pool: PoolInfo) {
@@ -231,11 +229,10 @@ impl Twap {
         }
 
         // update mean
-        let len: usize;
-        if self.pivoted == true {
-            len = MAX_LENGTH.into();
+        let len: usize = if self.pivoted == true {
+            MAX_LENGTH.into()
         } else {
-            len = self.observations.len();
+            self.observations.len()
         }
 
         self.update_mean(len);
@@ -243,11 +240,8 @@ impl Twap {
 
     pub fn update_mean(&mut self, len: usize) {
         self.mean_1min = self.calculate_mean(Mean::M_1MIN, len);
-
         self.mean_5min = self.calculate_mean(Mean::M_5MIN, len);
-
         self.mean_1h = self.calculate_mean(Mean::M_1H, len);
-
         self.mean_12h = self.calculate_mean(Mean::M_12H, len);
     }
 }
@@ -301,8 +295,6 @@ impl Observation {
 
 #[cfg(test)]
 mod tests {
-    use super::Twap;
-    use super::Observation;
     use super::*;
 
     use near_sdk::test_utils::{accounts, VMContextBuilder};
@@ -362,9 +354,7 @@ mod tests {
         );
 
         assert!(twap.observations.len() == 2, "Length Mismatch");
-
         assert!(twap.observations[1].num_of_observations == 2);
-
         assert!(twap.observations[1].price1_cumulative == 101, "price 1 Mismatch");
         assert!(twap.observations[1].price2_cumulative == 3, "price 2 Mismatch");
 

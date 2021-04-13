@@ -50,7 +50,7 @@ pub fn is_promise_success() -> bool {
 }
 
 // convert seconds into nanoseconds
-pub fn to_nanoseconds(time: u64) -> u64 {
+pub const fn to_nanoseconds(time: u64) -> u64 {
     return time * 1000_000_000;
 } 
 

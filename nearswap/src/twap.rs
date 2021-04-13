@@ -5,10 +5,8 @@ use near_sdk::{env};
 use std::convert::{TryFrom,TryInto};
 
 use std::fmt;
-use crate::constants::*;
-use crate::pool::*;
 use crate::*;
-use crate::util::*;
+use crate::constants::*;
 
 #[derive(Debug)]
 pub enum Mean {
@@ -46,7 +44,6 @@ impl Twap {
 
     pub fn new() -> Self {
         Self {
-            populated: 0,
             current_idx: 0,
             pivoted: false,
             observations: Vec::new(),
@@ -108,16 +105,15 @@ impl Twap {
             self.pivoted = true;
             self.current_idx = 0;
         } else {
-            self.current_idx+=1;
+            self.current_idx += 1;
         }
-        if updated_index < self.observations.len() {
-            self.observations[updated_index] = Observation::transform(o, block_timestamp, price1, price2);
+        if self.current_idx < self.observations.len() {
+            self.observations[self.current_idx] = Observation::transform(o, block_timestamp, price1, price2);
         } else {
             self.observations.push(Observation::transform(o, block_timestamp, price1, price2));
         }
 
-        self.current_idx = updated_index;
-        return updated_index;
+        return self.current_idx;
     }
 
     /**
@@ -181,43 +177,40 @@ impl Twap {
         max_length: usize,
     ) -> (u128, u128) {
         let time_diff: u64 = match time {
-            Mean::M_1MIN => to_nanoseconds(60), // 1 minute in nanoseconds
-            Mean::M_5MIN => to_nanoseconds(300), // 5 minute in nanoseconds
-            Mean::M_1H => to_nanoseconds(60 * 60),
-            Mean::M_12H => to_nanoseconds(12 * 60 * 60),
+            Mean::M_1MIN => T_1MIN, // 1 minute in nanoseconds
+            Mean::M_5MIN => T_5MIN, // 5 minute in nanoseconds
+            Mean::M_1H => T_1H,
+            Mean::M_12H => T_12H,
             _ => 0
         };
-        let last_index = self.current_idx;
-        let req_timestamp = self.observations[last_index].block_timestamp - time_diff;
+        let req_timestamp = self.observations[self.current_idx].block_timestamp - time_diff;
         let left_index = self.binary_search(max_length, req_timestamp);
+        let current_o = &self.observations[self.current_idx];
         
-        let total_observe, price1cumu, price2cumu;
+        let total_observe;
+        let price1cumu;
+        let price2cumu;
         if left_index == 0 {
-            total_observe = self.observations[last_index].num_of_observations;
-            price1cumu = self.observations[last_index].price1_cumulative;
-            price2cumu = self.observations[last_index].price2_cumulative;
+            total_observe = current_o.num_of_observations;
+            price1cumu = current_o.price1_cumulative;
+            price2cumu = current_o.price2_cumulative;
         } else {
-            total_observe = self.observations[last_index].num_of_observations
-                                    - self.observations[left_index - 1].num_of_observations;
-            price1cumu = self.observations[last_index].price1_cumulative
-                                    - self.observations[left_index - 1].price1_cumulative;
-            price2cumu = self.observations[last_index].price2_cumulative
-                                    - self.observations[left_index - 1].price2_cumulative;
+            let prev_o = &self.observations[left_index - 1];
+            total_observe = current_o.num_of_observations
+                                    - prev_o.num_of_observations;
+            price1cumu = current_o.price1_cumulative
+                                    - prev_o.price1_cumulative;
+            price2cumu = current_o.price2_cumulative
+                                    - prev_o.price2_cumulative;
         }
         let mean1 = price1cumu / total_observe;
         let mean2 = price2cumu / total_observe;
         return (mean1, mean2);
     }
 
-    pub(crate) fn log_observation(&mut self, pool: PoolInfo) {
-        // price1, price2 calculate
-        let near = u128::try_from(pool.ynear).unwrap();
-        let reserve = u128::try_from(pool.reserve).unwrap();
-        let price1: u128 = near / reserve;
-        let price2: u128 = reserve / near;
-
+    pub(crate) fn log_observation(&mut self, price1: u128, price2: u128) {
         // update current index
-        if self.observations.len == 0 {
+        if self.observations.len() == 0 {
             self.current_idx = self.initialize(env::block_timestamp(), price1, price2);
         } else {
             self.current_idx = self.write(
@@ -229,13 +222,7 @@ impl Twap {
         }
 
         // update mean
-        let len: usize = if self.pivoted == true {
-            MAX_LENGTH.into()
-        } else {
-            self.observations.len()
-        }
-
-        self.update_mean(len);
+        self.update_mean(self.observations.len());
     }
 
     pub fn update_mean(&mut self, len: usize) {

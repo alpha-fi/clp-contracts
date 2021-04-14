@@ -183,7 +183,13 @@ impl Twap {
             Mean::M_12H => T_12H,
             _ => 0
         };
-        let req_timestamp = self.observations[self.current_idx].block_timestamp - time_diff;
+        let req_timestamp;
+        if self.observations[self.current_idx].block_timestamp >= time_diff {
+            req_timestamp = self.observations[self.current_idx].block_timestamp - time_diff;
+        } else {
+            req_timestamp = self.observations[self.current_idx].block_timestamp;
+        }
+         
         let left_index = self.binary_search(max_length, req_timestamp);
         let current_o = &self.observations[self.current_idx];
         
@@ -293,10 +299,10 @@ mod tests {
     }
 
     // returns twap with observation vector with timestamp [1, 2, 3, 4, 5, 6, 7, 9, 10]
-    fn get_twap() -> Twap {
+    fn get_twap(timestamp: u64) -> Twap {
 
         let mut twap: Twap = Twap::new();
-        let mut current_idx = twap.initialize(env::block_timestamp(), 1, 1);
+        let mut current_idx = twap.initialize(timestamp, 1, 1);
 
         let max_length = 10;
         // fill all places
@@ -415,7 +421,7 @@ mod tests {
     fn simple_binary_search_works() {
         init_blockchain();
 
-        let twap: Twap = get_twap();
+        let twap: Twap = get_twap(env::block_timestamp());
         let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -446,7 +452,7 @@ mod tests {
     fn binary_edge_case_works() {
         init_blockchain();
 
-        let twap: Twap = get_twap();
+        let twap: Twap = get_twap(env::block_timestamp());
         let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -460,7 +466,7 @@ mod tests {
     fn pivoted_binary_search_works() {
         init_blockchain();
 
-        let mut twap: Twap = get_twap();
+        let mut twap: Twap = get_twap(env::block_timestamp());
         let max_length = 10;
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
@@ -549,5 +555,47 @@ mod tests {
 
         assert_eq!(11 , res.0, "Wrong mean - 2");
         assert_eq!(11, res.1, "Wrong mean - 1");
+    }
+
+    // binary search edge cases
+    #[test]
+    fn calculate_mean_edge_cases() {
+        init_blockchain();
+
+        let timestamp = env::block_timestamp();
+        let mut twap: Twap = Twap::new();
+        let mut current_idx = twap.initialize(timestamp, 1, 1);
+        let max_length = 10;
+
+        let min_2_timestamp = timestamp + to_nanoseconds(120);
+
+        twap.write(min_2_timestamp, 3, 3, max_length);
+        // calculate mean for last 5 mins, though array starts from 1 min
+        let mut res = twap.calculate_mean(Mean::M_5MIN, twap.observations.len());
+
+        assert_eq!(3, res.0, "Wrong mean - 1");
+        assert_eq!(3, res.1, "Wrong mean - 1");
+
+        // calculate mean for last 12 hours mins, though array starts from 1 min
+        let mut res = twap.calculate_mean(Mean::M_12H, twap.observations.len());
+
+        assert_eq!(3, res.0, "Wrong mean - 1");
+        assert_eq!(3, res.1, "Wrong mean - 1");
+
+        let min_8_timestamp = timestamp + to_nanoseconds(480);
+        let min_10_timestamp = timestamp + to_nanoseconds(600);
+
+        twap.write(min_8_timestamp, 12, 12, max_length);
+        twap.write(min_10_timestamp, 10, 10, max_length);
+
+        for i in 2..9 {
+            twap.write(min_10_timestamp + to_nanoseconds(60 * (i + 10)), 5, 5, max_length);
+        }
+        // array
+        // 18, 3, 8, 10, 12, 13, 14, 15, 16, 17
+        res = twap.calculate_mean(Mean::M_1MIN, twap.observations.len());
+
+        assert_eq!(5 , res.0, "Wrong mean - 2");
+        assert_eq!(5, res.1, "Wrong mean - 1");
     }
 }

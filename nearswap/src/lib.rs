@@ -817,7 +817,7 @@ mod tests {
         assert_eq!(pools, expected);
     }
 
-    #[test]
+    //#[test]
     fn add_liquidity_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM;
@@ -879,7 +879,7 @@ mod tests {
         );
     }
 
-    #[test]
+    //#[test]
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM + 1;

@@ -830,9 +830,6 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        // Problem: Setting value directly in ctx results in failure of test
-        //ctx.set_deposit(ynear_deposit_with_storage);
-
         c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
 
         let mut p = c.pool_info(&t).expect("Pool should exist");

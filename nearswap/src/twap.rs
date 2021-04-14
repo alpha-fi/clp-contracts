@@ -97,7 +97,7 @@ impl Twap {
     ) -> usize {
         let mut o = &self.observations[self.current_idx];
         if(block_timestamp == o.block_timestamp) {
-            self.observations[self.current_idx] = Observation::transform(o, block_timestamp, price1, price2);
+            self.observations[self.current_idx] = transform(o, block_timestamp, price1, price2);
             return self.current_idx;
         }
 
@@ -108,9 +108,9 @@ impl Twap {
             self.current_idx += 1;
         }
         if self.current_idx < self.observations.len() {
-            self.observations[self.current_idx] = Observation::transform(o, block_timestamp, price1, price2);
+            self.observations[self.current_idx] = transform(o, block_timestamp, price1, price2);
         } else {
-            self.observations.push(Observation::transform(o, block_timestamp, price1, price2));
+            self.observations.push(transform(o, block_timestamp, price1, price2));
         }
 
         return self.current_idx;
@@ -245,30 +245,30 @@ pub struct Observation {
     pub price2_cumulative: u128,
 }
 
-impl Observation {
-    /**
-    Transforms a previous observation into a new observation.
-    Parameters:
-    + `block_timestamp`: _must_ be chronologically equal to or greater than last.block_timestamp.
-    + `last`: The specified observation to be transformed.
-    + `price1`: price of first token.
-    + `price2`: price of second token.
-    */
-    pub fn transform(
-        last: &Observation,
-        block_timestamp: u64,
-        price1: u128,
-        price2: u128
-    ) -> Observation {
-        return
-            Observation {
-                block_timestamp: block_timestamp,
-                num_of_observations: last.num_of_observations + 1,
-                price1_cumulative: last.price1_cumulative + price1,
-                price2_cumulative: last.price2_cumulative + price2,
-            };
-    }
+/**
+Transforms a previous observation into a new observation.
+Parameters:
++ `block_timestamp`: _must_ be chronologically equal to or greater than last.block_timestamp.
++ `last`: The specified observation to be transformed.
++ `price1`: price of first token.
++ `price2`: price of second token.
+*/
+pub fn transform(
+    last: &Observation,
+    block_timestamp: u64,
+    price1: u128,
+    price2: u128
+) -> Observation {
+    return
+        Observation {
+            block_timestamp: block_timestamp,
+            num_of_observations: last.num_of_observations + 1,
+            price1_cumulative: last.price1_cumulative + price1,
+            price2_cumulative: last.price2_cumulative + price2,
+        };
+}
 
+impl Observation {
     /// returns instance of Observation structure
     pub fn new() -> Self {
         return Self {

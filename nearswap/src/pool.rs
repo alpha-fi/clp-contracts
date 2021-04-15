@@ -51,7 +51,7 @@ impl Pool {
             reserve: 0,
             shares: LookupMap::new(pool_id),
             total_shares: 0,
-            twap: Twap::new(),
+            twap: Twap::new(65535),
         }
     }
 

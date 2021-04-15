@@ -897,7 +897,7 @@ mod tests {
             reserve: 10 * NDENOM,
             total_shares: 30 * NDENOM,
             shares: shares_map,
-            twap: Twap::new(),
+            twap: Twap::new(10),
         };
         c.pools.insert(&t, &p);
 
@@ -932,7 +932,7 @@ mod tests {
             reserve: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
-            twap: Twap::new(),
+            twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
 
@@ -974,7 +974,7 @@ mod tests {
             reserve: 22 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
-            twap: Twap::new(),
+            twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
 
@@ -1081,7 +1081,7 @@ mod tests {
             reserve: p1_factor * G,
             total_shares: 0,
             shares: LookupMap::new("1".as_bytes().to_vec()),
-            twap: Twap::new(),
+            twap: Twap::new(10),
         };
         let p2 = Pool {
             // 2:1
@@ -1089,7 +1089,7 @@ mod tests {
             reserve: G,
             total_shares: 0,
             shares: LookupMap::new("2".as_bytes().to_vec()),
-            twap: Twap::new(),
+            twap: Twap::new(10),
         };
         c.set_pool(&t1, &p1);
         c.set_pool(&t2, &p2);

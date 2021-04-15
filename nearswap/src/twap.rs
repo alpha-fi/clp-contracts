@@ -300,7 +300,7 @@ mod tests {
     }
 
     // returns twap with observation vector with timestamp [1, 2, 3, 4, 5, 6, 7, 9, 10]
-    fn get_twap(timestamp: u64) -> Twap {
+    fn setup_twap(timestamp: u64) -> Twap {
 
         let max_length = 10;
         let mut twap: Twap = Twap::new(max_length);
@@ -415,7 +415,7 @@ mod tests {
     fn simple_binary_search_works() {
         init_blockchain();
 
-        let twap: Twap = get_twap(1);
+        let twap: Twap = setup_twap(1);
         let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -434,7 +434,7 @@ mod tests {
     fn binary_edge_case_works() {
         init_blockchain();
 
-        let twap: Twap = get_twap(1);
+        let twap: Twap = setup_twap(1);
         let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -445,7 +445,7 @@ mod tests {
     fn pivoted_binary_search_works() {
         init_blockchain();
 
-        let mut twap: Twap = get_twap(1);
+        let mut twap: Twap = setup_twap(1);
         let max_length = 10;
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]

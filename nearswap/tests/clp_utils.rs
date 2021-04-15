@@ -90,7 +90,7 @@ pub fn create_pool_add_liquidity(
     call!(
         owner,
         token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_amount.into()),
-        deposit = 2 * NEP21_STORAGE_DEPOSIT
+        deposit = 2 * NDENOM
     )
     .assert_success();
 
@@ -98,7 +98,7 @@ pub fn create_pool_add_liquidity(
     call!(
         owner,
         clp.add_liquidity(token_id.to_string(), U128(token_amount), U128(near_amount)),
-        deposit = near_amount + NEP21_STORAGE_DEPOSIT
+        deposit = near_amount + NDENOM
     )
     .assert_success();
 }

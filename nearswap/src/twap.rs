@@ -403,7 +403,7 @@ mod tests {
             1, 1
         );
 
-        env_log!("as {}", twap.observations.len());
+        println!("as {}", twap.observations.len());
         assert!(twap.observations.len() == 10, "Mismatch");
         assert!(current_idx == 1, "current index mismatch");
 
@@ -458,7 +458,7 @@ mod tests {
         let mut result_index = twap.binary_search(
             11,
         );
-        //println!("SSS {} {}", result_index, current_idx);
+        println!("SSS {} {}", result_index, current_idx);
         assert!(result_index == 0, "Wrong Index");
 
         current_idx = twap.log_observation(
@@ -475,7 +475,7 @@ mod tests {
             3,
         );
 
-        env_log!("RESULT {}", result_index);
+        println!("RESULT {}", result_index);
         assert!(twap.observations.get(0).unwrap().block_timestamp == 13, "First timestamp wrong");
         assert!(twap.observations.get(1).unwrap().block_timestamp == 20, "Second timestamp wrong");
         assert!(twap.observations.get(2).unwrap().block_timestamp == 21, "Second timestamp wrong");

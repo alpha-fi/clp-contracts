@@ -83,7 +83,7 @@ impl Twap {
     Writes an oracle observation to the array.
     Index represents the most recently written element.
     Parameters:
-    + `block_timestamp`: The timestamp of the new observation.
+    + `block_timestamp`: The timestamp (in nanoseconds) of the new observation.
     + `price1`: price of first token.
     + `price2`: price of second token.
     + `max_length`: The maximum length of TWAP array
@@ -122,7 +122,7 @@ impl Twap {
     Similar to rotated array from a certain pivot point.
     Parameters:
     + `max_length`: The maximum length of TWAP array.
-    + `timestamp`: given timestamp.
+    + `block_timestamp`: timestamp in nonoseconds.
     */
     pub fn binary_search(
         &self,
@@ -227,7 +227,6 @@ impl Twap {
             );
         }
 
-        // update mean
         self.update_mean(self.observations.len());
     }
 
@@ -326,7 +325,6 @@ mod tests {
         let current_idx = twap.initialize(env::block_timestamp(), 1, 1);
 
         assert!(twap.observations.len() == 1, "Mismatch");
-
         assert!(twap.observations.get(0).unwrap().price1_cumulative == 1, "Mismatch");
         assert!(twap.observations.get(0).unwrap().price2_cumulative == 1, "Mismatch");
     }
@@ -429,14 +427,12 @@ mod tests {
             max_length,
             5,
         );
-
         assert!(returned_index == 4, "Wrong Index");
 
         returned_index = twap.binary_search(
             max_length,
             0,
         );
-
         assert!(returned_index == 0, "Wrong Index");
 
         returned_index = twap.binary_search(

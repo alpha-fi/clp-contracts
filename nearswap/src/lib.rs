@@ -888,6 +888,16 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
+
         let amount = shares_bal / 3;
         let min_v = U128::from(1);
         c.withdraw_liquidity(t.clone(), amount.into(), min_v, min_v);

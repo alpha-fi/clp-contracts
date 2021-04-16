@@ -2,15 +2,14 @@
 // Copyright (C) 2020 Robert Zaremba and contributors
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::LookupMap;
+use near_sdk::collections::{LookupMap, Vector};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
 use std::fmt;
-
-// use crate::types::*;
-// use crate::util::*;
+use crate::*;
+use crate::twap::*;
 
 /// PoolInfo is a helper structure to extract public data from a Pool
 #[derive(Debug, PartialEq, BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -41,6 +40,8 @@ pub struct Pool {
     pub shares: LookupMap<AccountId, Balance>,
     /// check `PoolInfo.total_shares`
     pub total_shares: Balance,
+
+    pub twap: Twap,
 }
 
 impl Pool {
@@ -50,6 +51,7 @@ impl Pool {
             reserve: 0,
             shares: LookupMap::new(pool_id),
             total_shares: 0,
+            twap: Twap::new(65535),
         }
     }
 

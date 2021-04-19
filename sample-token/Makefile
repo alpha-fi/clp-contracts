@@ -1,15 +1,13 @@
 #################
-#   NEARswap    #
+#   Sample Token    #
 
 
 include ../Makefile_common.mk
 
 export TOKEN1=token1.nearswap.testnet
 
-deploy-nearswap:
-	near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)  --initFunction "new" --initArgs "{\"owner\": \"$NMASTER_ACC\"}"
+deploy-token:
+	near deploy --wasmFile target/wasm32-unknown-unknown/release/sample_token.wasm --accountId $(TOKEN1)  --initFunction "new"
 
-init-nearswap:
-	@echo near sent ${NMASTER_ACC} ${NCLP_ACC} 200
-# no need to call new because we call it during the deployment
-#	@echo near call ${NCLP_ACC} new "{\"owner\": \"$NMASTER_ACC\"}" --accountId ${NCLP_ACC}
+init-token:
+	@echo near sent ${NMASTER_ACC} ${TOKEN1} 200

@@ -600,7 +600,7 @@ mod tests {
         _init(0)
     }
     fn init_with_storage_deposit() -> (Ctx, NearSwap) {
-        _init(NDENOM * 120)
+        _init(NDENOM)
     }
 
     // TODO - fix this test.
@@ -686,7 +686,7 @@ mod tests {
 
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
         ctx.set_deposit(ynear_deposit_with_storage);
 
         let account_deposit = AccountDeposit {
@@ -751,7 +751,7 @@ mod tests {
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();

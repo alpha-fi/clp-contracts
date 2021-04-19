@@ -4,7 +4,7 @@
 
 include ../Makefile_common.mk
 
-export NCLP_ACC=beta-1.nearswap.testnet
+export TOKEN1=token1.nearswap.testnet
 
 deploy-nearswap:
 	near deploy --wasmFile target/wasm32-unknown-unknown/release/near_clp.wasm --accountId $(NCLP_ACC)  --initFunction "new" --initArgs "{\"owner\": \"$NMASTER_ACC\"}"

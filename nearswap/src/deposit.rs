@@ -67,7 +67,7 @@ impl NearSwap {
         token_id: &AccountId,
         amount: Balance,
     ) {
-        let mut account_deposit = self.get_deposit(sender_id);
+        let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)
                 || account_deposit.tokens.contains_key(token_id),

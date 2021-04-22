@@ -70,11 +70,11 @@ impl NearSwap {
         let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)
-                || account_deposit.tokens.contains_key(token_id),
+                || d.tokens.contains_key(token_id),
             "{}",
             ERR23_TOKEN_NOT_WHITELISTED
         );
-        account_deposit.add(token_id, amount);
+        d.add(token_id, amount);
     }
 
     /**

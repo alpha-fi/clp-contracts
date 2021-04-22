@@ -59,6 +59,24 @@ impl NearSwap {
         env_log!("Deposit, {} yNEAR", amount);
     }
 
+    /// Record deposit of some number of tokens to this contract.
+    /// Fails if account is not registered or if token isn't whitelisted.
+    pub(crate) fn deposit_token(
+        &mut self,
+        sender_id: &AccountId,
+        token_id: &AccountId,
+        amount: Balance,
+    ) {
+        let mut account_deposit = self.get_deposit(sender_id);
+        assert!(
+            self.whitelisted_tokens.contains(token_id)
+                || account_deposit.tokens.contains_key(token_id),
+            "{}",
+            ERR23_TOKEN_NOT_WHITELISTED
+        );
+        account_deposit.add(token_id, amount);
+    }
+
     /**
     Withdraws near from deposit.
     Requires payment of exactly one yNEAR to enforce wallet confirmation. */
@@ -153,9 +171,28 @@ pub struct AccountDeposit {
 }
 
 impl AccountDeposit {
+    /// add given token to whitelist and set balance to 0.
+    /// Fails if not enough amount to cover new storage usage.
+    pub(crate) fn add_to_whitelist(&mut self, token_ids: &Vec<ValidAccountId>) {
+        for token_id in token_ids {
+            let t = token_id.as_ref();
+            if !self.tokens.contains_key(t) {
+                self.tokens.insert(t.clone(), 0);
+            }
+        }
+        self.assert_storage();
+    }
+
+    /// Remove `token_id` from this account whitelist and remove balance.
+    /// Panics if the `token_id` balance is not 0.
+    pub(crate) fn remove_from_whitelist(&mut self, token_id: &AccountId) {
+        let amount = self.tokens.remove(token_id).unwrap_or_default();
+        assert_eq!(amount, 0, "{}", ERR24_NON_ZERO_TOKEN_BALANCE);
+    }
     /**
     deposit `token`s. If this is a first depoisit, a new record is created and the minimum
     required storage is increased. */
+    /// Fails if account is not registered or if token isn't whitelisted.
     pub(crate) fn add(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
             *x = *x + amount;

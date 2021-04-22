@@ -139,6 +139,7 @@ mod tests {
             owner: "owner".to_string(),
             pools: UnorderedMap::new("p".into()),
             deposits: LookupMap::new("d".into()),
+            whitelisted_tokens: UnorderedSet::new("w".into()),
         };
         near.deposits.insert(&"owner".to_string(), &ac);
 

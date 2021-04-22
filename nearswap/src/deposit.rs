@@ -191,8 +191,9 @@ impl AccountDeposit {
     }
     /**
     deposit `token`s. If this is a first depoisit, a new record is created and the minimum
-    required storage is increased. */
-    /// Fails if account is not registered or if token isn't whitelisted.
+    required storage is increased. 
+    Fails if account is not registered or if token isn't whitelisted.
+    */
     pub(crate) fn add(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
             *x = *x + amount;

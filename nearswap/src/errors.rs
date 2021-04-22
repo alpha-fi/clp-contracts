@@ -23,3 +23,5 @@ pub const ERR20_ACC_NOT_REGISTERED: &str = "E20: Account not registered";
 pub const ERR21_ACC_STORAGE_TOO_LOW: &str =
     "E21: Not enough NEAR to cover storage. Deposit more NEAR";
 pub const ERR22_ACC_ALREADY_REGISTERED: &str = "E22: Account already registered";
+pub const ERR23_TOKEN_NOT_WHITELISTED: &str = "E23: Token is not whitelisted";
+pub const ERR24_NON_ZERO_TOKEN_BALANCE: &str = "E24: Token balance is non-zero";

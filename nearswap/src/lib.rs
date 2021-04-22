@@ -3,7 +3,7 @@
 
 use internal::{assert_max_pay, assert_min_buy};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{assert_one_yocto, env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
 
@@ -39,6 +39,9 @@ pub struct NearSwap {
 
     // user deposits
     deposits: LookupMap<AccountId, AccountDeposit>,
+
+    // Set of whitelisted tokens by "owner".
+    whitelisted_tokens: UnorderedSet<AccountId>,
 }
 
 //-------------------------
@@ -54,6 +57,7 @@ impl NearSwap {
             owner: o,
             pools: UnorderedMap::new("p".into()),
             deposits: LookupMap::new("d".into()),
+            whitelisted_tokens: UnorderedSet::new("w".into()),
         }
     }
 
@@ -71,6 +75,22 @@ impl NearSwap {
         env_log!("Changing owner from {} to {}", self.owner, o);
         self.owner = o;
     }
+
+    /// Extend whitelisted tokens with new tokens. Only can be called by owner.
+    #[payable]
+    pub fn extend_whitelisted_tokens(&mut self, tokens: Vec<ValidAccountId>) {
+        self.assert_owner();
+        for token in tokens {
+            self.whitelisted_tokens.insert(token.as_ref());
+        }
+    }
+
+    /// Remove whitelisted token. Only can be called by owner.
+    pub fn remove_whitelisted_token(&mut self, token: ValidAccountId) {
+        self.assert_owner();
+        self.whitelisted_tokens.remove(token.as_ref());
+    }
+    
 
     /**********************
      POOL MANAGEMENT

@@ -922,6 +922,69 @@ mod tests {
         );
     }
 
+    fn prepare_for_withdraw() -> (AccountId, NearSwap) {
+        let (ctx, mut c) = init_with_storage_deposit();
+        let acc = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+
+        let shares_bal = 12 * NDENOM;
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&acc, &shares_bal);
+        let p = Pool {
+            ynear: shares_bal,
+            tokens: 3 * NDENOM,
+            total_shares: shares_bal,
+            shares: shares_map,
+        };
+        c.set_pool(&t, &p);
+
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
+        return (t.clone(), c);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_1() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(10 * NDENOM);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_2() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(1);
+        let min_token = U128::from(10 * NDENOM);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = "E5: can't withdraw more shares then currently owned")]
+    fn withdraw_happy_path_failure_3() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares = 24 * NDENOM;
+        let min_near = U128::from(1);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), shares.into(), min_near, min_token);
+    }
+
     #[test]
     fn shares_transfer() {
         let (ctx, mut c) = init_with_storage_deposit();

@@ -5,7 +5,10 @@ use internal::{assert_max_pay, assert_min_buy};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::{assert_one_yocto, env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
+use near_sdk::{
+    assert_one_yocto, env, near_bindgen, AccountId,
+    Balance, PanicOnDefault, Promise, StorageUsage
+};
 
 mod constants;
 mod deposit;
@@ -219,6 +222,7 @@ impl NearSwap {
         token: AccountId,
         min_tokens: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let ynear: u128 = ynear_in.into();
         let min_tokens: u128 = min_tokens.into();
@@ -227,7 +231,7 @@ impl NearSwap {
         let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
         assert_min_buy(tokens_out, min_tokens);
         self._swap_n2t(&mut p, ynear, &token, tokens_out);
-        self.storage_check();
+        self.storage_check(start_storage);
         return tokens_out.into();
     }
 
@@ -243,6 +247,7 @@ impl NearSwap {
         token: AccountId,
         tokens_out: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let tokens_out: u128 = tokens_out.into();
         let max_ynear: u128 = max_ynear.into();
@@ -251,7 +256,7 @@ impl NearSwap {
         let mut p = self.get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
         self._swap_n2t(&mut p, near_to_pay, &token, tokens_out);
-        self.storage_check();
+        self.storage_check(start_storage);
         return near_to_pay.into();
     }
 
@@ -267,6 +272,7 @@ impl NearSwap {
         tokens_paid: U128,
         min_ynear: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let tokens_paid: u128 = tokens_paid.into();
         let min_ynear: u128 = min_ynear.into();
@@ -276,7 +282,7 @@ impl NearSwap {
         let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_ynear);
         self._swap_t2n(&mut p, &token, tokens_paid, near_out);
-        self.storage_check();
+        self.storage_check(start_storage);
         return near_out.into();
     }
 
@@ -293,6 +299,7 @@ impl NearSwap {
         max_tokens: U128,
         ynear_out: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let max_tokens: u128 = max_tokens.into();
         let ynear_out: u128 = ynear_out.into();
@@ -302,7 +309,7 @@ impl NearSwap {
         let tokens_to_pay = self.calc_in_amount(ynear_out, p.tokens, p.ynear);
         assert_max_pay(tokens_to_pay, max_tokens);
         self._swap_t2n(&mut p, &token, tokens_to_pay, ynear_out);
-        self.storage_check();
+        self.storage_check(start_storage);
         return tokens_to_pay.into();
     }
 
@@ -321,6 +328,7 @@ impl NearSwap {
         token_out: AccountId,
         min_tokens_out: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let tokens_in: u128 = tokens_in.into();
         let min_tokens_out: u128 = min_tokens_out.into();
@@ -332,7 +340,7 @@ impl NearSwap {
         self._swap_tokens(
             p1, p2, &token_in, tokens_in, &token_out, tokens_out, near_swap,
         );
-        self.storage_check();
+        self.storage_check(start_storage);
         return tokens_out.into();
     }
 
@@ -351,6 +359,7 @@ impl NearSwap {
         token_out: AccountId,
         tokens_out: U128,
     ) -> U128 {
+        let start_storage = env::storage_usage();
         assert_one_yocto();
         let (tokens_out, max_tokens_in) = (u128::from(tokens_out), u128::from(max_tokens_in));
         assert!(max_tokens_in > 0 && tokens_out > 0, ERR02_POSITIVE_ARGS);
@@ -368,15 +377,14 @@ impl NearSwap {
             tokens_out,
             near_swapped,
         );
-        self.storage_check();
+        self.storage_check(start_storage);
         return tokens_in_to_pay.into();
     }
 
-    pub fn storage_check(&mut self) {
-        let start_storage = env::storage_usage();
+    pub fn storage_check(&mut self, storage: StorageUsage) {
         let user = env::predecessor_account_id();
         let mut d = self.get_deposit(&user);
-        d.update_storage(start_storage);
+        d.update_storage(storage);
         self.set_deposit(&user, &d);
     }
 

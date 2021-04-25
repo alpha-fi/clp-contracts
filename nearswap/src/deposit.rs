@@ -350,11 +350,4 @@ mod tests {
         let expected = initial - 2 + 84;
         assert!(d.storage_used == expected, "Storage Mismatch");
     }
-
-    /*#[test]
-    fn deposit_token_works() {
-        let (mut ctx, mut c) = init();
-        c.deposit_token("sender".try_into().unwrap(), "token".try_into(),unwrap(), 100.try_into());
-        
-    }*/
 }

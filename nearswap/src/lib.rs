@@ -548,7 +548,7 @@ impl NearSwap {
 mod tests {
     use super::*;
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
-    use std::convert::TryInto;
+    use std::convert::{TryInto, TryFrom};
     use near_sdk_sim::to_yocto;
 
     struct Accounts {
@@ -621,6 +621,108 @@ mod tests {
     }
     fn init_with_storage_deposit() -> (Ctx, NearSwap) {
         _init(NEP21_STORAGE_DEPOSIT * 120)
+    }
+    fn init_with_owner() -> (Ctx, NearSwap) {
+        let mut ctx = Ctx::new(vec![], false);
+        ctx.vm.attached_deposit = 0;
+        testing_env!(ctx.vm.clone());
+        let contract = NearSwap::new("predecessor".try_into().unwrap());
+        return (ctx, contract);
+    }
+
+    fn to_va(a: AccountId) -> ValidAccountId {
+        ValidAccountId::try_from(a).unwrap()
+    }
+
+    fn account_deposit() -> AccountDeposit {
+        return AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [("eth".into(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn add_to_whitelist_works() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        // Add to nearswap whitelist
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should work
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+        let res = c.get_deposit(&a.clone());
+        assert_eq!(res.tokens.get(&"token1".to_string()), Some(&10))
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn add_to_whitelist_failure_1() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        // Add to nearswap whitelist
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        let mut account_deposit = account_deposit();
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should not work
+        // because token not whitelisted in account deposit
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn add_to_whitelist_failure_2() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should not work
+        // because token not whitelisted in global list
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn remove_from_whitelist_works_1() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+        c.remove_whitelisted_token(to_va("token1".into()));
+
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn remove_from_whitelist_works_2() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+        
+        account_deposit.remove_from_whitelist(&"token1".into());
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
     }
 
     // TODO - fix this test.

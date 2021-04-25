@@ -67,7 +67,7 @@ impl NearSwap {
         let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)
-                || d.tokens.contains_key(token_id),
+                && d.tokens.contains_key(token_id),
             "{}",
             ERR23_TOKEN_NOT_WHITELISTED
         );
@@ -350,4 +350,11 @@ mod tests {
         let expected = initial - 2 + 84;
         assert!(d.storage_used == expected, "Storage Mismatch");
     }
+
+    /*#[test]
+    fn deposit_token_works() {
+        let (mut ctx, mut c) = init();
+        c.deposit_token("sender".try_into().unwrap(), "token".try_into(),unwrap(), 100.try_into());
+        
+    }*/
 }

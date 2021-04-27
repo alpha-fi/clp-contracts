@@ -620,7 +620,7 @@ mod tests {
         _init(0)
     }
     fn init_with_storage_deposit() -> (Ctx, NearSwap) {
-        _init(NEP21_STORAGE_DEPOSIT * 120)
+        _init(NDENOM)
     }
 
     // TODO - fix this test.
@@ -706,7 +706,7 @@ mod tests {
 
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit;
         ctx.set_deposit(ynear_deposit_with_storage);
 
         let account_deposit = AccountDeposit {
@@ -771,7 +771,7 @@ mod tests {
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
@@ -826,7 +826,7 @@ mod tests {
 
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NEP21_STORAGE_DEPOSIT;
+        let ynear_deposit_with_storage = ynear_deposit + NDENOM;
  
         ctx.set_deposit(ynear_deposit_with_storage);
 
@@ -908,6 +908,16 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
+
         let amount = shares_bal / 3;
         let min_v = U128::from(1);
         c.withdraw_liquidity(t.clone(), amount.into(), min_v, min_v);
@@ -930,6 +940,69 @@ mod tests {
             shares_bal - amount,
             "LP should have correct amount of shares"
         );
+    }
+
+    fn prepare_for_withdraw() -> (AccountId, NearSwap) {
+        let (ctx, mut c) = init_with_storage_deposit();
+        let acc = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+
+        let shares_bal = 12 * NDENOM;
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&acc, &shares_bal);
+        let p = Pool {
+            ynear: shares_bal,
+            tokens: 3 * NDENOM,
+            total_shares: shares_bal,
+            shares: shares_map,
+        };
+        c.set_pool(&t, &p);
+
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
+        return (t.clone(), c);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_1() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(10 * NDENOM);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_2() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(1);
+        let min_token = U128::from(10 * NDENOM);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = "E5: can't withdraw more shares then currently owned")]
+    fn withdraw_happy_path_failure_3() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares = 24 * NDENOM;
+        let min_near = U128::from(1);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), shares.into(), min_near, min_token);
     }
 
     #[test]

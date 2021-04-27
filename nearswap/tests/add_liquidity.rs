@@ -42,7 +42,7 @@ fn add_liquidity() {
     let res = call!(
         alice,
         token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_deposit.into()),
-        deposit = 2 * NEP21_STORAGE_DEPOSIT
+        deposit = 2 * NDENOM
     );
     println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
     assert!(res.is_ok());
@@ -57,7 +57,7 @@ fn add_liquidity() {
     let res1 = call!(
         alice,
         clp_contract.add_liquidity(token_id.to_string(), U128(token_deposit), U128(near_deposit)),
-        deposit = near_deposit + NEP21_STORAGE_DEPOSIT
+        deposit = near_deposit + NDENOM
     );
     
     // Verify Liquidity

@@ -33,11 +33,8 @@ impl FungibleTokenReceiver for NearSwap {
     ) -> PromiseOrValue<U128> {
         let token = env::predecessor_account_id();
         let sender_id = AccountId::from(sender_id);
-        // TODO: chekc if token is whitelisted to avoid spam attacks.
 
-        let mut d = self.get_deposit(&sender_id);
-        d.add(&token, amount.into());
-        self.deposits.insert(&sender_id, &d);
+        self.deposit_token(&sender_id, &token, amount.into());
         env_log!("Deposit, {} {}", amount.0, token);
 
         return PromiseOrValue::Value(U128(0));
@@ -70,11 +67,12 @@ impl NearSwap {
         let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)
-                || d.tokens.contains_key(token_id),
+                && d.tokens.contains_key(token_id),
             "{}",
             ERR23_TOKEN_NOT_WHITELISTED
         );
         d.add(token_id, amount);
+        self.deposits.insert(&sender_id, &d);
     }
 
     /**

@@ -31,6 +31,7 @@ impl FungibleTokenReceiver for NearSwap {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        assert!(false, "Called AOK");
         let token = env::predecessor_account_id();
         let sender_id = AccountId::from(sender_id);
 
@@ -64,6 +65,8 @@ impl NearSwap {
         token_id: &AccountId,
         amount: Balance,
     ) {
+        env_log!("Called  sfsd");
+        assert!(false, "SJHSJHJ ERRRORR");
         let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)

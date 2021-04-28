@@ -1,73 +1,73 @@
-#![allow(unused)]
+use std::convert::TryFrom;
 
-mod clp_utils;
-mod nep21_utils;
-use clp_utils::*;
-use nep21_utils::*;
+use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::AccountId;
+use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount};
 
-use near_sdk_sim::{
-    call, deploy, init_simulator, near_crypto::Signer, to_yocto, view, ContractAccount,
-    UserAccount, STORAGE_AMOUNT,
-};
-use nearswap::util::*;
-use nearswap::PoolInfo;
-use near_sdk::json_types::{U128, U64};
-use serde_json::json;
-use std::convert::TryInto;
+use near_sdk_sim::transaction::ExecutionStatus;
+use nearswap::{NearSwapContract, PoolInfo};
+use std::collections::HashMap;
+use sample_token::ContractContract as SampleToken;
+
+mod nep141_utils;
+use nep141_utils::*;
+
+near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
+    NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
+}
 
 #[test]
 fn add_liquidity() {
-    let (master_account, clp_contract, token, alice, carol) = deploy_clp();
-    let token_id = "token";
-    let token_contract = deploy_nep21(&token, token_id.into(), U128(1_000_000 * NDENOM));
-    // Creates Pool
+    let root = init_simulator(None);
+    let owner = root.create_user("owner".to_string(), to_yocto("100"));
+    let nearswap = deploy!(
+        contract: NearSwapContract,
+        contract_id: clp_contract(),
+        bytes: &NEARSWAP_WASM_BYTES,
+        signer_account: root,
+        init_method: new(to_va("owner".to_string()))
+    );
+    let token1 = sample_token(&root, dai(), vec![clp_contract()]);
+    let token2 = sample_token(&root, eth(), vec![clp_contract()]);
     call!(
-        carol,
-        clp_contract.create_pool(token_id.to_string().try_into().unwrap()),
-        deposit = STORAGE_AMOUNT
+        owner,
+        nearswap.extend_whitelisted_tokens(vec![to_va(dai()), to_va(eth())])
     );
-    let near_deposit = 7_000 * NDENOM;
-    let token_deposit = 14_000 * NDENOM;
-    // Funds Alice
     call!(
-        token,
-        token_contract.transfer(alice.account_id(), token_deposit.into()),
-        deposit = STORAGE_AMOUNT
-    );
-    println!(
-        "{} adds liquidity to {}",
-        alice.account_id(), token_id.to_string()
-    );
-    println!("creating allowance for CLP");
-    let res = call!(
-        alice,
-        token_contract.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), token_deposit.into()),
-        deposit = 2 * NDENOM
-    );
-    println!("{:#?}\n Cost:\n{:#?}", res.status(), res.profile_data());
-    assert!(res.is_ok());
+        root,
+        nearswap.create_pool(to_va("dai".into())),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
 
-    let val = view!(token_contract.get_allowance(
-        alice.account_id(), NEARSWAP_CONTRACT_ID.to_string())
-    );
-    let value: U128 = val.unwrap_json();
-    assert!(value == U128(token_deposit), "Allowance Error");
+    // Register account
+    call!(
+        root,
+        nearswap.storage_deposit(None, Some(true)),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
 
-    //add_liquidity
-    let res1 = call!(
-        alice,
-        clp_contract.add_liquidity(token_id.to_string(), U128(token_deposit), U128(near_deposit)),
-        deposit = near_deposit + NDENOM
-    );
-    
-    // Verify Liquidity
-    let bal = get_nep21_balance(&token_contract, &NEARSWAP_CONTRACT_ID.to_string());
-    assert!(bal == U128(token_deposit), "Liquidity Error");
+    // Deposit more near in account deposit
+    call!(
+        root,
+        nearswap.storage_deposit(None, None),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
 
-    let after_adding_info = get_pool_info(&clp_contract, &token_id.to_string());
-    println!(
-        "pool after add liq: {} {:?}",
-        &token.account_id(),
-        after_adding_info
-    );
+    // Deposit tokens
+    call!(
+        root,
+        token1.ft_transfer_call(to_va(clp_contract()), to_yocto("105").into(), None, "".to_string()),
+        deposit = 1
+    )
+    .assert_success();
+
+    call!(
+        root,
+        nearswap.add_liquidity(dai(), U128(to_yocto("5")), U128(to_yocto("105")), U128(0)),
+        deposit = 1
+    )
+    .assert_success();
 }

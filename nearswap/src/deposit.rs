@@ -31,7 +31,6 @@ impl FungibleTokenReceiver for NearSwap {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        assert!(false, "Called AOK");
         let token = env::predecessor_account_id();
         let sender_id = AccountId::from(sender_id);
 
@@ -57,6 +56,17 @@ impl NearSwap {
         env_log!("Deposit, {} yNEAR", amount);
     }
 
+    /**
+    Add tokens to account deposit whitelist
+    */
+    pub fn add_to_account_whitelist(
+        &mut self, token_ids: &Vec<ValidAccountId>) {
+        let sender_id = env::predecessor_account_id();
+        let mut d = self.get_deposit(&sender_id);
+        d.add_to_whitelist(token_ids);
+        self.deposits.insert(&sender_id, &d);
+    }
+
     /// Record deposit of some number of tokens to this contract.
     /// Fails if account is not registered or if token isn't whitelisted.
     pub(crate) fn deposit_token(
@@ -65,8 +75,6 @@ impl NearSwap {
         token_id: &AccountId,
         amount: Balance,
     ) {
-        env_log!("Called  sfsd");
-        assert!(false, "SJHSJHJ ERRRORR");
         let mut d = self.get_deposit(sender_id);
         assert!(
             self.whitelisted_tokens.contains(token_id)
@@ -233,11 +241,10 @@ impl AccountDeposit {
 
     #[inline]
     pub(crate) fn assert_storage(&self) {
-        assert!(
-            self.storage_used >= INIT_ACCOUNT_STORAGE
-                && self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
-            ERR21_ACC_STORAGE_TOO_LOW
-        )
+        if self.storage_used < INIT_ACCOUNT_STORAGE
+            || self.ynear < (self.storage_used as u128) * env::storage_byte_cost() {
+                env::panic(b"E21: Not enough NEAR to cover storage. Deposit more NEAR");
+        }
     }
 
     pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {
@@ -304,6 +311,7 @@ mod tests {
 
     #[test]
     fn assert_storage_works() {
+        init_blockchain();
         let deposit = AccountDeposit {
             ynear: 9900000000000000000000,
             storage_used: 100,
@@ -316,6 +324,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E21: Not enough NEAR to cover storage. Deposit more NEAR"#)]
     fn assert_storage_low() {
+        init_blockchain();
         let deposit = new_account_deposit();
 
         AccountDeposit::assert_storage(&deposit);

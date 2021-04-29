@@ -56,6 +56,11 @@ fn add_liquidity() {
     )
     .assert_success();
 
+    call!(
+        root,
+        nearswap.add_to_account_whitelist(&vec![to_va(dai()), to_va(eth())])
+    )
+    .assert_success();
     // Deposit tokens
     call!(
         root,
@@ -66,7 +71,7 @@ fn add_liquidity() {
 
     call!(
         root,
-        nearswap.add_liquidity(dai(), U128(to_yocto("5")), U128(to_yocto("105")), U128(0)),
+        nearswap.add_liquidity(dai(), U128(123), U128(to_yocto("105")), U128(0)),
         deposit = 1
     )
     .assert_success();

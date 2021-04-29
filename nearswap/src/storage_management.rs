@@ -44,7 +44,7 @@ impl StorageManagement for NearSwap {
 
                 let acc_deposit = AccountDeposit {
                     ynear: min_balance,
-                    storage_used: 0,
+                    storage_used: INIT_ACCOUNT_STORAGE,
                     tokens: HashMap::new(),
                 };
                 self.deposits.insert(&account_id, &acc_deposit);

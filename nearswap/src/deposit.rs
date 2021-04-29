@@ -241,10 +241,11 @@ impl AccountDeposit {
 
     #[inline]
     pub(crate) fn assert_storage(&self) {
-        if self.storage_used < INIT_ACCOUNT_STORAGE
-            || self.ynear < (self.storage_used as u128) * env::storage_byte_cost() {
-                env::panic(b"E21: Not enough NEAR to cover storage. Deposit more NEAR");
-        }
+        assert!(
+            self.storage_used >= INIT_ACCOUNT_STORAGE
+                && self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
+            ERR21_ACC_STORAGE_TOO_LOW
+        )
     }
 
     pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {

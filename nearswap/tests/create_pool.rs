@@ -40,6 +40,13 @@ fn add_liquidity() {
     )
     .assert_success();
 
+    let mut res = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    
+    // verify created pool
+    assert!(to_u128(res.ynear) == 0, "Near in pool incorrect");
+    assert!(to_u128(res.tokens) == 0, "Tokens in pool incorrect");
+    assert!(to_u128(res.total_shares) == 0, "Total shares in pool incorrect");
+
     // Register account
     call!(
         root,
@@ -75,4 +82,11 @@ fn add_liquidity() {
         deposit = 1
     )
     .assert_success();
+    
+    res = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    
+    // verify created pool after adding liquidity
+    assert!(to_u128(res.ynear) == 123, "Near in pool incorrect");
+    assert!(to_u128(res.tokens) == to_yocto("105"), "Tokens in pool incorrect");
+    assert!(to_u128(res.total_shares) == 123, "Total shares in pool incorrect");
 }

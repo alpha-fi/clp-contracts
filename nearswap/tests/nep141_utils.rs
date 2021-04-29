@@ -56,3 +56,7 @@ pub fn clp_contract() -> AccountId {
 pub fn to_va(a: AccountId) -> ValidAccountId {
     ValidAccountId::try_from(a).unwrap()
 }
+
+pub fn to_u128(a: U128) -> u128 {
+    return u128::try_from(a).unwrap();
+}

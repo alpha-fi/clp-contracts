@@ -231,7 +231,7 @@ impl NearSwap {
         let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
         assert_min_buy(tokens_out, min_tokens);
         self._swap_n2t(&mut p, ynear, &token, tokens_out);
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return tokens_out.into();
     }
 
@@ -256,7 +256,7 @@ impl NearSwap {
         let mut p = self.get_pool(&token);
         let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
         self._swap_n2t(&mut p, near_to_pay, &token, tokens_out);
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return near_to_pay.into();
     }
 
@@ -282,7 +282,7 @@ impl NearSwap {
         let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_ynear);
         self._swap_t2n(&mut p, &token, tokens_paid, near_out);
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return near_out.into();
     }
 
@@ -309,7 +309,7 @@ impl NearSwap {
         let tokens_to_pay = self.calc_in_amount(ynear_out, p.tokens, p.ynear);
         assert_max_pay(tokens_to_pay, max_tokens);
         self._swap_t2n(&mut p, &token, tokens_to_pay, ynear_out);
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return tokens_to_pay.into();
     }
 
@@ -340,7 +340,7 @@ impl NearSwap {
         self._swap_tokens(
             p1, p2, &token_in, tokens_in, &token_out, tokens_out, near_swap,
         );
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return tokens_out.into();
     }
 
@@ -377,14 +377,23 @@ impl NearSwap {
             tokens_out,
             near_swapped,
         );
-        self.storage_check(start_storage);
+        self.unsafe_storage_check(start_storage);
         return tokens_in_to_pay.into();
     }
 
-    pub fn storage_check(&mut self, storage: StorageUsage) {
+    /**
+    Update storage using deposit update storage function
+    start_storage: storage before performing any operation
+    Note: 
+    - This function must be called after performing all the operations to get the
+    correct storage
+    - This is unsafe when we have other deposit instance around this function call,
+    which can overwrite changes here.
+    */
+    fn unsafe_storage_check(&mut self, start_storage: StorageUsage) {
         let user = env::predecessor_account_id();
         let mut d = self.get_deposit(&user);
-        d.update_storage(storage);
+        d.update_storage(start_storage);
         self.set_deposit(&user, &d);
     }
 

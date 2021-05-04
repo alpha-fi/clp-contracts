@@ -1,18 +1,16 @@
 use near_contract_standards::storage_management::{
     StorageBalance, StorageBalanceBounds, StorageManagement,
 };
-use near_sdk::{assert_one_yocto, env, near_bindgen, AccountId, Balance};
-use near_sdk::collections::{LookupMap, UnorderedMap};
-use std::convert::TryInto;
+use near_sdk::{assert_one_yocto, env, near_bindgen};
 use std::collections::HashMap;
+use std::convert::TryInto;
 
-use crate::*;
 use crate::constants::*;
+use crate::*;
 
 /// Implements users storage management for NearSwap.
 #[near_bindgen]
 impl StorageManagement for NearSwap {
-
     // Register the caller and store minimal deposit.
     #[payable]
     fn storage_deposit(
@@ -21,14 +19,18 @@ impl StorageManagement for NearSwap {
         registration_only: Option<bool>,
     ) -> StorageBalance {
         let amount = env::attached_deposit();
-        let account_id = if let Some(a) = account_id { a.into() } else { env::predecessor_account_id() };
+        let account_id = if let Some(a) = account_id {
+            a.into()
+        } else {
+            env::predecessor_account_id()
+        };
         let registration_only = registration_only.unwrap_or(false);
         let min_balance = self.storage_balance_bounds().min.0;
         assert!(amount < min_balance, ERR12_NOT_ENOUGH_NEAR);
         if registration_only {
             // Registration only setups the account but doesn't leave space for tokens.
             if self.deposits.contains_key(&account_id) {
-               env::log(format!("Account already registered").as_bytes());
+                env::log(format!("Account already registered").as_bytes());
                 if amount > 0 {
                     Promise::new(env::predecessor_account_id()).transfer(amount);
                 }
@@ -39,12 +41,15 @@ impl StorageManagement for NearSwap {
                 }
 
                 let acc_deposit = AccountDeposit {
-                    near: min_balance,
+                    ynear: min_balance,
                     storage_used: 0,
-                    tokens: HashMap::new()
+                    tokens: HashMap::new(),
                 };
                 self.deposits.insert(&account_id, &acc_deposit);
-                return StorageBalance { total: U128(min_balance), available: U128(0) };
+                return StorageBalance {
+                    total: U128(min_balance),
+                    available: U128(0),
+                };
             }
         } else {
             self.deposit_near();
@@ -61,9 +66,9 @@ impl StorageManagement for NearSwap {
             .deposits
             .get(&account_id)
             .expect(ERR20_ACC_NOT_REGISTERED);
-        
+
         // storage available
-        let available = account_deposit.near - account_deposit.storage_usage();
+        let available = account_deposit.ynear - account_deposit.storage_usage();
         let amount = if let Some(a) = amount { a.0 } else { available };
         assert!(amount <= available, ERR14_NOT_ENOUGH_NEAR_DEPOSITED);
         Promise::new(account_id.clone()).transfer(amount);
@@ -81,7 +86,7 @@ impl StorageManagement for NearSwap {
                 "ERR_STORAGE_UNREGISTER_TOKENS_NOT_EMPTY"
             );
             self.deposits.remove(&account_id);
-            Promise::new(account_id.clone()).transfer(account_deposit.near);
+            Promise::new(account_id.clone()).transfer(account_deposit.ynear);
             true
         } else {
             false
@@ -90,7 +95,7 @@ impl StorageManagement for NearSwap {
 
     fn storage_balance_bounds(&self) -> StorageBalanceBounds {
         StorageBalanceBounds {
-            min: U128(MIN_ACCOUNT_DEPOSIT_LENGTH * (env::storage_byte_cost())),
+            min: U128(INIT_ACCOUNT_STORAGE as u128 * env::storage_byte_cost()),
             max: None,
         }
     }
@@ -98,14 +103,11 @@ impl StorageManagement for NearSwap {
     // check if a user is registered by calling
     fn storage_balance_of(&self, account_id: ValidAccountId) -> Option<StorageBalance> {
         if self.deposits.contains_key(account_id.as_ref()) {
-            let acc_deposits = self
-            .deposits
-            .get(account_id.as_ref())
-            .unwrap();
+            let acc_deposits = self.deposits.get(account_id.as_ref()).unwrap();
             return Some(StorageBalance {
-                total: U128(acc_deposits.near),
-                available: U128(acc_deposits.near - acc_deposits.storage_usage()),
-            })
+                total: U128(acc_deposits.ynear),
+                available: U128(acc_deposits.ynear - acc_deposits.storage_usage()),
+            });
         } else {
             return None;
         }
@@ -117,8 +119,8 @@ mod tests {
     use super::StorageManagement;
     use super::*;
 
-    use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::{testing_env, BlockHeight, MockedBlockchain};
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
 
     fn init_blockchain() {
         let context = VMContextBuilder::new();
@@ -127,7 +129,7 @@ mod tests {
 
     fn new_near_swap() -> NearSwap {
         let ac = AccountDeposit {
-            near: 9900000000000000000000,
+            ynear: 9900000000000000000000,
             storage_used: 10,
             tokens: HashMap::new(),
         };
@@ -137,6 +139,7 @@ mod tests {
             owner: "owner".to_string(),
             pools: UnorderedMap::new("p".into()),
             deposits: LookupMap::new("d".into()),
+            whitelisted_tokens: UnorderedSet::new("w".into()),
         };
         near.deposits.insert(&"owner".to_string(), &ac);
 
@@ -148,7 +151,11 @@ mod tests {
         init_blockchain();
         let near_swap = new_near_swap();
 
-        let result = StorageManagement::storage_balance_of(&near_swap, "owner".to_string().try_into().unwrap()).unwrap();
+        let result = StorageManagement::storage_balance_of(
+            &near_swap,
+            "owner".to_string().try_into().unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(result.total.0, 9900000000000000000000);
     }
@@ -158,8 +165,12 @@ mod tests {
         init_blockchain();
         let near_swap = new_near_swap();
 
-        let result = StorageManagement::storage_balance_of(&near_swap, "owner1".to_string().try_into().unwrap()).is_none();
-        
+        let result = StorageManagement::storage_balance_of(
+            &near_swap,
+            "owner1".to_string().try_into().unwrap(),
+        )
+        .is_none();
+
         assert!(result, true);
     }
 }

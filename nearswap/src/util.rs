@@ -5,18 +5,16 @@ use near_sdk::Gas;
 use near_sdk::{env, AccountId, PromiseResult};
 use uint::construct_uint;
 
+use crate::constants::*;
+
 /// Near denomination = 1e24. Usage: { amount: 50*E24 }
-pub const NDENOM: u128 = 1_000_000_000_000_000_000_000_000;
 const NDENOM_ROUNDING: u128 = 500_000_000_000_000_000_000_000;
 
-/// TGas denomination 1 Tera Gas => 1e12 yocto Nears
+/// TGas denomination 1 Tera Gas => 1e12 yNEAR
 pub const TGAS: Gas = 1_000_000_000_000;
 
 /// Prepaid gas costs. TODO: we need to adjust this value properly.
 pub const MAX_GAS: Gas = 200 * TGAS;
-
-/// nep21 may require NEAR deposit for storage to create a new balance
-pub const NEP21_STORAGE_DEPOSIT: u128 = 4 * NDENOM / 100; //0.04 NEAR
 
 // TODO: should we make it customizable?
 /// Price per 1 byte of storage from mainnet genesis config. 100e18
@@ -54,7 +52,7 @@ pub const fn to_nanoseconds(time: u64) -> u64 {
     return time * 1000_000_000;
 } 
 
-/// yoctoNEAR to NEAR. Rounds to nearest.
+/// yoctoNEAR to NEAR. Rounds down.
 #[inline]
 pub fn yton(yocto_amount: u128) -> u128 {
     (yocto_amount + NDENOM_ROUNDING) / NDENOM

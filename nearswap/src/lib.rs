@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
+use internal::{assert_max_pay, assert_min_buy};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise};
+use near_sdk::{
+    assert_one_yocto, env, near_bindgen, AccountId,
+    Balance, PanicOnDefault, Promise, StorageUsage
+};
 
+mod constants;
 mod deposit;
 pub mod errors;
 mod ft_token;
+mod internal;
 pub mod pool;
+mod storage_management;
 pub mod types;
 pub mod util;
 pub mod twap;
-mod storage_management;
-mod constants;
 
 use crate::deposit::*;
 use crate::errors::*;
@@ -22,8 +27,7 @@ use crate::twap::*;
 use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
-
-mod internal;
+use crate::constants::*;
 
 // a way to optimize memory management
 near_sdk::setup_alloc!();
@@ -40,6 +44,9 @@ pub struct NearSwap {
 
     // user deposits
     deposits: LookupMap<AccountId, AccountDeposit>,
+
+    // Set of whitelisted tokens by "owner".
+    whitelisted_tokens: UnorderedSet<AccountId>,
 }
 
 //-------------------------
@@ -55,6 +62,7 @@ impl NearSwap {
             owner: o,
             pools: UnorderedMap::new("p".into()),
             deposits: LookupMap::new("d".into()),
+            whitelisted_tokens: UnorderedSet::new("w".into()),
         }
     }
 
@@ -73,12 +81,28 @@ impl NearSwap {
         self.owner = o;
     }
 
+    /// Extend whitelisted tokens with new tokens. Only can be called by owner.
+    #[payable]
+    pub fn extend_whitelisted_tokens(&mut self, tokens: Vec<ValidAccountId>) {
+        self.assert_owner();
+        for token in tokens {
+            self.whitelisted_tokens.insert(token.as_ref());
+        }
+    }
+
+    /// Remove whitelisted token. Only can be called by owner.
+    pub fn remove_whitelisted_token(&mut self, token: ValidAccountId) {
+        self.assert_owner();
+        self.whitelisted_tokens.remove(token.as_ref());
+    }
+    
+
     /**********************
      POOL MANAGEMENT
     *********************/
 
     /// Allows any user to creat a new near-token pool. Each pool is identified by the `token`
-    /// account - which we call the Pool Reserve Token.
+    /// account - which we call the Pool Token.
     /// If a pool for give token exists then "E1" assert exception is thrown.
     /// TODO: charge user for a storage created!
     #[payable]
@@ -100,98 +124,66 @@ impl NearSwap {
         }
     }
 
-    /// Returns list of pools identified as their reserve token AccountId.
+    /// Returns list of pools identified by token AccountId.
     pub fn list_pools(&self) -> Vec<AccountId> {
         return self.pools.keys().collect();
     }
 
-    /// Increases Near and the Reserve token liquidity.
-    /// The supplied funds must preserve current ratio of the liquidity pool.
-    /// Returns amount of LP Shares is minted for the user.
+    /**
+    Transfer $NEAR and tokens from deposit to a pool.
+    The supplied funds must preserve current ratio of the liquidity pool.
+    Arguments:
+     * `ynear` - amount of yNEAR liquidity to add to the `token` pool. If it will require
+       more tokens than `max_tokens`, then the `ynear` will be adjusted (lowerred) to meet
+       the `max_tokens` constraint.
+     * `max_tokens` - max amount of tokens to add to the liquidity
+     * `min_shares` - minimum amount of shares to be minted to make the transaction successful.
+        If 0, then min_shares constraint won't be checked.
+    Returns: amount of LP Shares minted for the user.
+    Panics when:
+     * not enough tokens or NEAR in deposit
+     * not enough NEAR to cover storage fees
+     * `min_shares > 0` and the operation will mint less shares than required.
+    Notes:
+     * `token` - we don't need to use ValidAccountId because token is already registered. */
     #[payable]
-    pub fn add_liquidity(&mut self, token: AccountId, max_tokens: U128, min_shares: U128) -> U128 {
-        let mut p = self.must_get_pool(&token);
+    pub fn add_liquidity(
+        &mut self,
+        token: AccountId,
+        ynear: U128,
+        max_tokens: U128,
+        min_shares: U128,
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        let mut p = self.get_pool(&token);
         let caller = env::predecessor_account_id();
-        let shares_minted;
-        let ynear_amount = env::attached_deposit() - NEP21_STORAGE_DEPOSIT;
-        let added_reserve;
+        let ynear: Balance = ynear.into();
         let max_tokens: Balance = max_tokens.into();
+        let mut d = self.get_deposit(&caller);
         assert!(
-            ynear_amount > 0 && max_tokens > 0,
-            "E2: balance arguments must be >0"
+            ynear > 0 && max_tokens > 0,
+            "E2: added liquidity must be >0"
         );
-
-        // the very first deposit -- we define the constant ratio
-        if p.total_shares == 0 {
-            p.ynear = ynear_amount;
-            shares_minted = p.ynear;
-            p.total_shares = shares_minted;
-            added_reserve = max_tokens;
-            p.reserve = added_reserve;
-            p.shares.insert(&caller, &shares_minted);
-        } else {
-            let ynear_256 = u256::from(ynear_amount);
-            let p_ynear_256 = u256::from(p.ynear);
-            added_reserve = (ynear_256 * u256::from(p.reserve) / p_ynear_256 + 1).as_u128();
-            shares_minted = (ynear_256 * u256::from(p.total_shares) / p_ynear_256).as_u128();
-            env_log!(
-                "shares_to_mint={}, min_shares={}; attached_ynear={}, added_reserve={}, max_added_reserve={}",
-                shares_minted,
-                min_shares.0,
-                ynear_amount,
-                added_reserve, max_tokens
-            );
-            assert!(
-                max_tokens >= added_reserve,
-                "E3: needs to transfer {} of tokens and it's bigger then specified  maximum={}",
-                added_reserve,
-                max_tokens
-            );
-            assert!(
-                u128::from(min_shares) <= shares_minted,
-                "E4: amount minted shares ({}) is smaller then the required minimum",
-                shares_minted
-            );
-            p.shares.insert(
-                &caller,
-                &(p.shares.get(&caller).unwrap_or(0) + shares_minted),
-            );
-            p.reserve += added_reserve;
-            p.ynear += ynear_amount;
-            p.total_shares += shares_minted;
-        }
-
-        env_log!(
-            "Minting {} of shares for {} yNEAR and {} reserve tokens",
-            shares_minted,
-            ynear_amount,
-            added_reserve
-        );
+        let (ynear, added_tokens, shares_minted) =
+            p.add_liquidity(&caller, ynear, max_tokens, min_shares.into());
+        d.remove(&token, added_tokens);
+        d.remove_near(ynear);
+        d.update_storage(start_storage);
+        self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
 
-        // TODO: do proper rollback
-        // Prepare a callback for liquidity transfer rollback which we will attach later on.
-        let callback_args = format!(r#"{{ "token":"{}" }}"#, token).into();
-        let callback = Promise::new(env::current_account_id()).function_call(
-            "add_liquidity_transfer_callback".into(),
-            callback_args,
-            0,
-            5 * TGAS,
+        env_log!(
+            "Minting {} of shares for {} yNEAR and {} tokens",
+            shares_minted,
+            ynear,
+            added_tokens
         );
-        self.schedule_nep21_tx(&token, caller, env::current_account_id(), added_reserve)
-            .then(callback); //after that, the callback will check success/failure
-
-        // TODO:
-        // Handling exception is work-in-progress in NEAR runtime
-        // 1. rollback `p` on changes or move the pool update to a promise
-        // 2. consider adding a lock to prevent other contracts calling and manipulate the prise before the token transfer will get finalized.
-
         return shares_minted.into();
     }
 
     /// Redeems `shares` for liquidity stored in this pool with condition of getting at least
-    /// `min_ynear` of Near and `min_tokens` of reserve tokens (`token`). Shares are note
-    /// exchengable between different pools.
+    /// `min_ynear` of Near and `min_tokens` of tokens. Shares are not
+    /// exchagable between different pools.
     pub fn withdraw_liquidity(
         &mut self,
         token: AccountId,
@@ -199,157 +191,121 @@ impl NearSwap {
         min_ynear: U128,
         min_tokens: U128,
     ) {
-        let shares_: u128 = shares.into();
+        let start_storage = env::storage_usage();
+        let shares: u128 = shares.into();
         let min_ynear: u128 = min_ynear.into();
         let min_tokens: u128 = min_tokens.into();
         assert!(
-            shares_ > 0 && min_ynear > 0 && min_tokens > 0,
-            "E2: balance arguments must be >0"
+            shares > 0 && min_ynear > 0 && min_tokens > 0,
+            "E2: balance arguments must be > 0"
         );
 
         let caller = env::predecessor_account_id();
-        let mut p = self.must_get_pool(&token);
+        let mut p = self.get_pool(&token);
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
-            current_shares >= shares_,
+            current_shares >= shares,
             format!(
                 "E5: can't withdraw more shares then currently owned ({})",
                 current_shares
             )
         );
 
-        let total_shares2 = u256::from(p.total_shares);
-        let shares2 = u256::from(shares_);
-        let ynear_amount = (shares2 * u256::from(p.ynear) / total_shares2).as_u128();
-        let token_amount = (shares2 * u256::from(p.reserve) / total_shares2).as_u128();
-        assert!(
-            ynear_amount >= min_ynear && token_amount >= min_tokens,
-            format!(
-                "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
-                ynear_amount, token_amount
-            )
-        );
+        let mut d = self.get_deposit(&caller);
+        let (ynear, token_amount) = 
+            p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
 
         env_log!(
-            "Reedeming {:?} shares for {} NEAR and {} reserve tokens",
+            "Reedeming {:?} shares for {} NEAR and {} tokens",
             shares,
-            ynear_amount,
+            ynear,
             token_amount,
         );
-        p.shares.insert(&caller, &(current_shares - shares_));
-        p.total_shares -= shares_;
-        p.reserve -= token_amount;
-        p.ynear -= ynear_amount;
 
-        // let prepaid_gas = env::prepaid_gas();
-        self.schedule_nep21_tx(
-            &token,
-            env::current_account_id(),
-            caller.clone(),
-            token_amount,
-        )
-        .then(Promise::new(caller).transfer(ynear_amount));
-
-        //TODO COMPLEX-CALLBACKS
+        d.add(&token, token_amount);
+        d.add_near(ynear);
+        d.update_storage(start_storage);
+        self.set_deposit(&caller, &d);
         self.set_pool(&token, &p);
     }
 
     /**********************
-     CLP market functions
+     AMM functions
     **********************/
 
-    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Swaps NEAR to `token` and transfers the tokens to the caller.
     /// Caller attaches near tokens he wants to swap to the transacion under a condition of
     /// receving at least `min_tokens` of `token`.
+    /// Returns amount of bought tokens.
     #[payable]
-    pub fn swap_near_to_token_exact_in(&mut self, token: AccountId, min_tokens: U128) {
-        self._swap_n2t_exact_in(
-            &token,
-            env::attached_deposit(),
-            min_tokens.into(),
-            env::predecessor_account_id(),
-        );
-    }
-
-    /// Same as `swap_near_to_token_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_near_to_token_exact_in_xfr(
+    pub fn swap_near_to_token_exact_in(
         &mut self,
+        ynear_in: U128,
         token: AccountId,
         min_tokens: U128,
-        recipient: AccountId,
-    ) {
-        self._swap_n2t_exact_in(
-            &token,
-            env::attached_deposit(),
-            min_tokens.into(),
-            recipient,
-        );
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let ynear: u128 = ynear_in.into();
+        let min_tokens: u128 = min_tokens.into();
+        assert!(ynear > 0 && min_tokens > 0, ERR02_POSITIVE_ARGS);
+
+        let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
+        assert_min_buy(tokens_out, min_tokens);
+        self._swap_n2t(&mut p, ynear, &token, tokens_out);
+        self.unsafe_storage_check(start_storage);
+        return tokens_out.into();
     }
 
-    /// Swaps NEAR to `token` and transfers the reserve tokens to the caller.
+    /// Swaps NEAR to `token` and transfers the tokens to the caller.
     /// Caller attaches maximum amount of NEAR he is willing to swap to receive `tokens_out`
     /// of `token` wants to swap to the transacion. Surplus of NEAR tokens will be returned.
     /// Transaction will panic if the caller doesn't attach enough NEAR tokens.
+    /// Returns amount of yNEAR paid.
     #[payable]
-    pub fn swap_near_to_token_exact_out(&mut self, token: AccountId, tokens_out: U128) {
-        let b = env::predecessor_account_id();
-        self._swap_n2t_exact_out(
-            &token,
-            tokens_out.into(),
-            env::attached_deposit(),
-            b.clone(),
-            b,
-        );
-    }
-
-    /// Same as `swap_near_to_token_exact_out`, but user additionly specifies the `recipient`
-    /// who will receive the reserve tokens after the swap.
-    #[payable]
-    pub fn swap_near_to_token_exact_out_xfr(
+    pub fn swap_near_to_token_exact_out(
         &mut self,
+        max_ynear: U128,
         token: AccountId,
         tokens_out: U128,
-        recipient: AccountId,
-    ) {
-        self._swap_n2t_exact_out(
-            &token,
-            tokens_out.into(),
-            env::attached_deposit(),
-            env::predecessor_account_id(),
-            recipient,
-        );
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let tokens_out: u128 = tokens_out.into();
+        let max_ynear: u128 = max_ynear.into();
+        assert!(tokens_out > 0 && max_ynear > 0, ERR02_POSITIVE_ARGS);
+
+        let mut p = self.get_pool(&token);
+        let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
+        self._swap_n2t(&mut p, near_to_pay, &token, tokens_out);
+        self.unsafe_storage_check(start_storage);
+        return near_to_pay.into();
     }
 
     /// Swaps `tokens_paid` of `token` to NEAR and transfers NEAR to the caller under acc
     /// condition of receving at least `min_ynear` yocto NEARs.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract (at least `tokens_paid`).
-    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    /// Returns amount of yNEAR bought.
     #[payable]
     pub fn swap_token_to_near_exact_in(
         &mut self,
         token: AccountId,
         tokens_paid: U128,
         min_ynear: U128,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b.clone(), b);
-    }
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let tokens_paid: u128 = tokens_paid.into();
+        let min_ynear: u128 = min_ynear.into();
+        assert!(tokens_paid > 0 && min_ynear > 0, ERR02_POSITIVE_ARGS);
 
-    /// Same as `swap_token_to_near_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_token_to_near_exact_in_xfr(
-        &mut self,
-        token: AccountId,
-        tokens_paid: U128,
-        min_ynear: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_t2n_exact_in(&token, tokens_paid.into(), min_ynear.into(), b, recipient);
+        let mut p = self.get_pool(&token);
+        let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
+        assert_min_buy(near_out, min_ynear);
+        self._swap_t2n(&mut p, &token, tokens_paid, near_out);
+        self.unsafe_storage_check(start_storage);
+        return near_out.into();
     }
 
     /// Swaps `token` to NEAR and transfers NEAR to the caller.
@@ -357,30 +313,26 @@ impl NearSwap {
     /// more than `max_tokens` of `token`.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
     /// for this contract.
-    /// TODO: Transaction will panic if a caller doesn't provide enough allowance.
+    /// Returns amount tokens yNEAR paid.
     #[payable]
     pub fn swap_token_to_near_exact_out(
         &mut self,
         token: AccountId,
-        ynear_out: U128,
         max_tokens: U128,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_t2n_exact_out(&token, ynear_out.into(), max_tokens.into(), b.clone(), b);
-    }
+        ynear_out: U128,
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let max_tokens: u128 = max_tokens.into();
+        let ynear_out: u128 = ynear_out.into();
+        assert!(ynear_out > 0 && max_tokens > 0, ERR02_POSITIVE_ARGS);
 
-    /// Same as `swap_token_to_near_exact_out`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_token_to_near_exact_out_xfr(
-        &mut self,
-        token: AccountId,
-        ynear_out: U128,
-        max_tokens: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_t2n_exact_out(&token, ynear_out.into(), max_tokens.into(), b, recipient);
+        let mut p = self.get_pool(&token);
+        let tokens_to_pay = self.calc_in_amount(ynear_out, p.tokens, p.ynear);
+        assert_max_pay(tokens_to_pay, max_tokens);
+        self._swap_t2n(&mut p, &token, tokens_to_pay, ynear_out);
+        self.unsafe_storage_check(start_storage);
+        return tokens_to_pay.into();
     }
 
     /// Swaps two different tokens.
@@ -389,45 +341,29 @@ impl NearSwap {
     /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
     /// Transaction will panic if a caller doesn't provide enough allowance.
+    /// Returns amount tokens bought.
     #[payable]
     pub fn swap_tokens_exact_in(
         &mut self,
-        from: AccountId,
-        to: AccountId,
+        token_in: AccountId,
         tokens_in: U128,
+        token_out: AccountId,
         min_tokens_out: U128,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_in(
-            &from,
-            &to,
-            tokens_in.into(),
-            min_tokens_out.into(),
-            b.clone(),
-            b,
-        );
-    }
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let tokens_in: u128 = tokens_in.into();
+        let min_tokens_out: u128 = min_tokens_out.into();
+        assert!(min_tokens_out > 0 && tokens_in > 0, ERR02_POSITIVE_ARGS);
 
-    /// Same as `swap_tokens_exact_in`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_tokens_exact_in_xfr(
-        &mut self,
-        from: AccountId,
-        to: AccountId,
-        tokens_in: U128,
-        min_tokens_out: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_in(
-            &from,
-            &to,
-            tokens_in.into(),
-            min_tokens_out.into(),
-            b,
-            recipient,
+        let (p1, p2, near_swap, tokens_out) =
+            self._price_swap_tokens_in(&token_in, &token_out, tokens_in);
+        assert_min_buy(tokens_out, min_tokens_out);
+        self._swap_tokens(
+            p1, p2, &token_in, tokens_in, &token_out, tokens_out, near_swap,
         );
+        self.unsafe_storage_check(start_storage);
+        return tokens_out.into();
     }
 
     /// Swaps two different tokens.
@@ -436,69 +372,71 @@ impl NearSwap {
     /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
     /// Transaction will panic if a caller doesn't provide enough allowance.
+    /// Returns amount tokens paid.
     #[payable]
     pub fn swap_tokens_exact_out(
         &mut self,
-        from: AccountId,
-        to: AccountId,
-        tokens_out: U128,
+        token_in: AccountId,
         max_tokens_in: U128,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_out(
-            &from,
-            &to,
-            tokens_out.into(),
-            max_tokens_in.into(),
-            b.clone(),
-            b,
+        token_out: AccountId,
+        tokens_out: U128,
+    ) -> U128 {
+        let start_storage = env::storage_usage();
+        assert_one_yocto();
+        let (tokens_out, max_tokens_in) = (u128::from(tokens_out), u128::from(max_tokens_in));
+        assert!(max_tokens_in > 0 && tokens_out > 0, ERR02_POSITIVE_ARGS);
+
+        let (p1, p2, near_swapped, tokens_in_to_pay) =
+            self._price_swap_tokens_out(&token_in, &token_out, tokens_out);
+        env_log!("Buying price is {}", tokens_in_to_pay);
+        assert_max_pay(tokens_in_to_pay, max_tokens_in);
+        self._swap_tokens(
+            p1,
+            p2,
+            &token_in,
+            tokens_in_to_pay,
+            &token_out,
+            tokens_out,
+            near_swapped,
         );
+        self.unsafe_storage_check(start_storage);
+        return tokens_in_to_pay.into();
     }
 
-    /// Same as `swap_tokens_exact_out`, but user additionly specifies the `recipient`
-    /// who will receive the tokens after the swap.
-    #[payable]
-    pub fn swap_tokens_exact_out_xfr(
-        &mut self,
-        from: AccountId,
-        to: AccountId,
-        tokens_out: U128,
-        max_tokens_in: U128,
-        recipient: AccountId,
-    ) {
-        let b = env::predecessor_account_id();
-        self._swap_tokens_exact_out(
-            &from,
-            &to,
-            tokens_out.into(),
-            max_tokens_in.into(),
-            b,
-            recipient,
-        );
+    /**
+    Update storage using deposit update storage function
+    start_storage: storage before performing any operation
+    Note: 
+    - This function must be called after performing all the operations to get the
+    correct storage
+    - This is unsafe when we have other deposit instance around this function call,
+    which can overwrite changes here.
+    */
+    fn unsafe_storage_check(&mut self, start_storage: StorageUsage) {
+        let user = env::predecessor_account_id();
+        let mut d = self.get_deposit(&user);
+        d.update_storage(start_storage);
+        self.set_deposit(&user, &d);
     }
 
     /// Calculates amount of tokens user will recieve when swapping `ynear_in` for `token`
     /// assets
     pub fn price_near_to_token_in(&self, token: AccountId, ynear_in: U128) -> U128 {
-        self._price_near_to_token_in(&token, ynear_in.into())
-            .1
-            .into()
+        self._price_n2t_in(&token, ynear_in.into()).1.into()
     }
 
     /// Calculates amount of NEAR user will need to swap if he wants to receive
     /// `tokens_out` of `token`
     pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: U128) -> U128 {
-        self._price_near_to_token_out(&token, tokens_out.into())
-            .1
-            .into()
+        self._price_n2t_out(&token, tokens_out.into()).1.into()
     }
 
     /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
     pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: U128) -> U128 {
         let tokens_in: u128 = tokens_in.into();
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
-        return self.calc_out_amount(tokens_in, p.reserve, p.ynear).into();
+        let p = self.get_pool(&token);
+        return self.calc_out_amount(tokens_in, p.tokens, p.ynear).into();
     }
 
     /// Calculates amount of tokens user will need to swap if he wants to receive
@@ -506,8 +444,8 @@ impl NearSwap {
     pub fn price_token_to_near_out(&self, token: AccountId, ynear_out: U128) -> U128 {
         let ynear_out: u128 = ynear_out.into();
         assert!(ynear_out > 0, "E2: balance arguments must be >0");
-        let p = self.must_get_pool(&token);
-        return self.calc_in_amount(ynear_out, p.reserve, p.ynear).into();
+        let p = self.get_pool(&token);
+        return self.calc_in_amount(ynear_out, p.tokens, p.ynear).into();
     }
 
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
@@ -528,34 +466,6 @@ impl NearSwap {
         self._price_swap_tokens_out(&from, &to, tokens_out.into())
             .3
             .into()
-    }
-
-    pub fn add_liquidity_transfer_callback(&mut self, token: AccountId) {
-        println!("enter add_liquidity_transfer_callback");
-        // TODO: handle refund from nep21
-        assert_eq!(
-            env::current_account_id(),
-            env::predecessor_account_id(),
-            "Can be called only as a callback"
-        );
-
-        // TODO: simulation doesn't allow using a promise inside callbacks.
-        // For now we just log result
-        if !is_promise_success() {
-            env_log!(
-                "add_liquidity_transfer_callback: token {} transfer FAILED!",
-                token
-            );
-            panic!("callback");
-            //TODO ROLLBACK add_liquidity
-        }
-        println!("PromiseResult  transfer succeeded");
-
-        // If the stake action failed and the current locked amount is positive, then the contract has to unstake.
-        /*if !stake_action_succeeded && env::account_locked_balance() > 0 {
-            Promise::new(env::current_account_id()).stake(0, self.stake_public_key.clone());
-        }
-         */
     }
 
     /**********************
@@ -592,7 +502,7 @@ impl NearSwap {
 
     /// Returns the `owner` shares balance of a pool identified by the `token`.
     pub fn balance_of(&self, token: AccountId, holder: AccountId) -> U128 {
-        self.must_get_pool(&token)
+        self.get_pool(&token)
             .shares
             .get(&holder)
             .unwrap_or(0)
@@ -671,7 +581,8 @@ impl NearSwap {
 mod tests {
     use super::*;
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
-    use std::convert::TryInto;
+    use std::convert::{TryInto, TryFrom};
+    use near_sdk_sim::to_yocto;
 
     struct Accounts {
         current: AccountId,
@@ -742,7 +653,109 @@ mod tests {
         _init(0)
     }
     fn init_with_storage_deposit() -> (Ctx, NearSwap) {
-        _init(NEP21_STORAGE_DEPOSIT * 120)
+        _init(NDENOM)
+    }
+    fn init_with_owner() -> (Ctx, NearSwap) {
+        let mut ctx = Ctx::new(vec![], false);
+        ctx.vm.attached_deposit = 0;
+        testing_env!(ctx.vm.clone());
+        let contract = NearSwap::new("predecessor".try_into().unwrap());
+        return (ctx, contract);
+    }
+
+    fn to_va(a: AccountId) -> ValidAccountId {
+        ValidAccountId::try_from(a).unwrap()
+    }
+
+    fn account_deposit() -> AccountDeposit {
+        return AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [("eth".into(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn add_to_whitelist_works() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        // Add to nearswap whitelist
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should work
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+        let res = c.get_deposit(&a.clone());
+        assert_eq!(res.tokens.get(&"token1".to_string()), Some(&10))
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn add_to_whitelist_failure_1() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        // Add to nearswap whitelist
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        let mut account_deposit = account_deposit();
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should not work
+        // because token not whitelisted in account deposit
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn add_to_whitelist_failure_2() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        // deposit should not work
+        // because token not whitelisted in global list
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn remove_from_whitelist_works_1() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+        c.remove_whitelisted_token(to_va("token1".into()));
+
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
+    fn remove_from_whitelist_works_2() {
+        let (mut ctx, mut c) = init_with_owner();
+        let a = ctx.accounts.predecessor.clone();
+        c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
+        // Add to account deposit list
+        let mut account_deposit = account_deposit();
+        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.set_deposit(&a.clone(), &account_deposit);
+        
+        account_deposit.remove_from_whitelist(&"token1".into());
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        c.deposit_token(&a.clone(), &"token1".into(), 10);
     }
 
     // TODO - fix this test.
@@ -797,7 +810,7 @@ mod tests {
                 p,
                 PoolInfo {
                     ynear: 0.into(),
-                    reserve: 0.into(),
+                    tokens: 0.into(),
                     total_shares: 0.into()
                 }
             ),
@@ -817,7 +830,7 @@ mod tests {
         assert_eq!(pools, expected);
     }
 
-    //#[test]
+    #[test]
     fn add_liquidity_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM;
@@ -830,12 +843,21 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
             ynear: ynear_deposit.into(),
-            reserve: token_deposit.into(),
+            tokens: token_deposit.into(),
             total_shares: ynear_deposit.into(),
         };
         assert_eq!(p, expected_pool, "pool_info should be correct");
@@ -859,11 +881,11 @@ mod tests {
 
         println!(">> adding liquidity - second time");
 
-        c.add_liquidity(t.clone(), (token_deposit * 10).into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
-            reserve: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            tokens: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
             total_shares: (ynear_deposit * 2).into(),
         };
         assert_eq!(p, expected_pool, "pool_info should be correct");
@@ -879,34 +901,44 @@ mod tests {
         );
     }
 
-    //#[test]
+    #[test]
     fn add_liquidity2_happy_path() {
-        let ynear_deposit = 3 * NDENOM;
-        let token_deposit = 1 * NDENOM + 1;
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
         let ynear_deposit_with_storage = ynear_deposit;
 
         let (ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
+        let account_deposit = AccountDeposit {
+            ynear: ynear_deposit + NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &initial_ynear);
         let p = Pool {
             ynear: initial_ynear,
-            reserve: 10 * NDENOM,
-            total_shares: 30 * NDENOM,
+            tokens: 10 * NDENOM,
+            total_shares: initial_ynear,
             shares: shares_map,
             twap: Twap::new(10),
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(), token_deposit.into(), ynear_deposit.into());
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (ynear_deposit + p.ynear).into(),
-            reserve: (token_deposit + p.reserve).into(),
+            tokens: (token_deposit + p.tokens + 1).into(), // 1 is added as a minimum token transfer
             total_shares: (ynear_deposit + p.ynear).into(),
         };
         assert_eq!(p_info, expected_pool, "pool_info should be correct");
@@ -915,6 +947,80 @@ mod tests {
             to_num(a_shares),
             ynear_deposit + p.ynear,
             "LP should have correct amount of shares"
+        );
+    }
+
+    #[test]
+    fn add_liquidity_min_shares_path() {
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
+
+        let (mut ctx, mut c) =  _init(ynear_deposit_with_storage);
+        let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
+
+        // in unit tests we can't do cross contract calls, so we can't check token1 updates.
+        check_and_create_pool(&mut c, &t);
+
+        let account_deposit = AccountDeposit {
+            ynear: 2*ynear_deposit + NDENOM,
+            storage_used: 10,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
+
+        let mut p = c.pool_info(&t).expect("Pool should exist");
+        let mut expected_pool = PoolInfo {
+            ynear: ynear_deposit.into(),
+            tokens: token_deposit.into(),
+            total_shares: ynear_deposit.into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        let a_shares = to_num(c.balance_of(t.clone(), a.clone()));
+        assert_eq!(
+            a_shares, ynear_deposit,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit,
+            "Total supply should be correct"
+        );
+
+        // total supply of an unknown token must be 0
+        assert_eq!(
+            to_num(c.total_supply("unknown-token".to_string())),
+            0,
+            "total supply of other token shouldn't change"
+        );
+
+        println!(">> adding liquidity - second time with minted shares");
+
+        let min_shares = to_yocto("30");
+
+        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), min_shares.into());
+        p = c.pool_info(&t).expect("Pool should exist");
+        expected_pool = PoolInfo {
+            ynear: (ynear_deposit * 2).into(),
+            tokens: (token_deposit * 2 + 1).into(), // 1 is added as a minimum token transfer
+            total_shares: (ynear_deposit * 2).into(),
+        };
+        assert_eq!(p, expected_pool, "pool_info should be correct");
+        assert_eq!(
+            to_num(c.balance_of(t.clone(), a.clone())),
+            ynear_deposit * 2,
+            "LP should have correct amount of shares"
+        );
+        assert_eq!(
+            to_num(c.total_supply(t.clone())),
+            ynear_deposit * 2,
+            "Total supply should be correct"
         );
     }
 
@@ -929,12 +1035,22 @@ mod tests {
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
-            reserve: 3 * NDENOM,
+            tokens: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
             twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
+
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
 
         let amount = shares_bal / 3;
         let min_v = U128::from(1);
@@ -943,7 +1059,7 @@ mod tests {
         let pi = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: U128::from(shares_bal - amount),
-            reserve: U128::from(2 * NDENOM),
+            tokens: U128::from(2 * NDENOM),
             total_shares: U128::from(shares_bal - amount),
         };
         assert_eq!(pi, expected_pool, "pool_info should be correct");
@@ -960,6 +1076,70 @@ mod tests {
         );
     }
 
+    fn prepare_for_withdraw() -> (AccountId, NearSwap) {
+        let (ctx, mut c) = init_with_storage_deposit();
+        let acc = ctx.accounts.predecessor.clone();
+        let t = ctx.accounts.token1.clone();
+
+        let shares_bal = 12 * NDENOM;
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&acc, &shares_bal);
+        let p = Pool {
+            ynear: shares_bal,
+            tokens: 3 * NDENOM,
+            total_shares: shares_bal,
+            shares: shares_map,
+            twap: Twap::new(10)
+        };
+        c.set_pool(&t, &p);
+
+        let account_deposit = AccountDeposit {
+            ynear: NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&acc.clone(), &account_deposit);
+        return (t.clone(), c);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_1() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(10 * NDENOM);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming"#)]
+    fn withdraw_happy_path_failure_2() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares_bal = 12 * NDENOM;
+        let amount = shares_bal / 3;
+        let min_near = U128::from(1);
+        let min_token = U128::from(10 * NDENOM);
+        c.withdraw_liquidity(t.clone(), amount.into(), min_near, min_token);
+    }
+
+    #[test]
+    #[should_panic(expected = "E5: can't withdraw more shares then currently owned")]
+    fn withdraw_happy_path_failure_3() {
+        let (mut t, mut c) = prepare_for_withdraw();
+
+        let shares = 24 * NDENOM;
+        let min_near = U128::from(1);
+        let min_token = U128::from(1);
+        c.withdraw_liquidity(t.clone(), shares.into(), min_near, min_token);
+    }
+
     #[test]
     fn shares_transfer() {
         let (ctx, mut c) = init_with_storage_deposit();
@@ -971,7 +1151,7 @@ mod tests {
         shares_map.insert(&acc, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
-            reserve: 22 * NDENOM,
+            tokens: 22 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
             twap: Twap::new(10),
@@ -1078,7 +1258,7 @@ mod tests {
         let p1 = Pool {
             // 1:4
             ynear: G,
-            reserve: p1_factor * G,
+            tokens: p1_factor * G,
             total_shares: 0,
             shares: LookupMap::new("1".as_bytes().to_vec()),
             twap: Twap::new(10),
@@ -1086,7 +1266,7 @@ mod tests {
         let p2 = Pool {
             // 2:1
             ynear: 2 * G,
-            reserve: G,
+            tokens: G,
             total_shares: 0,
             shares: LookupMap::new("2".as_bytes().to_vec()),
             twap: Twap::new(10),
@@ -1097,7 +1277,7 @@ mod tests {
         let amount: u128 = 1_000_000;
         let amount_net: u128 = 997_000;
         let mut v = c.price_near_to_token_in(t1.clone(), amount.into());
-        let v_expected = amount_net * p1.reserve / (p1.ynear + amount_net);
+        let v_expected = amount_net * p1.tokens / (p1.ynear + amount_net);
         assert_eq!(to_num(v), v_expected);
         let mut v2 = c.price_near_to_token_out(t1.clone(), v.into());
         assert_eq!(to_num(v2), amount, "price_out(price_in) must be identity");

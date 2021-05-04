@@ -11,12 +11,17 @@
 // E10: Pool is empty and can't make a swap.
 // E22: Only owner can call this function
 
+pub const ERR02_POSITIVE_ARGS: &str = "E2: balance arguments must be >0";
+
 pub const ERR11_NOT_ENOUGH_SHARES: &str = "E11: Insufficient amount of shares balance";
 pub const ERR12_NOT_ENOUGH_NEAR: &str = "E12: Insufficient amount of NEAR attached";
 pub const ERR13_NOT_ENOUGH_TOKENS_DEPOSITED: &str = "E13: Insufficient amount of tokens in deposit";
 pub const ERR14_NOT_ENOUGH_NEAR_DEPOSITED: &str = "E14: Insufficient amount of NEAR in deposit";
+pub const ERR15_NOT_ENOUGH_NEAR_DEPOSITED: &str = "E14: Insufficient amount of NEAR in deposit";
 
 pub const ERR20_ACC_NOT_REGISTERED: &str = "E20: Account not registered";
 pub const ERR21_ACC_STORAGE_TOO_LOW: &str =
     "E21: Not enough NEAR to cover storage. Deposit more NEAR";
 pub const ERR22_ACC_ALREADY_REGISTERED: &str = "E22: Account already registered";
+pub const ERR23_TOKEN_NOT_WHITELISTED: &str = "E23: Token is not whitelisted";
+pub const ERR24_NON_ZERO_TOKEN_BALANCE: &str = "E24: Token balance is non-zero";

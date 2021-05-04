@@ -59,7 +59,7 @@ fn test_swap() {
     call!(
         token,
         token_contract.transfer(carol.account_id(), U128(to_yocto("19000"))),
-        deposit = NEP21_STORAGE_DEPOSIT
+        deposit = NDENOM
     );
 
     let carol_t_balance_pre =
@@ -132,7 +132,7 @@ fn test_swap() {
     call!(
         carol,
         token_contract_2.inc_allowance(NEARSWAP_CONTRACT_ID.to_string(), carol_allowance.into()),
-        deposit = NEP21_STORAGE_DEPOSIT
+        deposit = NDENOM
     );
 
     let value = view!(clp_contract.price_token_to_token_out(

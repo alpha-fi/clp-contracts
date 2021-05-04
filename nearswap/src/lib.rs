@@ -19,9 +19,11 @@ pub mod pool;
 mod storage_management;
 pub mod types;
 pub mod util;
+pub mod twap;
 
 use crate::deposit::*;
 use crate::errors::*;
+use crate::twap::*;
 use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
@@ -830,17 +832,16 @@ mod tests {
 
     #[test]
     fn add_liquidity_happy_path() {
-        let (mut ctx, mut c) = init();
+        let ynear_deposit = 3 * NDENOM;
+        let token_deposit = 1 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
+
+        let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
-
-        let ynear_deposit = 30 * NDENOM;
-        let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit;
-        ctx.set_deposit(ynear_deposit_with_storage);
 
         let account_deposit = AccountDeposit {
             ynear: 2*ynear_deposit + NDENOM,
@@ -928,6 +929,7 @@ mod tests {
             tokens: 10 * NDENOM,
             total_shares: initial_ynear,
             shares: shares_map,
+            twap: Twap::new(10),
         };
         c.pools.insert(&t, &p);
 
@@ -950,18 +952,16 @@ mod tests {
 
     #[test]
     fn add_liquidity_min_shares_path() {
-        let (mut ctx, mut c) = init();
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
+
+        let (mut ctx, mut c) =  _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
-
-        let ynear_deposit = 30 * NDENOM;
-        let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit + NDENOM;
- 
-        ctx.set_deposit(ynear_deposit_with_storage);
 
         let account_deposit = AccountDeposit {
             ynear: 2*ynear_deposit + NDENOM,
@@ -1038,6 +1038,7 @@ mod tests {
             tokens: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
+            twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
 
@@ -1088,6 +1089,7 @@ mod tests {
             tokens: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
+            twap: Twap::new(10)
         };
         c.set_pool(&t, &p);
 
@@ -1152,6 +1154,7 @@ mod tests {
             tokens: 22 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
+            twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
 
@@ -1258,6 +1261,7 @@ mod tests {
             tokens: p1_factor * G,
             total_shares: 0,
             shares: LookupMap::new("1".as_bytes().to_vec()),
+            twap: Twap::new(10),
         };
         let p2 = Pool {
             // 2:1
@@ -1265,6 +1269,7 @@ mod tests {
             tokens: G,
             total_shares: 0,
             shares: LookupMap::new("2".as_bytes().to_vec()),
+            twap: Twap::new(10),
         };
         c.set_pool(&t1, &p1);
         c.set_pool(&t2, &p2);

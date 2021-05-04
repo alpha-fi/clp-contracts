@@ -1,0 +1,13 @@
+[package]
+name = "sample-token"
+version = "0.1.0"
+authors = [""]
+edition = "2018"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = { git = "https://github.com/near/near-sdk-rs.git", rev="9d99077" } # ver=v3.0.0-pre.3
+near-contract-standards = { git = "https://github.com/near/near-sdk-rs", rev = "9d99077" }

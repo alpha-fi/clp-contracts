@@ -28,22 +28,12 @@ impl NearSwap {
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     #[inline]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
-        // in_a * out_bal / (in_bal + in_a)  and scaling for fee
-        let in_net = u256::from(in_amount) * 997;
-        let r: u256 = in_net * u256::from(out_bal) / (u256::from(in_bal) * 1000 + in_net);
-        return r.as_u128();
-    }
+        // formula r = (in_amount * in_bal * out_bal ) / ( in_amount + in_bal ) ^ 2;
+        let denominator = (U512::from(in_amount) + U512::from(in_bal)) * U512::from(in_amount) + U512::from(in_bal);
+        let numerator = ( U512::from(in_amount) * U512::from(in_bal) * U512::from(out_bal));
 
-    /// Calculates amout of tokens a user must pay to buy `out_amount` tokens, when a total
-    /// balance in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens
-    /// respectively.
-    #[inline]
-    pub(crate) fn calc_in_amount(&self, out_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
-        // this is getOutputPrice in Uniswap
-        // (in_bal * out_amount * 1000) / (out_bal - out_amount) / 997;
-        let numerator = u256::from(in_bal) * u256::from(out_amount) * 1000;
-        let r: u256 = numerator / u256::from(out_bal - out_amount) / 997;
-        return r.as_u128() + 1;
+        let r = numerator / denominator;
+        return r.as_u128();
     }
 
     pub(crate) fn _price_n2t_in(&self, token: &AccountId, ynear_in: u128) -> (Pool, u128) {
@@ -53,19 +43,12 @@ impl NearSwap {
         (p, out)
     }
 
-    pub(crate) fn _price_n2t_out(&self, token: &AccountId, tokens_out: u128) -> (Pool, U128) {
-        assert!(tokens_out > 0, "E2: balance arguments must be >0");
-        let p = self.get_pool(&token);
-        let in_amount = self.calc_in_amount(tokens_out, p.ynear, p.tokens).into();
-        (p, in_amount)
-    }
-
     pub(crate) fn _price_swap_tokens_in(
         &self,
         t_in: &AccountId,
         t_out: &AccountId,
         tokens_in: Balance,
-    ) -> (Pool, Pool, Balance, Balance) {
+    ) -> Balance {
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
         let p_in = self.get_pool(t_in);
@@ -76,28 +59,23 @@ impl NearSwap {
             "Swapping_in {} {} -> {} ynear -> {} {}",
             tokens_in, t_in, near_swap, tokens2_out, t_out
         );
-        return (p_in, p_out, near_swap, tokens2_out);
+        return tokens2_out;
     }
 
-    pub(crate) fn _price_swap_tokens_out(
-        &self,
-        t_in: &AccountId,
-        t_out: &AccountId,
-        tokens_out: Balance,
-    ) -> (Pool, Pool, Balance, Balance) {
-        assert!(tokens_out > 0, "E2: balance arguments must be >0");
-        assert_ne!(t_in, t_out, "E9: can't swap same tokens");
-        let p_in = self.get_pool(&t_in);
-        let p_out = self.get_pool(&t_out);
-        let near_swap = self.calc_in_amount(tokens_out, p_out.ynear, p_out.tokens);
-        let tokens1_to_pay = self.calc_in_amount(near_swap, p_in.tokens, p_in.ynear);
-        println!(
-            "Swapping_out {} {} -> {} ynear -> {} {}",
-            tokens1_to_pay, t_in, near_swap, tokens_out, t_out
-        );
-        return (p_in, p_out, near_swap, tokens1_to_pay);
+    // calculateFee the fee of the swap
+    pub(crate) fn calcLiquidityFee(&self, X: u128, x: u128, Y: u128) -> u128 {
+        // ( x^2 *  Y ) / ( x + X )^2
+        let numerator = U512::from(x) * U512::from(x) * U512::from(Y);
+        let denominator = (U512::from(x) + U512::from(X)) * (U512::from(x) + U512::from(X));
+        if(denominator == U512::from(0)) {
+            return 0;
+        }
+        let r = numerator/denominator;
+        return r.as_u128();
     }
 
+    // Should be at least tokens_out or swap will fail
+    // (prevents front running and other slippage issues).
     pub(crate) fn _swap_n2t(
         &mut self,
         p: &mut Pool,
@@ -105,22 +83,33 @@ impl NearSwap {
         token: &AccountId,
         tokens_out: Balance,
     ) {
+        let in_bal = p.ynear;
+        let out_bal = p.tokens;
+        let in_amount = ynear_in;
+
+        let liquidityFee = self.calcLiquidityFee(in_bal, in_amount, out_bal);
+        let amount_out = self.calc_out_amount(in_amount, in_bal, out_bal);
+
+        assert!(amount_out >= tokens_out, "ERR_MIN_AMOUNT");
         println!(
             "User purchased {} {} for {} yNEAR",
-            tokens_out, token, ynear_in
+            amount_out, token, ynear_in
         );
-        p.tokens -= tokens_out;
+        
+        p.tokens -= amount_out;
         p.ynear += ynear_in;
 
         let user = env::predecessor_account_id();
         let mut d = self.get_deposit(&user);
         d.remove_near(ynear_in);
-        d.add(token, tokens_out);
+        d.add(token, amount_out);
 
         self.set_pool(token, p);
         self.set_deposit(&user, &d);
     }
 
+    // Should be at least ynear_out or swap will fail
+    // (prevents front running and other slippage issues).
     pub(crate) fn _swap_t2n(
         &mut self,
         p: &mut Pool,
@@ -129,48 +118,75 @@ impl NearSwap {
         ynear_out: Balance,
     ) {
         let user = env::predecessor_account_id();
+
+        let in_bal = p.tokens;
+        let out_bal = p.ynear;
+        let in_amount = token_in;
+
+        let liquidityFee = self.calcLiquidityFee(in_bal, in_amount, out_bal);
+        let amount_out = self.calc_out_amount(in_amount, in_bal, out_bal);
+        
+        assert!(amount_out >= ynear_out, "ERR_MIN_AMOUNT");
         println!(
             "User {} purchased {} NEAR tokens for {} tokens",
-            user, ynear_out, token_in
+            user, amount_out, token_in
         );
-        p.tokens += token_in;
-        p.ynear -= ynear_out;
+
+        p.tokens += in_amount;
+        p.ynear -= amount_out;
 
         let mut d = self.get_deposit(&user);
-        d.remove(token, token_in);
-        d.ynear += ynear_out;
+        d.remove(token, in_amount);
+        d.ynear += amount_out;
 
         self.set_pool(&token, p);
         self.set_deposit(&user, &d);
     }
 
-    // TODO: use references rather than copying Pool
+    // Should be at least min_amount_out or swap will fail
+    // (prevents front running and other slippage issues).
     pub(crate) fn _swap_tokens(
         &mut self,
-        mut p1: Pool,
-        mut p2: Pool,
+        p1: &mut Pool,
+        p2: &mut Pool,
         token1: &AccountId,
         token1_in: Balance,
         token2: &AccountId,
         token2_out: Balance,
-        near_swap: Balance,
     ) {
         let user = env::predecessor_account_id();
+
+        let in_bal_first = p1.tokens;
+        let out_bal_first = p1.ynear;
+        let in_amount_first = token1_in;
+
+        let liquidityFee_first = self.calcLiquidityFee(in_bal_first, in_amount_first, out_bal_first);
+        let amount_out_first = self.calc_out_amount(in_amount_first, in_bal_first, out_bal_first);
+
+        let in_bal_second = p2.ynear;
+        let out_bal_second = p2.tokens;
+        let in_amount_second = amount_out_first;
+
+        let liquidityFee_second = self.calcLiquidityFee(in_bal_second, in_amount_second, out_bal_second);
+        let amount_out_second = self.calc_out_amount(in_amount_second, in_bal_second, out_bal_second);
+
+        assert!(amount_out_second >= token2_out, "ERR_MIN_AMOUNT");
         println!(
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,
         );
-        p1.tokens += token1_in;
-        p1.ynear -= near_swap;
-        p2.tokens -= token2_out;
-        p2.ynear += near_swap;
+
+        p1.tokens += in_amount_first;
+        p1.ynear -= amount_out_first;
+        p2.tokens -= amount_out_second;
+        p2.ynear += amount_out_first;
 
         let mut d = self.get_deposit(&user);
-        d.remove(token1, token1_in);
-        d.add(token2, token2_out);
+        d.remove(token1, in_amount_first);
+        d.add(token2, amount_out_second);
 
-        self.set_pool(&token1, &p1);
-        self.set_pool(&token2, &p2);
+        self.set_pool(&token1, p1);
+        self.set_pool(&token2, p2);
         self.set_deposit(&user, &d);
     }
 

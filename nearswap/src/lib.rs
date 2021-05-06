@@ -257,31 +257,6 @@ impl NearSwap {
         return tokens_out.into();
     }
 
-    /// Swaps NEAR to `token` and transfers the tokens to the caller.
-    /// Caller attaches maximum amount of NEAR he is willing to swap to receive `tokens_out`
-    /// of `token` wants to swap to the transacion. Surplus of NEAR tokens will be returned.
-    /// Transaction will panic if the caller doesn't attach enough NEAR tokens.
-    /// Returns amount of yNEAR paid.
-    #[payable]
-    pub fn swap_near_to_token_exact_out(
-        &mut self,
-        max_ynear: U128,
-        token: AccountId,
-        tokens_out: U128,
-    ) -> U128 {
-        let start_storage = env::storage_usage();
-        assert_one_yocto();
-        let tokens_out: u128 = tokens_out.into();
-        let max_ynear: u128 = max_ynear.into();
-        assert!(tokens_out > 0 && max_ynear > 0, ERR02_POSITIVE_ARGS);
-
-        let mut p = self.get_pool(&token);
-        let near_to_pay = self.calc_in_amount(tokens_out, p.ynear, p.tokens);
-        self._swap_n2t(&mut p, near_to_pay, &token, tokens_out);
-        self.unsafe_storage_check(start_storage);
-        return near_to_pay.into();
-    }
-
     /// Swaps `tokens_paid` of `token` to NEAR and transfers NEAR to the caller under acc
     /// condition of receving at least `min_ynear` yocto NEARs.
     /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
@@ -308,36 +283,9 @@ impl NearSwap {
         return near_out.into();
     }
 
-    /// Swaps `token` to NEAR and transfers NEAR to the caller.
-    /// Caller defines the amount of NEAR he wants to receive under a condition of not spending
-    /// more than `max_tokens` of `token`.
-    /// Preceeding to this transaction, caller has to create sufficient allowance of `token`
-    /// for this contract.
-    /// Returns amount tokens yNEAR paid.
-    #[payable]
-    pub fn swap_token_to_near_exact_out(
-        &mut self,
-        token: AccountId,
-        max_tokens: U128,
-        ynear_out: U128,
-    ) -> U128 {
-        let start_storage = env::storage_usage();
-        assert_one_yocto();
-        let max_tokens: u128 = max_tokens.into();
-        let ynear_out: u128 = ynear_out.into();
-        assert!(ynear_out > 0 && max_tokens > 0, ERR02_POSITIVE_ARGS);
-
-        let mut p = self.get_pool(&token);
-        let tokens_to_pay = self.calc_in_amount(ynear_out, p.tokens, p.ynear);
-        assert_max_pay(tokens_to_pay, max_tokens);
-        self._swap_t2n(&mut p, &token, tokens_to_pay, ynear_out);
-        self.unsafe_storage_check(start_storage);
-        return tokens_to_pay.into();
-    }
-
     /// Swaps two different tokens.
     /// Caller defines the amount of tokens he wants to swap under a condition of
-    /// receving at least `min_to_tokens`.
+    /// receving at least `min_tokens_out`.
     /// Preceeding to this transaction, caller has to create a sufficient allowance of
     /// `from` token for this contract.
     /// Transaction will panic if a caller doesn't provide enough allowance.
@@ -356,51 +304,16 @@ impl NearSwap {
         let min_tokens_out: u128 = min_tokens_out.into();
         assert!(min_tokens_out > 0 && tokens_in > 0, ERR02_POSITIVE_ARGS);
 
-        let (p1, p2, near_swap, tokens_out) =
+        let mut p1 = self.get_pool(&token_in);
+        let mut p2 = self.get_pool(&token_out);
+        let tokens_out =
             self._price_swap_tokens_in(&token_in, &token_out, tokens_in);
         assert_min_buy(tokens_out, min_tokens_out);
         self._swap_tokens(
-            p1, p2, &token_in, tokens_in, &token_out, tokens_out, near_swap,
+            &mut p1, &mut p2, &token_in, tokens_in, &token_out, tokens_out,
         );
         self.unsafe_storage_check(start_storage);
         return tokens_out.into();
-    }
-
-    /// Swaps two different tokens.
-    /// Caller defines the amount of tokens he wants to receive under a condiiton
-    /// of not spending more than `max_from_tokens`.
-    /// Preceeding to this transaction, caller has to create a sufficient allowance of
-    /// `from` token for this contract.
-    /// Transaction will panic if a caller doesn't provide enough allowance.
-    /// Returns amount tokens paid.
-    #[payable]
-    pub fn swap_tokens_exact_out(
-        &mut self,
-        token_in: AccountId,
-        max_tokens_in: U128,
-        token_out: AccountId,
-        tokens_out: U128,
-    ) -> U128 {
-        let start_storage = env::storage_usage();
-        assert_one_yocto();
-        let (tokens_out, max_tokens_in) = (u128::from(tokens_out), u128::from(max_tokens_in));
-        assert!(max_tokens_in > 0 && tokens_out > 0, ERR02_POSITIVE_ARGS);
-
-        let (p1, p2, near_swapped, tokens_in_to_pay) =
-            self._price_swap_tokens_out(&token_in, &token_out, tokens_out);
-        env_log!("Buying price is {}", tokens_in_to_pay);
-        assert_max_pay(tokens_in_to_pay, max_tokens_in);
-        self._swap_tokens(
-            p1,
-            p2,
-            &token_in,
-            tokens_in_to_pay,
-            &token_out,
-            tokens_out,
-            near_swapped,
-        );
-        self.unsafe_storage_check(start_storage);
-        return tokens_in_to_pay.into();
     }
 
     /**
@@ -425,12 +338,6 @@ impl NearSwap {
         self._price_n2t_in(&token, ynear_in.into()).1.into()
     }
 
-    /// Calculates amount of NEAR user will need to swap if he wants to receive
-    /// `tokens_out` of `token`
-    pub fn price_near_to_token_out(&self, token: AccountId, tokens_out: U128) -> U128 {
-        self._price_n2t_out(&token, tokens_out.into()).1.into()
-    }
-
     /// Calculates amount of NEAR user will recieve when swapping `tokens_in` for NEAR.
     pub fn price_token_to_near_in(&self, token: AccountId, tokens_in: U128) -> U128 {
         let tokens_in: u128 = tokens_in.into();
@@ -439,32 +346,9 @@ impl NearSwap {
         return self.calc_out_amount(tokens_in, p.tokens, p.ynear).into();
     }
 
-    /// Calculates amount of tokens user will need to swap if he wants to receive
-    /// `tokens_out` of `tokens`
-    pub fn price_token_to_near_out(&self, token: AccountId, ynear_out: U128) -> U128 {
-        let ynear_out: u128 = ynear_out.into();
-        assert!(ynear_out > 0, "E2: balance arguments must be >0");
-        let p = self.get_pool(&token);
-        return self.calc_in_amount(ynear_out, p.tokens, p.ynear).into();
-    }
-
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
     pub fn price_token_to_token_in(&self, from: AccountId, to: AccountId, tokens_in: U128) -> U128 {
         self._price_swap_tokens_in(&from, &to, tokens_in.into())
-            .3
-            .into()
-    }
-
-    /// Calculates amount of tokens `from` user will need to swap if he wants to receive
-    /// `tokens_out` of tokens `to`
-    pub fn price_token_to_token_out(
-        &self,
-        from: AccountId,
-        to: AccountId,
-        tokens_out: U128,
-    ) -> U128 {
-        self._price_swap_tokens_out(&from, &to, tokens_out.into())
-            .3
             .into()
     }
 

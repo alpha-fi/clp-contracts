@@ -28,7 +28,7 @@ impl NearSwap {
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     #[inline]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
-        // formula r = (in_amount * in_bal * out_bal ) / ( in_amount + in_bal ) ^ 2;
+        // formula: y = (x * Y * X) / (x + X)^2
         let denominator = (U512::from(in_amount) + U512::from(in_bal)) * U512::from(in_amount) + U512::from(in_bal);
         let numerator = ( U512::from(in_amount) * U512::from(in_bal) * U512::from(out_bal));
 
@@ -62,33 +62,30 @@ impl NearSwap {
         return tokens2_out;
     }
 
-    // calculateFee the fee of the swap
-    pub(crate) fn calcLiquidityFee(&self, X: u128, x: u128, Y: u128) -> u128 {
-        // ( x^2 *  Y ) / ( x + X )^2
-        let numerator = U512::from(x) * U512::from(x) * U512::from(Y);
-        let denominator = (U512::from(x) + U512::from(X)) * (U512::from(x) + U512::from(X));
-        if(denominator == U512::from(0)) {
-            return 0;
+    /// returns swap out amount and fee.
+    pub(crate) fn calc_out_with_fee(&self, x: u128,  X: u128, Y: u128) -> (u128, u128) {
+        if x == 0 {
+          return (0, 0);
         }
-        let r = numerator/denominator;
-        return r.as_u128();
+        fee = x*1000/3; // 0.3% x
+        x = x-fee;
+        (calc_out_amount(x, X,  Y), fee)
     }
 
-    // Should be at least tokens_out or swap will fail
-    // (prevents front running and other slippage issues).
+    /// Should be at least `min_tokens_out` or swap will fail
+    /// (prevents front running and other slippage issues).
     pub(crate) fn _swap_n2t(
         &mut self,
         p: &mut Pool,
         ynear_in: Balance,
         token: &AccountId,
-        tokens_out: Balance,
+        min_tokens_out: Balance,
     ) {
         let in_bal = p.ynear;
         let out_bal = p.tokens;
         let in_amount = ynear_in;
 
-        let liquidityFee = self.calcLiquidityFee(in_bal, in_amount, out_bal);
-        let amount_out = self.calc_out_amount(in_amount, in_bal, out_bal);
+        let out_amount, fee = self.calc_out_with_fee(in_amount, in_bal, out_bal);
 
         assert!(amount_out >= tokens_out, "ERR_MIN_AMOUNT");
         println!(
@@ -152,25 +149,12 @@ impl NearSwap {
         token1: &AccountId,
         token1_in: Balance,
         token2: &AccountId,
-        token2_out: Balance,
+        min_token2_out: Balance,
     ) {
         let user = env::predecessor_account_id();
-
-        let in_bal_first = p1.tokens;
-        let out_bal_first = p1.ynear;
-        let in_amount_first = token1_in;
-
-        let liquidityFee_first = self.calcLiquidityFee(in_bal_first, in_amount_first, out_bal_first);
-        let amount_out_first = self.calc_out_amount(in_amount_first, in_bal_first, out_bal_first);
-
-        let in_bal_second = p2.ynear;
-        let out_bal_second = p2.tokens;
-        let in_amount_second = amount_out_first;
-
-        let liquidityFee_second = self.calcLiquidityFee(in_bal_second, in_amount_second, out_bal_second);
-        let amount_out_second = self.calc_out_amount(in_amount_second, in_bal_second, out_bal_second);
-
-        assert!(amount_out_second >= token2_out, "ERR_MIN_AMOUNT");
+        let (swap_amount, _) = self.calc_out_with_fee(token1_in, p1.tokens, p1.ynear);
+        let (out, _) = self.calc_out_with_fee(swap_amount, p2.ynear, p2.tokens);
+        assert!(out >= min_token2_out, "ERR_MIN_AMOUNT");
         println!(
             "User purchased {} {} tokens for {} {} tokens",
             token2_out, token2, token1_in, token1,

@@ -252,9 +252,9 @@ impl NearSwap {
 
         let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
         assert_min_buy(tokens_out, min_tokens);
-        self._swap_n2t(&mut p, ynear, &token, tokens_out);
+        let tokens_swap_out = self._swap_n2t(&mut p, ynear, &token, tokens_out);
         self.unsafe_storage_check(start_storage);
-        return tokens_out.into();
+        return tokens_swap_out.into();
     }
 
     /// Swaps `tokens_paid` of `token` to NEAR and transfers NEAR to the caller under acc
@@ -278,9 +278,9 @@ impl NearSwap {
         let mut p = self.get_pool(&token);
         let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_ynear);
-        self._swap_t2n(&mut p, &token, tokens_paid, near_out);
+        let near_swap_out = self._swap_t2n(&mut p, &token, tokens_paid, near_out);
         self.unsafe_storage_check(start_storage);
-        return near_out.into();
+        return near_swap_out.into();
     }
 
     /// Swaps two different tokens.
@@ -309,11 +309,11 @@ impl NearSwap {
         let tokens_out =
             self._price_swap_tokens_in(&token_in, &token_out, tokens_in);
         assert_min_buy(tokens_out, min_tokens_out);
-        self._swap_tokens(
+        let tokens_swap_out = self._swap_tokens(
             &mut p1, &mut p2, &token_in, tokens_in, &token_out, tokens_out,
         );
         self.unsafe_storage_check(start_storage);
-        return tokens_out.into();
+        return tokens_swap_out.into();
     }
 
     /**

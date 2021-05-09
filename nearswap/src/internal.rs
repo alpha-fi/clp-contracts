@@ -29,8 +29,8 @@ impl NearSwap {
     #[inline]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // formula: y = (x * Y * X) / (x + X)^2
-        let denominator = (U512::from(in_amount) + U512::from(in_bal)) * U512::from(in_amount) + U512::from(in_bal);
-        let numerator = ( U512::from(in_amount) * U512::from(in_bal) * U512::from(out_bal));
+        let denominator = (u256::from(in_amount) + u256::from(in_bal)) * u256::from(in_amount) + u256::from(in_bal);
+        let numerator = ( u256::from(in_amount) * u256::from(in_bal) * u256::from(out_bal));
 
         let r = numerator / denominator;
         return r.as_u128();
@@ -63,13 +63,13 @@ impl NearSwap {
     }
 
     /// returns swap out amount and fee.
-    pub(crate) fn calc_out_with_fee(&self, x: u128,  X: u128, Y: u128) -> (u128, u128) {
+    pub(crate) fn calc_out_with_fee(&self, mut x: u128,  X: u128, Y: u128) -> (u128, u128) {
         if x == 0 {
           return (0, 0);
         }
-        fee = x*1000/3; // 0.3% x
-        x = x-fee;
-        (calc_out_amount(x, X,  Y), fee)
+        let fee = x*1000/3; // 0.3% x
+        x = x - fee;
+        (self.calc_out_amount(x, X,  Y), fee)
     }
 
     /// Should be at least `min_tokens_out` or swap will fail
@@ -80,29 +80,30 @@ impl NearSwap {
         ynear_in: Balance,
         token: &AccountId,
         min_tokens_out: Balance,
-    ) {
+    ) -> Balance {
         let in_bal = p.ynear;
         let out_bal = p.tokens;
         let in_amount = ynear_in;
 
-        let out_amount, fee = self.calc_out_with_fee(in_amount, in_bal, out_bal);
+        let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
 
-        assert!(amount_out >= tokens_out, "ERR_MIN_AMOUNT");
+        assert!(out_amount >= min_tokens_out, ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} for {} yNEAR",
-            amount_out, token, ynear_in
+            out_amount, token, ynear_in
         );
         
-        p.tokens -= amount_out;
+        p.tokens -= out_amount;
         p.ynear += ynear_in;
 
         let user = env::predecessor_account_id();
         let mut d = self.get_deposit(&user);
         d.remove_near(ynear_in);
-        d.add(token, amount_out);
+        d.add(token, out_amount);
 
         self.set_pool(token, p);
         self.set_deposit(&user, &d);
+        out_amount
     }
 
     // Should be at least ynear_out or swap will fail
@@ -113,31 +114,31 @@ impl NearSwap {
         token: &AccountId,
         token_in: Balance,
         ynear_out: Balance,
-    ) {
+    ) -> Balance {
         let user = env::predecessor_account_id();
 
         let in_bal = p.tokens;
         let out_bal = p.ynear;
         let in_amount = token_in;
 
-        let liquidityFee = self.calcLiquidityFee(in_bal, in_amount, out_bal);
-        let amount_out = self.calc_out_amount(in_amount, in_bal, out_bal);
-        
-        assert!(amount_out >= ynear_out, "ERR_MIN_AMOUNT");
+        let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
+
+        assert!(out_amount >= ynear_out, ERR25_MIN_AMOUNT);
         println!(
             "User {} purchased {} NEAR tokens for {} tokens",
-            user, amount_out, token_in
+            user, out_amount, token_in
         );
 
         p.tokens += in_amount;
-        p.ynear -= amount_out;
+        p.ynear -= out_amount;
 
         let mut d = self.get_deposit(&user);
         d.remove(token, in_amount);
-        d.ynear += amount_out;
+        d.ynear += out_amount;
 
         self.set_pool(&token, p);
         self.set_deposit(&user, &d);
+        out_amount
     }
 
     // Should be at least min_amount_out or swap will fail
@@ -150,28 +151,30 @@ impl NearSwap {
         token1_in: Balance,
         token2: &AccountId,
         min_token2_out: Balance,
-    ) {
+    ) -> Balance {
         let user = env::predecessor_account_id();
         let (swap_amount, _) = self.calc_out_with_fee(token1_in, p1.tokens, p1.ynear);
         let (out, _) = self.calc_out_with_fee(swap_amount, p2.ynear, p2.tokens);
-        assert!(out >= min_token2_out, "ERR_MIN_AMOUNT");
+
+        assert!(out >= min_token2_out, ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} tokens for {} {} tokens",
-            token2_out, token2, token1_in, token1,
+            out, token2, token1_in, token1,
         );
 
-        p1.tokens += in_amount_first;
-        p1.ynear -= amount_out_first;
-        p2.tokens -= amount_out_second;
-        p2.ynear += amount_out_first;
+        p1.tokens += token1_in;
+        p1.ynear -= swap_amount;
+        p2.tokens -= out;
+        p2.ynear += swap_amount;
 
         let mut d = self.get_deposit(&user);
-        d.remove(token1, in_amount_first);
-        d.add(token2, amount_out_second);
+        d.remove(token1, token1_in);
+        d.add(token2, out);
 
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p2);
         self.set_deposit(&user, &d);
+        out
     }
 
     /// Helper function for LP shares transfer implementing NEP-MFT standard.

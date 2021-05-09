@@ -25,11 +25,6 @@ construct_uint! {
     pub struct u256(4);
 }
 
-construct_uint! {
-    /// 512-bit unsigned integer.
-    pub struct U512(4);
-}
-
 /** Ensures that an account `a` is valid and panics if it's not.
 `name`: printed name of the account */
 #[inline]

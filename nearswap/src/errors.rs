@@ -24,3 +24,4 @@ pub const ERR21_ACC_STORAGE_TOO_LOW: &str =
 pub const ERR22_ACC_ALREADY_REGISTERED: &str = "E22: Account already registered";
 pub const ERR23_TOKEN_NOT_WHITELISTED: &str = "E23: Token is not whitelisted";
 pub const ERR24_NON_ZERO_TOKEN_BALANCE: &str = "E24: Token balance is non-zero";
+pub const ERR25_MIN_AMOUNT: &str = "E25: Swap output amount is less than required amount";

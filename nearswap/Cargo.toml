@@ -18,4 +18,4 @@ uint = { version = "0.9.0", default-features = false }
 [dev-dependencies]
 near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-sdk-sim = { git = "https://github.com/near/near-sdk-rs.git", rev="9d99077" }
-nep21-mintable = { path = "../other-contracts/nep-21" }
+sample-token = {path = "../sample-token"}

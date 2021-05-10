@@ -18,13 +18,14 @@ mod internal;
 pub mod pool;
 mod storage_management;
 pub mod types;
+mod view;
 pub mod util;
 pub mod twap;
 
 use crate::deposit::*;
 use crate::errors::*;
 use crate::twap::*;
-use crate::pool::*;
+pub use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
 use crate::constants::*;

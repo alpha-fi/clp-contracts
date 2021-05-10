@@ -26,7 +26,9 @@ impl StorageManagement for NearSwap {
         };
         let registration_only = registration_only.unwrap_or(false);
         let min_balance = self.storage_balance_bounds().min.0;
-        assert!(amount < min_balance, ERR12_NOT_ENOUGH_NEAR);
+        if amount < min_balance && registration_only {
+            env::panic(b"E12: Insufficient amount of NEAR attached");
+        }
         if registration_only {
             // Registration only setups the account but doesn't leave space for tokens.
             if self.deposits.contains_key(&account_id) {
@@ -42,7 +44,7 @@ impl StorageManagement for NearSwap {
 
                 let acc_deposit = AccountDeposit {
                     ynear: min_balance,
-                    storage_used: 0,
+                    storage_used: INIT_ACCOUNT_STORAGE,
                     tokens: HashMap::new(),
                 };
                 self.deposits.insert(&account_id, &acc_deposit);

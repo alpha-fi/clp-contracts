@@ -1,8 +1,7 @@
 [workspace]
 members = [
     "./nearswap",
-    "./other-contracts/nep-21",
-    "./sample-token"
+    "./sample-token",
 ]
 
 

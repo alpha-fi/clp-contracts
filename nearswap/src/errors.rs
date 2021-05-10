@@ -17,7 +17,6 @@ pub const ERR11_NOT_ENOUGH_SHARES: &str = "E11: Insufficient amount of shares ba
 pub const ERR12_NOT_ENOUGH_NEAR: &str = "E12: Insufficient amount of NEAR attached";
 pub const ERR13_NOT_ENOUGH_TOKENS_DEPOSITED: &str = "E13: Insufficient amount of tokens in deposit";
 pub const ERR14_NOT_ENOUGH_NEAR_DEPOSITED: &str = "E14: Insufficient amount of NEAR in deposit";
-pub const ERR15_NOT_ENOUGH_NEAR_DEPOSITED: &str = "E14: Insufficient amount of NEAR in deposit";
 
 pub const ERR20_ACC_NOT_REGISTERED: &str = "E20: Account not registered";
 pub const ERR21_ACC_STORAGE_TOO_LOW: &str =

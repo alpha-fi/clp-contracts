@@ -14,7 +14,7 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
 }
 
 pub fn sample_token(
-    root: &UserAccount,
+    creator: &UserAccount,
     token_id: AccountId,
     accounts_to_register: Vec<AccountId>,
 ) -> ContractAccount<SampleToken> {

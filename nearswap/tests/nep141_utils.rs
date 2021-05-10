@@ -22,17 +22,17 @@ pub fn sample_token(
         contract: SampleToken,
         contract_id: token_id,
         bytes: &SAMPLE_TOKEN_WASM_BYTES,
-        signer_account: root
+        signer_account: creator
     );
-    call!(root, t.new()).assert_success();
+    call!(creator, t.new()).assert_success();
     call!(
-        root,
-        t.mint(to_va(root.account_id.clone()), to_yocto("1000").into())
+        creator,
+        t.mint(to_va(creator.account_id.clone()), to_yocto("1000").into())
     )
     .assert_success();
     for account_id in accounts_to_register {
         call!(
-            root,
+            creator,
             t.storage_deposit(Some(to_va(account_id)), None),
             deposit = to_yocto("1")
         )

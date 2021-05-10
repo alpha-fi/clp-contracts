@@ -29,8 +29,11 @@ impl NearSwap {
     #[inline]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // formula: y = (x * Y * X) / (x + X)^2
-        let denominator = (u256::from(in_amount) + u256::from(in_bal)) * u256::from(in_amount) + u256::from(in_bal);
-        let numerator = ( u256::from(in_amount) * u256::from(in_bal) * u256::from(out_bal));
+        let x = u256::from(in_amount);
+        let X = u256::from(in_bal);
+        let numerator = ( x * u256::from(in_bal) * X);
+        let mut denominator = (x + X);
+        denominator *= denominator;
 
         let r = numerator / denominator;
         return r.as_u128();
@@ -86,7 +89,6 @@ impl NearSwap {
         let in_amount = ynear_in;
 
         let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
-
         assert!(out_amount >= min_tokens_out, ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} for {} yNEAR",
@@ -106,14 +108,14 @@ impl NearSwap {
         out_amount
     }
 
-    // Should be at least ynear_out or swap will fail
+    // Should be at least `min_ynear_out` or swap will fail
     // (prevents front running and other slippage issues).
     pub(crate) fn _swap_t2n(
         &mut self,
         p: &mut Pool,
         token: &AccountId,
         token_in: Balance,
-        ynear_out: Balance,
+        min_ynear_out: Balance,
     ) -> Balance {
         let user = env::predecessor_account_id();
 
@@ -122,7 +124,6 @@ impl NearSwap {
         let in_amount = token_in;
 
         let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
-
         assert!(out_amount >= ynear_out, ERR25_MIN_AMOUNT);
         println!(
             "User {} purchased {} NEAR tokens for {} tokens",

@@ -15,6 +15,7 @@ mod internal;
 pub mod pool;
 mod storage_management;
 pub mod types;
+mod view;
 pub mod util;
 
 use crate::deposit::*;

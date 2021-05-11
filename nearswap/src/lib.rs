@@ -277,7 +277,7 @@ impl NearSwap {
         assert!(tokens_paid > 0 && min_ynear > 0, ERR02_POSITIVE_ARGS);
 
         let mut p = self.get_pool(&token);
-        let near_out = self.calc_out_amount(tokens_paid, p.tokens, p.ynear);
+        let (near_out, _) = self.calc_out_with_fee(tokens_paid, p.tokens, p.ynear);
         assert_min_buy(near_out, min_ynear);
         let near_swap_out = self._swap_t2n(&mut p, &token, tokens_paid, near_out);
         self.unsafe_storage_check(start_storage);
@@ -344,7 +344,8 @@ impl NearSwap {
         let tokens_in: u128 = tokens_in.into();
         assert!(tokens_in > 0, "E2: balance arguments must be >0");
         let p = self.get_pool(&token);
-        return self.calc_out_amount(tokens_in, p.tokens, p.ynear).into();
+        let (out, _) = self.calc_out_with_fee(tokens_in, p.tokens, p.ynear).into();
+        return U128(out);
     }
 
     /// Calculates amount of tokens `to` user will receive when swapping `tokens_in` of `from`
@@ -1078,59 +1079,41 @@ mod tests {
     fn calc_price() {
         let (_, c) = init();
         const G: u128 = 1_000_000_000;
-        let assert_in = |buy, in_bal, out_bal, expected| {
-            assert_eq!(c.calc_in_amount(buy, in_bal, out_bal), expected)
+        let assert_in = |in_amount, in_bal, out_bal, expected| {
+            assert_eq!(c.calc_out_amount(in_amount, in_bal, out_bal), expected)
         };
 
         // #  test in prices  #
-        // Note, the output is always +1, because we add 1 at the end.
 
-        // ## test same supply ## - we expect x*1.003 + 1
-        assert_in(1, 10, 10, 2);
-        assert_in(1, G, G, 2);
-        assert_in(2, G, G, 3);
-        assert_in(100, G, G, 101);
-        // now the 0.3% takes effect
-        assert_in(1000, G, G, 1004);
-        assert_in(10_000, G, G, 10_031);
-        assert_in(20_000, NDENOM, NDENOM, 20_061);
+        // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
+        assert_in(1, 10, 10, 0);
+        assert_in(1, G, G, 0);
+        assert_in(2, G, G, 1);
+        assert_in(100, G, G, 99);
+        assert_in(1000, G, G, 999);
+        assert_in(10_000, G, G, 9999);
+        assert_in(20_000, NDENOM, NDENOM, 19999);
 
-        // ## test 2:1 ## - we expect 2x*1.003 + 1
-        assert_in(1, 2 * G, G, 3);
-        assert_in(10_000, 2 * G, G, 20_061);
-        assert_in(20_000, 2 * NDENOM, NDENOM, 40_121);
+        // ## test 2:1 ## - we expect y = (2*x * Y * X) / (2*x + X)^2
+        assert_in(1, 2 * G, G, 0);
+        assert_in(10_000, 2 * G, G, 4999);
+        assert_in(20_000, 2 * NDENOM, NDENOM, 9999);
 
-        // ## test 1:2 ## - we expect 0.5x*1.003 + 1
+        // ## test 1:2 ## - we expect (0.5x * Y * X) / (0.5x + X)^2
         assert_in(1, G, 2 * G, 1);
-        assert_in(10_000, G, 2 * G, 5000 + 15 + 1);
-        assert_in(20_000, NDENOM, 2 * NDENOM, 10_000 + 31);
+        assert_in(10_000, G, 2 * G, 19999);
+        assert_in(20_000, NDENOM, 2 * NDENOM, 39999);
 
-        assert_in(10, 12 * NDENOM, 2400, 50360285878556170603862u128);
+        assert_in(10, 12 * NDENOM, 2400, 0);
+    }
 
-        // #  test out prices  #
-        let assert_out = |sell, in_bal, out_bal, expected| {
-            assert_eq!(c.calc_out_amount(sell, in_bal, out_bal), expected)
-        };
-
-        // ## test same supply ## - we expect x*0.997
-        assert_out(1, G, G, 0); // 0 because we cut the decimals (should be 0.997)
-        assert_out(10, G, G, 9); // again rounding, should be 9.97
-        assert_out(1_000, G, G, 996); // rounding again...
-        assert_out(100_000, NDENOM, NDENOM, 99699);
-
-        // ## test 2:1 ## - we expect 0.5x*0.997
-        assert_out(1, 2 * G, G, 0); // 0 because we cut the decimals (should be 0.997)
-        assert_out(10, 2 * G, G, 4); // again rounding
-        assert_out(1_000, 2 * G, G, 996 / 2); // 996 because we add `in_net` to the denominator
-        assert_out(100_000, 2 * NDENOM, NDENOM, 99699 / 2); // 49849
-
-        // ## test 1:2  ## - we expect 2x*0.997
-        assert_out(1, G, 2 * G, 1); // 0 because we cut the decimals (should be 1.997)
-        assert_out(1_000, G, 2 * G, 1993); // rounding again...
-        assert_out(100_000, NDENOM, 2 * NDENOM, 199399);
-
-        // ## test 1:10  ## - we expect 10x*0.997 $net_calc
-        assert_out(1_000, G, 10 * G, 9969); //
+    fn mock_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
+        let x = u256::from(amount - (amount*3)/1000);
+        let X = u256::from(in_bal);
+        let numerator = ( x * u256::from(out_bal) * X);
+        let mut denominator = (x + X);
+        denominator *= denominator;
+        return (numerator / denominator).as_u128();
     }
 
     #[test]
@@ -1160,34 +1143,21 @@ mod tests {
         c.set_pool(&t2, &p2);
 
         let amount: u128 = 1_000_000;
-        let amount_net: u128 = 997_000;
         let mut v = c.price_near_to_token_in(t1.clone(), amount.into());
-        let v_expected = amount_net * p1.tokens / (p1.ynear + amount_net);
+
+        let mut v_expected = mock_calc_price_fee(amount, p1.ynear, p1.tokens);
         assert_eq!(to_num(v), v_expected);
-        let mut v2 = c.price_near_to_token_out(t1.clone(), v.into());
-        assert_eq!(to_num(v2), amount, "price_out(price_in) must be identity");
 
         // check reverse computation
-        v = c.price_token_to_near_in(t1.clone(), (amount * p1_factor).into());
-        assert_eq!(to_num(v), v_expected / p1_factor);
-        v2 = c.price_token_to_near_out(t1.clone(), v.into());
-        assert_close(v2, amount * p1_factor, 10);
-
-        // we can also do a reverse computation by starting from expected output
-        v2 = c.price_token_to_near_out(t1.clone(), v_expected.into());
-        assert_close(v2, amount * p1_factor * p1_factor, 10);
-        v = c.price_token_to_near_in(t1.clone(), v2.into()).into();
+        v_expected = mock_calc_price_fee(amount, p1.tokens, p1.ynear);
+        v = c.price_token_to_near_in(t1.clone(), amount.into());
         assert_eq!(to_num(v), v_expected);
 
         /*
          * test  token1 -> token2 swap
          */
         v = c.price_token_to_token_in(t1.clone(), t2.clone(), amount.into());
-        v2 = c.price_token_to_token_out(t1.clone(), t2.clone(), v.into());
-        assert_close(v2, amount, 10);
-
-        v2 = c.price_token_to_token_out(t2.clone(), t1.clone(), amount.into());
-        assert_close(v2, v.into(), amount * 2 / 1_000);
+        assert_close(v, amount / 8, 1000);
     }
 
     fn to_num(a: U128) -> u128 {

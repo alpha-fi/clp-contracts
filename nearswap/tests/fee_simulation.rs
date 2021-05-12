@@ -117,14 +117,14 @@ fn fee_simulation_test() {
     // Adding liquidity
     call!(
         lp1,
-        nearswap.add_liquidity(dai(), U128(to_yocto("9")), U128(to_yocto("90")), U128(0)),
+        nearswap.add_liquidity(dai(), to_yocto_str("9"), to_yocto_str("90"), U128(0)),
         deposit = 1
     )
     .assert_success();
     print!("OK ---- ");
     call!(
         lp2,
-        nearswap.add_liquidity(dai(), U128(to_yocto("1")), U128(to_yocto("10")), U128(0)),
+        nearswap.add_liquidity(dai(), to_yocto_str("1"), to_yocto_str("10"), U128(0)),
         deposit = 1
     )
     .assert_success();
@@ -156,12 +156,12 @@ fn fee_simulation_test() {
     assert_close(before_swap_token, to_yocto("0"), 0);
 
     let price_n2t = view!(
-            nearswap.price_near_to_token_in(dai(), U128(to_yocto("5")))
+            nearswap.price_near_to_token_in(dai(), to_yocto_str("5"))
         ).unwrap_json::<U128>();
 
     call!(
         alice,
-        nearswap.swap_near_to_token_exact_in(U128(to_yocto("5")), dai(), price_n2t),
+        nearswap.swap_near_to_token_exact_in(to_yocto_str("5"), dai(), price_n2t),
         deposit = 1
     ).assert_success();
 
@@ -176,6 +176,10 @@ fn fee_simulation_test() {
 
 fn to_u128(num: U128) -> u128 {
     return num.into();
+}
+
+fn to_yocto_str(x: &str) -> U128 {
+    return U128(to_yocto(&x));
 }
 
 fn assert_close(a1: U128, a2: u128, margin: u128) {

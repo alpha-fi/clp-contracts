@@ -115,19 +115,20 @@ fn fee_simulation_test() {
     print!("Token deposited in contract account deposit");
 
     // Adding liquidity
-    call!(
+    let lp1_shares = call!(
         lp1,
         nearswap.add_liquidity(dai(), to_yocto_str("9"), to_yocto_str("90"), U128(0)),
         deposit = 1
     )
-    .assert_success();
-    print!("OK ---- ");
-    call!(
+    .unwrap_json::<U128>();
+
+    let lp2_shares = call!(
         lp2,
-        nearswap.add_liquidity(dai(), to_yocto_str("1"), to_yocto_str("10"), U128(0)),
+        nearswap.add_liquidity(dai(), to_yocto_str("1"), to_yocto_str("10.01"), U128(0)),
         deposit = 1
     )
-    .assert_success();
+    .unwrap_json::<U128>();
+
     print!("Added Liquidity!");
     // Register alice before swapping
     call!(
@@ -172,6 +173,66 @@ fn fee_simulation_test() {
     assert_eq!(
         to_u128(before_swap_token) + to_u128(price_n2t),
         to_u128(after_swap_token), "Near to token swap unsuccessful");
+
+    let pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    let before_swap_token_lp1 = view!(
+        nearswap.get_deposit_token(lp1.account_id.clone(), dai())
+    ).unwrap_json::<U128>();
+    let before_swap_near_lp1 = view!(
+        nearswap.get_deposit_near(lp1.account_id.clone())
+    ).unwrap_json::<U128>();
+    let before_swap_token_lp2 = view!(
+        nearswap.get_deposit_token(lp2.account_id.clone(), dai())
+    ).unwrap_json::<U128>();
+    let before_swap_near_lp2 = view!(
+        nearswap.get_deposit_near(lp2.account_id.clone())
+    ).unwrap_json::<U128>();
+
+    // withdraw liquidity
+    call!(
+        lp1,
+        nearswap.withdraw_liquidity(dai(), lp1_shares, U128(1), U128(1))
+    ).assert_success();
+
+    let pool_after = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    let after_swap_token_lp1 = view!(
+        nearswap.get_deposit_token(lp1.account_id.clone(), dai())
+    ).unwrap_json::<U128>();
+    let after_swap_near_lp1 = view!(
+        nearswap.get_deposit_near(lp1.account_id.clone())
+    ).unwrap_json::<U128>();
+
+    // Check If ~90% of total shares are received by lp1
+    let tokens_received_lp1 = to_u128(after_swap_token_lp1) - to_u128(before_swap_token_lp1);
+    assert_eq!(to_u128(pool_before.tokens)*9/10, tokens_received_lp1, "Redeemed liquidity is not correct for lp1");
+
+    let near_received_lp1 = to_u128(after_swap_near_lp1) - to_u128(before_swap_near_lp1);
+    assert_eq!(to_u128(pool_before.ynear)*9/10, near_received_lp1, "Redeemed Near incorrect - lp1");
+    
+    call!(
+        lp2,
+        nearswap.withdraw_liquidity(dai(), lp2_shares, U128(1), U128(1))
+    ).assert_success();
+
+    let after_swap_token_lp2 = view!(
+        nearswap.get_deposit_token(lp2.account_id.clone(), dai())
+    ).unwrap_json::<U128>();
+    let after_swap_near_lp2 = view!(
+        nearswap.get_deposit_near(lp2.account_id.clone())
+    ).unwrap_json::<U128>();
+
+    // Check If ~10% of total shares are received by lp2
+    let tokens_received_lp2 = to_u128(after_swap_token_lp2) - to_u128(before_swap_token_lp2);
+    assert_close(U128(to_u128(pool_before.tokens)*1/10), tokens_received_lp2, 1);
+
+    let near_received_lp2 = to_u128(after_swap_near_lp2) - to_u128(before_swap_near_lp2);
+    assert_eq!(to_u128(pool_before.ynear)*1/10, near_received_lp2, "Redeemed Near incorrect - lp2");
+
+    // verify pool is empty after redeeming all liquidity
+    let pool = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    assert!(to_u128(pool.ynear) == 0, "Near in pool incorrect");
+    assert!(to_u128(pool.tokens) == 0, "Tokens in pool incorrect");
+    assert!(to_u128(pool.total_shares) == 0, "Total shares in pool incorrect");
 }
 
 fn to_u128(num: U128) -> u128 {

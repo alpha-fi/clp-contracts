@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::AccountId;
 use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount};
+use uint::construct_uint;
 
 use near_sdk_sim::transaction::ExecutionStatus;
 use nearswap::{NearSwapContract, PoolInfo};
@@ -160,6 +161,8 @@ fn fee_simulation_test() {
             nearswap.price_near_to_token_in(dai(), to_yocto_str("5"))
         ).unwrap_json::<U128>();
 
+    let mut pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+
     call!(
         alice,
         nearswap.swap_near_to_token_exact_in(to_yocto_str("5"), dai(), price_n2t),
@@ -174,7 +177,15 @@ fn fee_simulation_test() {
         to_u128(before_swap_token) + to_u128(price_n2t),
         to_u128(after_swap_token), "Near to token swap unsuccessful");
 
-    let pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    // Check if fee is deducted - Near deposited into pool must be 0.997 * near amount
+    // Fee - 0.3%
+    let out = mock_calc_out(
+        to_yocto("5")*997/1000,
+        to_u128(pool_before.ynear), to_u128(pool_before.tokens)
+    );
+    assert_eq!(out, to_u128(after_swap_token), "Wrong amount of fee deducted");
+
+    pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
     let before_swap_token_lp1 = view!(
         nearswap.get_deposit_token(lp1.account_id.clone(), dai())
     ).unwrap_json::<U128>();
@@ -233,6 +244,21 @@ fn fee_simulation_test() {
     assert!(to_u128(pool.ynear) == 0, "Near in pool incorrect");
     assert!(to_u128(pool.tokens) == 0, "Tokens in pool incorrect");
     assert!(to_u128(pool.total_shares) == 0, "Total shares in pool incorrect");
+}
+
+construct_uint! {
+    /// 256-bit unsigned integer.
+    pub struct u256(4);
+}
+
+// Mock calculation of price without deducting fee
+fn mock_calc_out(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
+    let X = u256::from(in_bal);
+    let x = u256::from(amount);
+    let numerator = ( x * u256::from(out_bal) * X);
+    let mut denominator = (x + X);
+    denominator *= denominator;
+    return (numerator / denominator).as_u128();
 }
 
 fn to_u128(num: U128) -> u128 {

@@ -10,8 +10,8 @@ use nearswap::{NearSwapContract, PoolInfo};
 use std::collections::HashMap;
 use sample_token::ContractContract as SampleToken;
 
-mod nep141_utils;
-use nep141_utils::*;
+mod simulation_utils;
+use simulation_utils::*;
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
@@ -33,17 +33,10 @@ fn fee_simulation_test() {
 
     let token1 = sample_token(&root, dai(), vec![clp_contract()]);
     // mint for liquidity providers
-    call!(
-        root,
-        token1.mint(to_va(lp1.account_id.clone()), to_yocto("1000").into())
-    )
-    .assert_success();
-    call!(
-        root,
-        token1.mint(to_va(lp2.account_id.clone()), to_yocto("1000").into())
-    )
-    .assert_success();
-    print!("Token minted for liquidators");
+    mint(&token1, &lp1, &root, to_yocto("1000"));
+    mint(&token1, &lp2, &root, to_yocto("1000"));
+    print!("Token minted for liquidity providers");
+
     call!(
         root,
         nearswap.extend_whitelisted_tokens(vec![to_va(dai())])
@@ -52,40 +45,13 @@ fn fee_simulation_test() {
     // Pool creation by root account
     call!(
         root,
-        nearswap.create_pool(to_va("dai".into())),
-        deposit = to_yocto("1")
+        nearswap.create_pool(to_va("dai".into()))
     )
     .assert_success();
 
-    // Register account lp1
-    call!(
-        lp1,
-        nearswap.storage_deposit(None, Some(true)),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
-    // Register account lp2
-    call!(
-        lp2,
-        nearswap.storage_deposit(None, Some(true)),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
-    print!("Account Registered!");
-    // Deposit near in account deposit lp1
-    call!(
-        lp1,
-        nearswap.storage_deposit(None, None),
-        deposit = to_yocto("35")
-    )
-    .assert_success();
-    // Deposit near in account deposit lp2
-    call!(
-        lp2,
-        nearswap.storage_deposit(None, None),
-        deposit = to_yocto("35")
-    )
-    .assert_success();
+    // register and add deposit to accounts
+    register_deposit_acc(&nearswap, &lp1, to_yocto("35"));
+    register_deposit_acc(&nearswap, &lp2, to_yocto("35"));
 
     // Add to accounts whitelist
     call!(
@@ -122,7 +88,6 @@ fn fee_simulation_test() {
         deposit = 1
     )
     .unwrap_json::<U128>();
-
     let lp2_shares = call!(
         lp2,
         nearswap.add_liquidity(dai(), to_yocto_str("1"), to_yocto_str("10.01"), U128(0)),
@@ -131,20 +96,7 @@ fn fee_simulation_test() {
     .unwrap_json::<U128>();
 
     print!("Added Liquidity!");
-    // Register alice before swapping
-    call!(
-        alice,
-        nearswap.storage_deposit(None, Some(true)),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
-    // Deposit near in account deposit
-    call!(
-        alice,
-        nearswap.storage_deposit(None, None),
-        deposit = to_yocto("5")
-    )
-    .assert_success();
+    register_deposit_acc(&nearswap, &alice, to_yocto("25"));
     call!(
         alice,
         nearswap.add_to_account_whitelist(&vec![to_va(dai())])
@@ -157,7 +109,7 @@ fn fee_simulation_test() {
     ).unwrap_json::<U128>();
     assert_close(before_swap_token, to_yocto("0"), 0);
 
-    let price_n2t = view!(
+    let expected_receive = view!(
             nearswap.price_near_to_token_in(dai(), to_yocto_str("5"))
         ).unwrap_json::<U128>();
 
@@ -165,7 +117,7 @@ fn fee_simulation_test() {
 
     call!(
         alice,
-        nearswap.swap_near_to_token_exact_in(to_yocto_str("5"), dai(), price_n2t),
+        nearswap.swap_near_to_token_exact_in(to_yocto_str("5"), dai(), expected_receive),
         deposit = 1
     ).assert_success();
 
@@ -174,7 +126,7 @@ fn fee_simulation_test() {
         ).unwrap_json::<U128>();
 
     assert_eq!(
-        to_u128(before_swap_token) + to_u128(price_n2t),
+        to_u128(before_swap_token) + to_u128(expected_receive),
         to_u128(after_swap_token), "Near to token swap unsuccessful");
 
     // Check if fee is deducted - Near deposited into pool must be 0.997 * near amount

@@ -41,6 +41,17 @@ pub fn sample_token(
     t
 }
 
+pub fn mint(
+    token: &ContractAccount<SampleToken>, recipient: &UserAccount,
+    creator: &UserAccount, amount: u128
+) {
+    call!(
+        creator,
+        token.mint(to_va(recipient.account_id.clone()), amount.into())
+    )
+    .assert_success();
+}
+
 pub fn dai() -> AccountId {
     "dai".to_string()
 }
@@ -59,4 +70,40 @@ pub fn to_va(a: AccountId) -> ValidAccountId {
 
 pub fn to_u128(a: U128) -> u128 {
     return u128::try_from(a).unwrap();
+}
+
+pub fn create_pools(
+    nearswap: &ContractAccount<NearSwapContract>,
+    owner: &UserAccount) {
+    call!(
+        owner,
+        nearswap.create_pool(to_va("dai".into())),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
+    call!(
+        owner,
+        nearswap.create_pool(to_va("eth".into())),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
+}
+
+pub fn register_deposit_acc(
+    nearswap: &ContractAccount<NearSwapContract>,
+    owner: &UserAccount, amount: u128) {
+    // Register account
+    call!(
+        owner,
+        nearswap.storage_deposit(None, Some(true)),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
+    // Deposit more near in account deposit
+    call!(
+        owner,
+        nearswap.storage_deposit(None, None),
+        deposit = amount
+    )
+    .assert_success();
 }

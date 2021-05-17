@@ -9,8 +9,8 @@ use nearswap::{NearSwapContract, PoolInfo};
 use std::collections::HashMap;
 use sample_token::ContractContract as SampleToken;
 
-mod nep141_utils;
-use nep141_utils::*;
+mod simulation_utils;
+use simulation_utils::*;
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
@@ -33,33 +33,10 @@ fn swap_test() {
         owner,
         nearswap.extend_whitelisted_tokens(vec![to_va(dai()), to_va(eth())])
     );
-    call!(
-        owner,
-        nearswap.create_pool(to_va("dai".into())),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
-    call!(
-        owner,
-        nearswap.create_pool(to_va("eth".into())),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
 
-    // Register account
-    call!(
-        owner,
-        nearswap.storage_deposit(None, Some(true)),
-        deposit = to_yocto("1")
-    )
-    .assert_success();
-    // Deposit more near in account deposit
-    call!(
-        owner,
-        nearswap.storage_deposit(None, None),
-        deposit = to_yocto("35")
-    )
-    .assert_success();
+    create_pools(&nearswap, &owner);
+
+    register_deposit_acc(&nearswap, &owner, to_yocto("35"));
 
     call!(
         owner,

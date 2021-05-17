@@ -1148,13 +1148,17 @@ mod tests {
         let mut v_expected = mock_calc_price_fee(amount, p1.ynear, p1.tokens);
         assert_eq!(to_num(v), v_expected);
 
-        // check reverse computation
         v_expected = mock_calc_price_fee(amount, p1.tokens, p1.ynear);
         v = c.price_token_to_near_in(t1.clone(), amount.into());
         assert_eq!(to_num(v), v_expected);
 
         /*
          * test  token1 -> token2 swap
+         * Pool one swaps token1 to near that gives amount_of_tokens / 4 number of near
+         * because pool ratio is 1:4
+         * Pool two swaps near to token2 that gives amount_of_tokens / 2 number of tokens
+         * because pool ratio is 2:1
+         * Therefore final tokens received is approximately amount / 8
          */
         v = c.price_token_to_token_in(t1.clone(), t2.clone(), amount.into());
         assert_close(v, amount / 8, 1000);

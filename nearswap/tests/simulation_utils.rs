@@ -77,14 +77,12 @@ pub fn create_pools(
     owner: &UserAccount) {
     call!(
         owner,
-        nearswap.create_pool(to_va("dai".into())),
-        deposit = to_yocto("1")
+        nearswap.create_pool(to_va("dai".into()))
     )
     .assert_success();
     call!(
         owner,
-        nearswap.create_pool(to_va("eth".into())),
-        deposit = to_yocto("1")
+        nearswap.create_pool(to_va("eth".into()))
     )
     .assert_success();
 }

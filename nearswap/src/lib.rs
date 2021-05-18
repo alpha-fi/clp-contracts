@@ -1108,6 +1108,43 @@ mod tests {
         assert_out(10, 12 * NDENOM, 2400, 0);
     }
 
+    #[test]
+    fn calc_price_with_fee() {
+        let (_, c) = init();
+        const G: u128 = 1_000_000_000;
+        let assert_out = |in_amount, in_bal, out_bal| {
+            assert_eq!(
+                c.calc_out_with_fee(in_amount, in_bal, out_bal).0,
+                expected_calc_price_fee(in_amount, in_bal, out_bal)
+            )
+        };
+
+        // #  test in prices  #
+
+        // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
+        // where x will be in_amount*(0.997) - (after deducting 3% fee)
+        // `out` is rounded down, that's why in the first test we have 0 out. 
+        assert_out(1, 10, 10);
+        assert_out(1, G, G);
+        assert_out(2, G, G);
+        assert_out(100, G, G);
+        assert_out(1000, G, G);
+        assert_out(10_000, G, G);
+        assert_out(20_000, NDENOM, NDENOM);
+
+        // ## test 2:1 ## - we expect y = (2*x * Y * X) / (2*x + X)^2
+        assert_out(1, 2 * G, G);
+        assert_out(10_000, 2 * G, G);
+        assert_out(20_000, 2 * NDENOM, NDENOM);
+
+        // ## test 1:2 ## - we expect (0.5x * Y * X) / (0.5x + X)^2
+        assert_out(1, G, 2 * G);
+        assert_out(10_000, G, 2 * G);
+        assert_out(20_000, NDENOM, 2 * NDENOM);
+
+        assert_out(10, 12 * NDENOM, 2400);
+    }
+
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount*3)/1000);
         let X = u256::from(in_bal);

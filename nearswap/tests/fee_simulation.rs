@@ -129,6 +129,10 @@ fn fee_simulation_test() {
     );
     assert_eq!(out, to_u128(after_swap_token), "Wrong amount of fee deducted");
 
+    // Pool
+    let pool_after_swap = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
+    assert!(to_u128(pool_after_swap.tokens) >= to_u128(pool_before.tokens) - to_u128(after_swap_token));
+
     pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
     let before_withdraw_token_lp1 = view!(
         nearswap.get_deposit_token(lp1.account_id.clone(), dai())

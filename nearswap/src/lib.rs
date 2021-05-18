@@ -1086,6 +1086,7 @@ mod tests {
         // #  test in prices  #
 
         // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
+        // `out` is rounded down, that's why in the first test we have 0 out. 
         assert_in(1, 10, 10, 0);
         assert_in(1, G, G, 0);
         assert_in(2, G, G, 1);
@@ -1154,9 +1155,9 @@ mod tests {
 
         /*
          * test  token1 -> token2 swap
-         * Pool one swaps token1 to near that gives amount_of_tokens / 4 number of near
+         * Pool1 swaps token1 to near that return amount_near = amount_tokens / 4
          * because pool ratio is 1:4
-         * Pool two swaps near to token2 that gives amount_of_tokens / 2 number of tokens
+         * Pool2 swaps near to token2 that gives amount_tokens = amount_near / 2
          * because pool ratio is 2:1
          * Therefore final tokens received is approximately amount / 8
          */

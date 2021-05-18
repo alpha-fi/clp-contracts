@@ -19,17 +19,9 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
 
 #[test]
 fn fee_simulation_test() {
-    let root = init_simulator(None);
+    let (root, alice, nearswap) = deploy(&"root".to_string());
     let lp1 = root.create_user("lp1".to_string(), to_yocto("100"));
     let lp2 = root.create_user("lp2".to_string(), to_yocto("100"));
-    let alice = root.create_user("alice".to_string(), to_yocto("100"));
-    let nearswap = deploy!(
-        contract: NearSwapContract,
-        contract_id: clp_contract(),
-        bytes: &NEARSWAP_WASM_BYTES,
-        signer_account: root,
-        init_method: new(to_va(root.account_id.clone()))
-    );
 
     let token1 = sample_token(&root, dai(), vec![clp_contract()]);
     // mint for liquidity providers
@@ -131,23 +123,23 @@ fn fee_simulation_test() {
 
     // Check if fee is deducted - Near deposited into pool must be 0.997 * near amount
     // Fee - 0.3%
-    let out = mock_calc_out(
+    let out = calc_out_expected(
         to_yocto("5")*997/1000,
         to_u128(pool_before.ynear), to_u128(pool_before.tokens)
     );
     assert_eq!(out, to_u128(after_swap_token), "Wrong amount of fee deducted");
 
     pool_before = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
-    let before_swap_token_lp1 = view!(
+    let before_withdraw_token_lp1 = view!(
         nearswap.get_deposit_token(lp1.account_id.clone(), dai())
     ).unwrap_json::<U128>();
-    let before_swap_near_lp1 = view!(
+    let before_withdraw_near_lp1 = view!(
         nearswap.get_deposit_near(lp1.account_id.clone())
     ).unwrap_json::<U128>();
-    let before_swap_token_lp2 = view!(
+    let before_withdraw_token_lp2 = view!(
         nearswap.get_deposit_token(lp2.account_id.clone(), dai())
     ).unwrap_json::<U128>();
-    let before_swap_near_lp2 = view!(
+    let before_withdraw_near_lp2 = view!(
         nearswap.get_deposit_near(lp2.account_id.clone())
     ).unwrap_json::<U128>();
 
@@ -158,7 +150,7 @@ fn fee_simulation_test() {
     ).assert_success();
 
     let pool_after = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
-    let after_swap_token_lp1 = view!(
+    let after_withdraw_token_lp1 = view!(
         nearswap.get_deposit_token(lp1.account_id.clone(), dai())
     ).unwrap_json::<U128>();
     let after_swap_near_lp1 = view!(
@@ -166,10 +158,10 @@ fn fee_simulation_test() {
     ).unwrap_json::<U128>();
 
     // Check If ~90% of total shares are received by lp1
-    let tokens_received_lp1 = to_u128(after_swap_token_lp1) - to_u128(before_swap_token_lp1);
+    let tokens_received_lp1 = to_u128(after_withdraw_token_lp1) - to_u128(before_withdraw_token_lp1);
     assert_eq!(to_u128(pool_before.tokens)*9/10, tokens_received_lp1, "Redeemed liquidity is not correct for lp1");
 
-    let near_received_lp1 = to_u128(after_swap_near_lp1) - to_u128(before_swap_near_lp1);
+    let near_received_lp1 = to_u128(after_swap_near_lp1) - to_u128(before_withdraw_near_lp1);
     assert_eq!(to_u128(pool_before.ynear)*9/10, near_received_lp1, "Redeemed Near incorrect - lp1");
     
     call!(
@@ -177,7 +169,7 @@ fn fee_simulation_test() {
         nearswap.withdraw_liquidity(dai(), lp2_shares, U128(1), U128(1))
     ).assert_success();
 
-    let after_swap_token_lp2 = view!(
+    let after_withdraw_token_lp2 = view!(
         nearswap.get_deposit_token(lp2.account_id.clone(), dai())
     ).unwrap_json::<U128>();
     let after_swap_near_lp2 = view!(
@@ -185,10 +177,10 @@ fn fee_simulation_test() {
     ).unwrap_json::<U128>();
 
     // Check If ~10% of total shares are received by lp2
-    let tokens_received_lp2 = to_u128(after_swap_token_lp2) - to_u128(before_swap_token_lp2);
+    let tokens_received_lp2 = to_u128(after_withdraw_token_lp2) - to_u128(before_withdraw_token_lp2);
     assert_close(U128(to_u128(pool_before.tokens)*1/10), tokens_received_lp2, 1);
 
-    let near_received_lp2 = to_u128(after_swap_near_lp2) - to_u128(before_swap_near_lp2);
+    let near_received_lp2 = to_u128(after_swap_near_lp2) - to_u128(before_withdraw_near_lp2);
     assert_eq!(to_u128(pool_before.ynear)*1/10, near_received_lp2, "Redeemed Near incorrect - lp2");
 
     // verify pool is empty after redeeming all liquidity
@@ -204,7 +196,7 @@ construct_uint! {
 }
 
 // Mock calculation of price without deducting fee
-fn mock_calc_out(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
+fn calc_out_expected(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
     let X = u256::from(in_bal);
     let x = u256::from(amount);
     let numerator = ( x * u256::from(out_bal) * X);

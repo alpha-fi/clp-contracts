@@ -12,21 +12,9 @@ use sample_token::ContractContract as SampleToken;
 mod simulation_utils;
 use simulation_utils::*;
 
-near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
-    NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
-}
-
 #[test]
 fn swap_test() {
-    let root = init_simulator(None);
-    let owner = root.create_user("owner".to_string(), to_yocto("100000"));
-    let nearswap = deploy!(
-        contract: NearSwapContract,
-        contract_id: clp_contract(),
-        bytes: &NEARSWAP_WASM_BYTES,
-        signer_account: owner,
-        init_method: new(to_va("owner".to_string()))
-    );
+    let (root, owner, nearswap) = deploy(&"owner".to_string());
     let token1 = sample_token(&owner, dai(), vec![clp_contract()]);
     let token2 = sample_token(&owner, eth(), vec![clp_contract()]);
     call!(

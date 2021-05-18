@@ -1079,7 +1079,7 @@ mod tests {
     fn calc_price() {
         let (_, c) = init();
         const G: u128 = 1_000_000_000;
-        let assert_in = |in_amount, in_bal, out_bal, expected| {
+        let assert_out = |in_amount, in_bal, out_bal, expected| {
             assert_eq!(c.calc_out_amount(in_amount, in_bal, out_bal), expected)
         };
 
@@ -1087,28 +1087,28 @@ mod tests {
 
         // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
         // `out` is rounded down, that's why in the first test we have 0 out. 
-        assert_in(1, 10, 10, 0);
-        assert_in(1, G, G, 0);
-        assert_in(2, G, G, 1);
-        assert_in(100, G, G, 99);
-        assert_in(1000, G, G, 999);
-        assert_in(10_000, G, G, 9999);
-        assert_in(20_000, NDENOM, NDENOM, 19999);
+        assert_out(1, 10, 10, 0);
+        assert_out(1, G, G, 0);
+        assert_out(2, G, G, 1);
+        assert_out(100, G, G, 99);
+        assert_out(1000, G, G, 999);
+        assert_out(10_000, G, G, 9999);
+        assert_out(20_000, NDENOM, NDENOM, 19999);
 
         // ## test 2:1 ## - we expect y = (2*x * Y * X) / (2*x + X)^2
-        assert_in(1, 2 * G, G, 0);
-        assert_in(10_000, 2 * G, G, 4999);
-        assert_in(20_000, 2 * NDENOM, NDENOM, 9999);
+        assert_out(1, 2 * G, G, 0);
+        assert_out(10_000, 2 * G, G, 4999);
+        assert_out(20_000, 2 * NDENOM, NDENOM, 9999);
 
         // ## test 1:2 ## - we expect (0.5x * Y * X) / (0.5x + X)^2
-        assert_in(1, G, 2 * G, 1);
-        assert_in(10_000, G, 2 * G, 19999);
-        assert_in(20_000, NDENOM, 2 * NDENOM, 39999);
+        assert_out(1, G, 2 * G, 1);
+        assert_out(10_000, G, 2 * G, 19999);
+        assert_out(20_000, NDENOM, 2 * NDENOM, 39999);
 
-        assert_in(10, 12 * NDENOM, 2400, 0);
+        assert_out(10, 12 * NDENOM, 2400, 0);
     }
 
-    fn mock_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
+    fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount*3)/1000);
         let X = u256::from(in_bal);
         let numerator = ( x * u256::from(out_bal) * X);
@@ -1146,10 +1146,10 @@ mod tests {
         let amount: u128 = 1_000_000;
         let mut v = c.price_near_to_token_in(t1.clone(), amount.into());
 
-        let mut v_expected = mock_calc_price_fee(amount, p1.ynear, p1.tokens);
+        let mut v_expected = expected_calc_price_fee(amount, p1.ynear, p1.tokens);
         assert_eq!(to_num(v), v_expected);
 
-        v_expected = mock_calc_price_fee(amount, p1.tokens, p1.ynear);
+        v_expected = expected_calc_price_fee(amount, p1.tokens, p1.ynear);
         v = c.price_token_to_near_in(t1.clone(), amount.into());
         assert_eq!(to_num(v), v_expected);
 

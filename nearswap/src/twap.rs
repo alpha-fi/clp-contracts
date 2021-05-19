@@ -14,10 +14,10 @@ pub const T_12H: u64 = to_nanoseconds(60 * 60 * 12);
 
 #[derive(Debug)]
 pub enum Mean {
-    M_1MIN,
-    M_5MIN,
-    M_1H,
-    M_12H,
+    M1min,
+    M5min,
+    M1h,
+    M12h,
 }
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -101,7 +101,7 @@ impl Twap {
         price2: u128
     ) -> u64 {
         let mut o = &self.observations.get(self.current_idx).unwrap();
-        if(block_timestamp == o.block_timestamp) {
+        if block_timestamp == o.block_timestamp {
             self.observations.replace(self.current_idx, &Observation::transform(o, block_timestamp, price1, price2));
             return self.current_idx;
         }
@@ -179,10 +179,10 @@ impl Twap {
         time: Mean,
     ) -> (u128, u128) {
         let time_diff: u64 = match time {
-            Mean::M_1MIN => T_1MIN, // 1 minute in nanoseconds
-            Mean::M_5MIN => T_5MIN, // 5 minute in nanoseconds
-            Mean::M_1H => T_1H,
-            Mean::M_12H => T_12H,
+            Mean::M1min => T_1MIN, // 1 minute in nanoseconds
+            Mean::M5min => T_5MIN, // 5 minute in nanoseconds
+            Mean::M1h => T_1H,
+            Mean::M12h => T_12H,
             _ => 0
         };
         let req_timestamp;
@@ -233,10 +233,10 @@ impl Twap {
     }
 
     pub fn update_mean(&mut self) {
-        self.mean_1min = self.calculate_mean(Mean::M_1MIN);
-        self.mean_5min = self.calculate_mean(Mean::M_5MIN);
-        self.mean_1h = self.calculate_mean(Mean::M_1H);
-        self.mean_12h = self.calculate_mean(Mean::M_12H);
+        self.mean_1min = self.calculate_mean(Mean::M1min);
+        self.mean_5min = self.calculate_mean(Mean::M5min);
+        self.mean_1h = self.calculate_mean(Mean::M1h);
+        self.mean_12h = self.calculate_mean(Mean::M12h);
     }
 }
 
@@ -512,7 +512,7 @@ mod tests {
         let min_2_timestamp = timestamp + to_nanoseconds(120);
 
         twap.log_observation(min_2_timestamp, 3, 3);
-        let mut res = twap.calculate_mean(Mean::M_1MIN);
+        let mut res = twap.calculate_mean(Mean::M1min);
 
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");
@@ -522,7 +522,7 @@ mod tests {
 
         twap.log_observation(min_8_timestamp, 12, 12);
         twap.log_observation(min_10_timestamp, 10, 10);
-        res = twap.calculate_mean(Mean::M_5MIN);
+        res = twap.calculate_mean(Mean::M5min);
 
         assert_eq!(11 , res.0, "Wrong mean - 2");
         assert_eq!(11, res.1, "Wrong mean - 1");
@@ -542,13 +542,13 @@ mod tests {
 
         twap.log_observation(min_2_timestamp, 3, 3);
         // calculate mean for last 5 mins, though array starts from 1 min
-        let mut res = twap.calculate_mean(Mean::M_5MIN);
+        let mut res = twap.calculate_mean(Mean::M5min);
 
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");
 
         // calculate mean for last 12 hours mins, though array starts from 1 min
-        let mut res = twap.calculate_mean(Mean::M_12H);
+        let mut res = twap.calculate_mean(Mean::M12h);
 
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");
@@ -564,7 +564,7 @@ mod tests {
         }
         // array
         // 18, 3, 8, 10, 12, 13, 14, 15, 16, 17
-        res = twap.calculate_mean(Mean::M_1MIN);
+        res = twap.calculate_mean(Mean::M1min);
 
         assert_eq!(5 , res.0, "Wrong mean - 2");
         assert_eq!(5, res.1, "Wrong mean - 1");

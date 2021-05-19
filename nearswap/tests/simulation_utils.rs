@@ -11,6 +11,20 @@ use sample_token::ContractContract as SampleToken;
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     SAMPLE_TOKEN_WASM_BYTES => "../res/sample_token.wasm",
+    NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
+}
+
+pub fn deploy(creator: &str) -> (UserAccount, UserAccount, ContractAccount<NearSwapContract>) {
+    let root = init_simulator(None);
+    let owner = root.create_user("owner".to_string(), to_yocto("100000"));
+    let nearswap = deploy!(
+        contract: NearSwapContract,
+        contract_id: clp_contract(),
+        bytes: &NEARSWAP_WASM_BYTES,
+        signer_account: owner,
+        init_method: new(to_va(creator.into()))
+    );
+    return (root, owner, nearswap);
 }
 
 pub fn sample_token(
@@ -41,6 +55,17 @@ pub fn sample_token(
     t
 }
 
+pub fn mint(
+    token: &ContractAccount<SampleToken>, recipient: &UserAccount,
+    creator: &UserAccount, amount: u128
+) {
+    call!(
+        creator,
+        token.mint(to_va(recipient.account_id.clone()), amount.into())
+    )
+    .assert_success();
+}
+
 pub fn dai() -> AccountId {
     "dai".to_string()
 }
@@ -59,4 +84,38 @@ pub fn to_va(a: AccountId) -> ValidAccountId {
 
 pub fn to_u128(a: U128) -> u128 {
     return u128::try_from(a).unwrap();
+}
+
+pub fn create_pools(
+    nearswap: &ContractAccount<NearSwapContract>,
+    owner: &UserAccount) {
+    call!(
+        owner,
+        nearswap.create_pool(to_va("dai".into()))
+    )
+    .assert_success();
+    call!(
+        owner,
+        nearswap.create_pool(to_va("eth".into()))
+    )
+    .assert_success();
+}
+
+pub fn register_deposit_acc(
+    nearswap: &ContractAccount<NearSwapContract>,
+    owner: &UserAccount, amount: u128) {
+    // Register account
+    call!(
+        owner,
+        nearswap.storage_deposit(None, Some(true)),
+        deposit = to_yocto("1")
+    )
+    .assert_success();
+    // Deposit more near in account deposit
+    call!(
+        owner,
+        nearswap.storage_deposit(None, None),
+        deposit = amount
+    )
+    .assert_success();
 }

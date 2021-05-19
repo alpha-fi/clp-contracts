@@ -9,8 +9,8 @@ use nearswap::{NearSwapContract, PoolInfo};
 use std::collections::HashMap;
 use sample_token::ContractContract as SampleToken;
 
-mod nep141_utils;
-use nep141_utils::*;
+mod simulation_utils;
+use simulation_utils::*;
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",

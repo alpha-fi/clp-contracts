@@ -31,8 +31,8 @@ impl NearSwap {
         // formula: y = (x * Y * X) / (x + X)^2
         let x = u256::from(in_amount);
         let X = u256::from(in_bal);
-        let numerator = ( x * u256::from(in_bal) * X);
-        let mut denominator = (x + X);
+        let numerator = x * u256::from(out_bal) * X;
+        let mut denominator = x + X;
         denominator *= denominator;
 
         let r = numerator / denominator;
@@ -44,7 +44,7 @@ impl NearSwap {
         if x == 0 {
             return (0, 0);
         }
-        let fee = x*1000/3; // 0.3% x
+        let fee = (x*3)/1000; // 0.3% x
         x = x - fee;
         (self.calc_out_amount(x, X,  Y), fee)
     }
@@ -52,7 +52,7 @@ impl NearSwap {
     pub(crate) fn _price_n2t_in(&self, token: &AccountId, ynear_in: u128) -> (Pool, u128) {
         assert!(ynear_in > 0, "E2: balance arguments must be >0");
         let p = self.get_pool(&token);
-        let out = self.calc_out_amount(ynear_in, p.ynear, p.tokens).into();
+        let (out, _) = self.calc_out_with_fee(ynear_in, p.ynear, p.tokens).into();
         (p, out)
     }
 
@@ -66,8 +66,8 @@ impl NearSwap {
         assert_ne!(t_in, t_out, "E9: can't swap same tokens");
         let p_in = self.get_pool(t_in);
         let p_out = self.get_pool(t_out);
-        let near_swap = self.calc_out_amount(tokens_in, p_in.tokens, p_in.ynear);
-        let tokens2_out = self.calc_out_amount(near_swap, p_out.ynear, p_out.tokens);
+        let (near_swap, _) = self.calc_out_with_fee(tokens_in, p_in.tokens, p_in.ynear);
+        let (tokens2_out, _) = self.calc_out_with_fee(near_swap, p_out.ynear, p_out.tokens);
         println!(
             "Swapping_in {} {} -> {} ynear -> {} {}",
             tokens_in, t_in, near_swap, tokens2_out, t_out

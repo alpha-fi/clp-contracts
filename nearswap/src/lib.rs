@@ -1145,6 +1145,17 @@ mod tests {
         assert_out(10, 12 * NDENOM, 2400);
     }
 
+    #[test]
+    fn compare_fee_with_non_fee() {
+        // Output tokens got from without fee will always be greater than with fee
+        // It could be equal if values are smaller
+        let (_, c) = init();
+        const G: u128 = 1_000_000_000;
+        let x = c.calc_out_amount(1_000_000, G, G);
+        let (y, _) = c.calc_out_with_fee(1_000_000, G, G);
+        assert!(x > y, "Tokens output incorrect");
+    }
+
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount*3)/1000);
         let X = u256::from(in_bal);

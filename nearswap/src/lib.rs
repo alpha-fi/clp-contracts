@@ -155,6 +155,7 @@ impl NearSwap {
         max_tokens: U128,
         min_shares: U128,
     ) -> U128 {
+        assert_one_yocto();
         let start_storage = env::storage_usage();
         let mut p = self.get_pool(&token);
         let caller = env::predecessor_account_id();

@@ -882,12 +882,6 @@ mod tests {
             total_shares: (adjusted_near + p.ynear).into(),
         };
         assert_eq!(p_info, expected_pool, "pool_info should be correct");
-        /*let a_shares = c.balance_of(t.clone(), a);
-        assert_eq!(
-            to_num(a_shares),
-            ynear_deposit + p.ynear,
-            "LP should have correct amount of shares"
-        );*/
     }
 
     fn expected_adjusted_near(max_tokens: u128, ynear_pool: u128, tokens_pool: u128) -> u128 {

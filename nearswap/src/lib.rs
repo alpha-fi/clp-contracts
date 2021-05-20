@@ -875,6 +875,7 @@ mod tests {
         c.add_liquidity(t.clone(), ynear_deposit.into(), max_tokens.into(), U128(0));
 
         let adjusted_near = expected_adjusted_near(max_tokens, p.ynear, p.tokens);
+        assert!(adjusted_near < ynear_deposit, "Adjusted near is greater than near deposit");
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (adjusted_near + p.ynear).into(),

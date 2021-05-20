@@ -837,6 +837,65 @@ mod tests {
     }
 
     #[test]
+    fn add_liquidity3_happy_path_adjust_ynear() {
+        let ynear_deposit = 30 * NDENOM;
+        let token_deposit = 10 * NDENOM;
+        let ynear_deposit_with_storage = ynear_deposit;
+
+        let (ctx, mut c) = _init(ynear_deposit_with_storage);
+        let t = ctx.accounts.token1.clone();
+        let a = ctx.accounts.predecessor.clone();
+
+        let account_deposit = AccountDeposit {
+            ynear: ynear_deposit + NDENOM,
+            storage_used: 84,
+            tokens: [(t.clone(), token_deposit * 11)]
+                .iter()
+                .cloned()
+                .collect(),
+        };
+        c.set_deposit(&a.clone(), &account_deposit);
+
+        let initial_ynear = 30 * NDENOM;
+        let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
+        shares_map.insert(&a, &initial_ynear);
+        // Pool Ratio: 3:1
+        let p = Pool {
+            ynear: initial_ynear,
+            tokens: 10 * NDENOM,
+            total_shares: initial_ynear,
+            shares: shares_map,
+            twap: Twap::new(10),
+        };
+        c.pools.insert(&t, &p);
+
+        let max_tokens = token_deposit / 2;
+        // max_tokens passed is less than required therefore ynear to be added
+        // in pool will be adjusted
+        c.add_liquidity(t.clone(), ynear_deposit.into(), max_tokens.into(), U128(0));
+
+        let adjusted_near = expected_adjusted_near(max_tokens, p.ynear, p.tokens);
+        let p_info = c.pool_info(&t).expect("Pool should exist");
+        let expected_pool = PoolInfo {
+            ynear: (adjusted_near + p.ynear).into(),
+            tokens: (max_tokens + p.tokens).into(),
+            total_shares: (adjusted_near + p.ynear).into(),
+        };
+        assert_eq!(p_info, expected_pool, "pool_info should be correct");
+        /*let a_shares = c.balance_of(t.clone(), a);
+        assert_eq!(
+            to_num(a_shares),
+            ynear_deposit + p.ynear,
+            "LP should have correct amount of shares"
+        );*/
+    }
+
+    fn expected_adjusted_near(max_tokens: u128, ynear_pool: u128, tokens_pool: u128) -> u128 {
+        let p_ynear_256 = u256::from(ynear_pool);
+        return ((u256::from(max_tokens) * p_ynear_256) / u256::from(tokens_pool) + 1).as_u128();
+    }
+
+    #[test]
     fn add_liquidity_min_shares_path() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;

@@ -114,7 +114,7 @@ impl Pool {
 
             // Adjust near according to max_tokens
             if max_tokens < added_tokens {
-                added_near = (((u256::from(max_tokens) - 1) * p_ynear_256) / u256::from(self.tokens)).as_u128();
+                added_near = ((u256::from(max_tokens) * p_ynear_256) / u256::from(self.tokens) + 1).as_u128();
                 added_tokens = max_tokens;
                 shares_minted = (u256::from(added_near) * u256::from(self.total_shares) / p_ynear_256).as_u128();
             } else {

@@ -96,27 +96,31 @@ impl Pool {
         min_shares: u128,
     ) -> (u128, u128, u128) {
         let shares_minted;
-        let added_tokens;
+        let mut added_tokens;
+        let added_near;
         // the very first deposit -- we define the constant ratio
         if self.total_shares == 0 {
             self.ynear = ynear;
             shares_minted = self.ynear;
             self.total_shares = shares_minted;
             added_tokens = max_tokens;
+            added_near = ynear;
             self.tokens = added_tokens;
             self.shares.insert(caller, &shares_minted);
         } else {
             let ynear_256 = u256::from(ynear);
             let p_ynear_256 = u256::from(self.ynear); // ynear in pool
             added_tokens = (ynear_256 * u256::from(self.tokens) / p_ynear_256 + 1).as_u128();
-            shares_minted = (ynear_256 * u256::from(self.total_shares) / p_ynear_256).as_u128();
-            // TODO: adjust ynear to max_tokens instead of panicing
-            assert!(
-                max_tokens >= added_tokens,
-                "E3: needs to transfer {} of tokens and it's bigger then specified  maximum={}",
-                added_tokens,
-                max_tokens
-            );
+
+            // Adjust near according to max_tokens
+            if max_tokens < added_tokens {
+                added_near = (((u256::from(max_tokens) - 1) * p_ynear_256) / u256::from(self.tokens)).as_u128();
+                added_tokens = max_tokens;
+                shares_minted = (u256::from(added_near) * u256::from(self.total_shares) / p_ynear_256).as_u128();
+            } else {
+                added_near = ynear;
+                shares_minted = (ynear_256 * u256::from(self.total_shares) / p_ynear_256).as_u128();
+            }
             assert!(
                 u128::from(min_shares) <= shares_minted,
                 "E4: amount minted shares ({}) is smaller then the required minimum",
@@ -127,10 +131,10 @@ impl Pool {
                 &(self.shares.get(&caller).unwrap_or(0) + shares_minted),
             );
             self.tokens += added_tokens;
-            self.ynear += ynear;
+            self.ynear += added_near;
             self.total_shares += shares_minted;
         }
-        return (ynear, added_tokens, shares_minted);
+        return (added_near, added_tokens, shares_minted);
     }
 
     /// Withdraw `shares` for liquidity stored in this pool and transfer them to the caller deposit account. User can require 

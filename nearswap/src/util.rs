@@ -31,6 +31,7 @@ construct_uint! {
 pub fn assert_account_is_valid(a: &AccountId) {
     assert!(
         env::is_valid_account_id(a.as_bytes()),
+        "{}",
         format!("{} account ID is invalid", a)
     );
 }

@@ -204,6 +204,7 @@ impl NearSwap {
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
             current_shares >= shares,
+            "{}",
             format!(
                 "E5: can't withdraw more shares then currently owned ({})",
                 current_shares
@@ -246,7 +247,7 @@ impl NearSwap {
         assert_one_yocto();
         let ynear: u128 = ynear_in.into();
         let min_tokens: u128 = min_tokens.into();
-        assert!(ynear > 0 && min_tokens > 0, ERR02_POSITIVE_ARGS);
+        assert!(ynear > 0 && min_tokens > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
         assert_min_buy(tokens_out, min_tokens);
@@ -271,7 +272,7 @@ impl NearSwap {
         assert_one_yocto();
         let tokens_paid: u128 = tokens_paid.into();
         let min_ynear: u128 = min_ynear.into();
-        assert!(tokens_paid > 0 && min_ynear > 0, ERR02_POSITIVE_ARGS);
+        assert!(tokens_paid > 0 && min_ynear > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let mut p = self.get_pool(&token);
         let (near_out, _) = self.calc_out_with_fee(tokens_paid, p.tokens, p.ynear);
@@ -300,7 +301,7 @@ impl NearSwap {
         assert_one_yocto();
         let tokens_in: u128 = tokens_in.into();
         let min_tokens_out: u128 = min_tokens_out.into();
-        assert!(min_tokens_out > 0 && tokens_in > 0, ERR02_POSITIVE_ARGS);
+        assert!(min_tokens_out > 0 && tokens_in > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let mut p1 = self.get_pool(&token_in);
         let mut p2 = self.get_pool(&token_out);
@@ -518,11 +519,6 @@ mod tests {
                 accounts: accounts,
                 vm: vm,
             };
-        }
-
-        pub fn set_deposit(&mut self, attached_deposit: Balance) {
-            self.vm.attached_deposit = attached_deposit;
-            testing_env!(self.vm.clone());
         }
     }
 
@@ -1211,6 +1207,7 @@ mod tests {
         assert!(x > y, "Tokens output incorrect");
     }
 
+    #[allow(non_snake_case)]
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount * 3) / 1000);
         let X = u256::from(in_bal);
@@ -1277,6 +1274,7 @@ mod tests {
         let diff = if a1 > a2 { a1 - a2 } else { a2 - a1 };
         assert!(
             diff <= margin,
+            "{}",
             format!(
                 "Expect to be close (margin={}):\n  left: {}\n right: {}\n  diff: {}\n",
                 margin, a1, a2, diff

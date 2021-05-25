@@ -233,10 +233,10 @@ impl DepositV1 {
 
     pub(crate) fn remove(&mut self, token: &AccountId, amount: u128) {
         if let Some(x) = self.tokens.get_mut(token) {
-            assert!(*x >= amount, ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);
+            assert!(*x >= amount, "{}", ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);
             *x = *x - amount;
         } else {
-            panic!(ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);
+            panic!("{}", ERR13_NOT_ENOUGH_TOKENS_DEPOSITED);
         }
     }
 
@@ -245,7 +245,7 @@ impl DepositV1 {
     pub(crate) fn remove_near(&mut self, ynear: u128) {
         assert!(
             self.ynear >= ynear + (self.storage_used as u128) * env::storage_byte_cost(),
-            ERR14_NOT_ENOUGH_NEAR_DEPOSITED,
+            "{}", ERR14_NOT_ENOUGH_NEAR_DEPOSITED,
         );
         self.ynear -= ynear;
     }
@@ -259,7 +259,7 @@ impl DepositV1 {
         assert!(
             self.storage_used >= INIT_ACCOUNT_STORAGE
                 && self.ynear >= (self.storage_used as u128) * env::storage_byte_cost(),
-            ERR21_ACC_STORAGE_TOO_LOW
+                "{}", ERR21_ACC_STORAGE_TOO_LOW
         )
     }
 

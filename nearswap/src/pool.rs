@@ -155,6 +155,7 @@ impl Pool {
         let token_amount = (shares2 * u256::from(self.tokens) / total_shares2).as_u128();
         assert!(
             ynear >= min_ynear && token_amount >= min_tokens,
+            "{}",
             format!(
                 "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
                 ynear, token_amount

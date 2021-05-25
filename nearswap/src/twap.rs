@@ -368,6 +368,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused_assignments)]
     fn overwrite_works() {
         init_blockchain();
 
@@ -417,7 +418,6 @@ mod tests {
         init_blockchain();
 
         let twap: Twap = setup_twap();
-        let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         let mut returned_index = twap.binary_search(5);
@@ -447,18 +447,17 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = setup_twap();
-        let max_length = 10;
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
         // add more value (that should overwrite last updated value)
-        let mut current_idx = twap.log_observation(13, 10, 10);
+        twap.log_observation(13, 10, 10);
 
         let mut result_index = twap.binary_search(11);
-        println!("SSS {} {}", result_index, current_idx);
+
         assert!(result_index == 0, "Wrong Index");
 
-        current_idx = twap.log_observation(20, 10, 10);
-        current_idx = twap.log_observation(21, 10, 10);
+        twap.log_observation(20, 10, 10);
+        twap.log_observation(21, 10, 10);
         // Updated array [13, 20, 21, 4, 5, 6, 7, 8, 9, 10]
 
         result_index = twap.binary_search(3);
@@ -533,7 +532,7 @@ mod tests {
 
         twap.log_observation(min_2_timestamp, 3, 3);
         // calculate mean for last 5 mins, though array starts from 1 min
-        let mut res = twap.calculate_mean(Mean::M5min);
+        let res = twap.calculate_mean(Mean::M5min);
 
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");

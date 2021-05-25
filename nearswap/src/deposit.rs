@@ -159,11 +159,6 @@ impl NearSwap {
             .expect(ERR20_ACC_NOT_REGISTERED)
             .into()
     }
-
-    #[inline]
-    pub(crate) fn set_deposit(&mut self, from: &AccountId, d: &AccountDepositV1) {
-        self.deposits.insert(from, &AccountDeposit::V1(d));
-    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]

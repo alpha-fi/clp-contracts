@@ -168,7 +168,7 @@ impl NearSwap {
         d.remove(&token, added_tokens);
         d.remove_near(ynear);
         d.update_storage(start_storage);
-        self.set_deposit(&caller, &d);
+        self.deposits.insert(&caller, &d.into());
         self.set_pool(&token, &p);
 
         env_log!(
@@ -223,7 +223,7 @@ impl NearSwap {
         d.add(&token, token_amount);
         d.add_near(ynear);
         d.update_storage(start_storage);
-        self.set_deposit(&caller, &d);
+        self.deposits.insert(&caller, &d.into());
         self.set_pool(&token, &p);
     }
 
@@ -326,7 +326,7 @@ impl NearSwap {
         let user = env::predecessor_account_id();
         let mut d = self.get_deposit(&user);
         d.update_storage(start_storage);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
     }
 
     /// Calculates amount of tokens user will recieve when swapping `ynear_in` for `token`
@@ -567,13 +567,13 @@ mod tests {
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
 
         // Add to account deposit list
-        let mut account_deposit = account_deposit();
-        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
-        c.set_deposit(&a.clone(), &account_deposit);
+        let mut d = account_deposit();
+        d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.deposits.insert(&a, &d.into());
 
         // deposit should work
-        c.deposit_token(&a.clone(), &"token1".into(), 10);
-        let res = c.get_deposit(&a.clone());
+        c.deposit_token(&a, &"token1".into(), 10);
+        let res = c.get_deposit(&a);
         assert_eq!(res.tokens.get(&"token1".to_string()), Some(&10))
     }
 
@@ -584,12 +584,12 @@ mod tests {
         let a = ctx.accounts.predecessor.clone();
         // Add to nearswap whitelist
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
-        let mut account_deposit = account_deposit();
-        c.set_deposit(&a.clone(), &account_deposit);
+        let mut d = account_deposit();
+        c.deposits.insert(&a, &d.into());
 
         // deposit should not work
         // because token not whitelisted in account deposit
-        c.deposit_token(&a.clone(), &"token1".into(), 10);
+        c.deposit_token(&a, &"token1".into(), 10);
     }
 
     #[test]
@@ -598,9 +598,8 @@ mod tests {
         let (mut ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
 
-        // Add to account deposit list
-        let mut account_deposit = account_deposit();
-        c.set_deposit(&a.clone(), &account_deposit);
+        let mut d = account_deposit();
+        c.deposits.insert(&a, &d.into());
 
         // deposit should not work
         // because token not whitelisted in global list
@@ -613,10 +612,9 @@ mod tests {
         let (mut ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
-        // Add to account deposit list
-        let mut account_deposit = account_deposit();
-        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
-        c.set_deposit(&a.clone(), &account_deposit);
+        let mut d = account_deposit();
+        d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.deposits.insert(&a, &d.into());
         c.remove_whitelisted_token(to_va("token1".into()));
 
         c.deposit_token(&a.clone(), &"token1".into(), 10);
@@ -628,13 +626,12 @@ mod tests {
         let (mut ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
-        // Add to account deposit list
-        let mut account_deposit = account_deposit();
-        account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
-        c.set_deposit(&a.clone(), &account_deposit);
+        let mut d = account_deposit();
+        d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
+        c.deposits.insert(&a, &d.into());
 
-        account_deposit.remove_from_whitelist(&"token1".into());
-        c.set_deposit(&a.clone(), &account_deposit);
+        d.remove_from_whitelist(&"token1".into());
+        c.deposits.insert(&a, &d.into());
 
         c.deposit_token(&a.clone(), &"token1".into(), 10);
     }
@@ -729,7 +726,7 @@ mod tests {
             storage_used: 10,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&a.clone(), &d);
+        c.deposits.insert(&a, &d.into());
         c.add_liquidity(
             t.clone(),
             ynear_deposit.into(),
@@ -799,12 +796,12 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let account_deposit = AccountDepositV1 {
+        let d = AccountDepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&a.clone(), &account_deposit);
+        c.deposits.insert(&a, &d.into());
 
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
@@ -850,12 +847,12 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let account_deposit = AccountDepositV1 {
+        let d = AccountDepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&a.clone(), &account_deposit);
+        c.deposits.insert(&a, &d.into());
 
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
@@ -907,12 +904,12 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let account_deposit = AccountDepositV1 {
+        let d = AccountDepositV1 {
             ynear: 2 * ynear_deposit + NDENOM,
             storage_used: 10,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&a.clone(), &account_deposit);
+        c.deposits.insert(&a, &d.into());
 
         c.add_liquidity(
             t.clone(),
@@ -978,12 +975,12 @@ mod tests {
     #[test]
     fn withdraw_happy_path() {
         let (ctx, mut c) = init_with_storage_deposit();
-        let acc = ctx.accounts.predecessor.clone();
+        let a = ctx.accounts.predecessor.clone();
         let t = ctx.accounts.token1.clone();
 
         let shares_bal = 12 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
-        shares_map.insert(&acc, &shares_bal);
+        shares_map.insert(&a, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
             tokens: 3 * NDENOM,
@@ -993,12 +990,12 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
-        let account_deposit = AccountDepositV1 {
+        let d = AccountDepositV1 {
             ynear: NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&acc.clone(), &account_deposit);
+        c.deposits.insert(&a, &d.into());
 
         let amount = shares_bal / 3;
         let min_v = U128::from(1);
@@ -1011,7 +1008,7 @@ mod tests {
             total_shares: U128::from(shares_bal - amount),
         };
         assert_eq!(pi, expected_pool, "pool_info should be correct");
-        let acc_shares = c.balance_of(t.clone(), acc);
+        let acc_shares = c.balance_of(t.clone(), a);
         assert_eq!(
             to_num(acc_shares),
             shares_bal - amount,
@@ -1026,12 +1023,12 @@ mod tests {
 
     fn prepare_for_withdraw() -> (AccountId, NearSwap) {
         let (ctx, mut c) = init_with_storage_deposit();
-        let acc = ctx.accounts.predecessor.clone();
+        let a = ctx.accounts.predecessor.clone();
         let t = ctx.accounts.token1.clone();
 
         let shares_bal = 12 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
-        shares_map.insert(&acc, &shares_bal);
+        shares_map.insert(&a, &shares_bal);
         let p = Pool {
             ynear: shares_bal,
             tokens: 3 * NDENOM,
@@ -1041,12 +1038,12 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
-        let account_deposit = AccountDepositV1 {
+        let d = AccountDepositV1 {
             ynear: NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&acc.clone(), &account_deposit);
+        c.deposits.insert(&a, &d.into());
         return (t.clone(), c);
     }
 

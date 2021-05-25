@@ -104,7 +104,7 @@ impl NearSwap {
         d.add(token, out_amount);
 
         self.set_pool(token, p);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out_amount
     }
 
@@ -138,7 +138,7 @@ impl NearSwap {
         d.ynear += out_amount;
 
         self.set_pool(&token, p);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out_amount
     }
 
@@ -174,7 +174,7 @@ impl NearSwap {
 
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p2);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out
     }
 

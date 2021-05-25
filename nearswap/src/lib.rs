@@ -584,7 +584,7 @@ mod tests {
         let a = ctx.accounts.predecessor.clone();
         // Add to nearswap whitelist
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
-        let mut d = account_deposit();
+        let d = account_deposit();
         c.deposits.insert(&a, &d.into());
 
         // deposit should not work
@@ -598,7 +598,7 @@ mod tests {
         let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
 
-        let mut d = account_deposit();
+        let d = account_deposit();
         c.deposits.insert(&a, &d.into());
 
         // deposit should not work
@@ -713,7 +713,7 @@ mod tests {
         let token_deposit = 1 * NDENOM;
 
         // attached_near is 1 yocto
-        let (mut ctx, mut c) = _init(1);
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -896,7 +896,7 @@ mod tests {
         let token_deposit = 10 * NDENOM;
 
         // attached_near is 1 yocto
-        let (mut ctx, mut c) = _init(1);
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -1049,7 +1049,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E6: redeeming"#)]
     fn withdraw_happy_path_failure_1() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares_bal = 12 * NDENOM;
         let amount = shares_bal / 3;
@@ -1061,7 +1061,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E6: redeeming"#)]
     fn withdraw_happy_path_failure_2() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares_bal = 12 * NDENOM;
         let amount = shares_bal / 3;
@@ -1073,7 +1073,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "E5: can't withdraw more shares then currently owned")]
     fn withdraw_happy_path_failure_3() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares = 24 * NDENOM;
         let min_near = U128::from(1);
@@ -1214,8 +1214,8 @@ mod tests {
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount * 3) / 1000);
         let X = u256::from(in_bal);
-        let numerator = (x * u256::from(out_bal) * X);
-        let mut denominator = (x + X);
+        let numerator = x * u256::from(out_bal) * X;
+        let mut denominator = x + X;
         denominator *= denominator;
         return (numerator / denominator).as_u128();
     }

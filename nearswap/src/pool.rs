@@ -2,7 +2,7 @@
 // Copyright (C) 2020 Robert Zaremba and contributors
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, Vector};
+use near_sdk::collections::{LookupMap};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};

@@ -88,7 +88,7 @@ impl NearSwap {
         let out_bal = p.tokens;
         let in_amount = ynear_in;
 
-        let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
+        let (out_amount, _fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
         assert!(out_amount >= min_tokens_out, ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} for {} yNEAR",

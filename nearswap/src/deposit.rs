@@ -271,15 +271,6 @@ impl AccountDepositV1 {
         self.storage_used += env::storage_usage() - tx_start_storage;
         self.assert_storage();
     }
-
-    /// Updates the account storage usage. This has to be called after all non AcountDeposit
-    /// changs are saved. Otherwise we will not take into account storage acquired in that
-    /// changes.
-    /// Panics if there is not enought $NEAR to cover storage usage.
-    pub(crate) fn update_storage(&mut self, tx_start_storage: StorageUsage) {
-        self.storage_used += env::storage_usage() - tx_start_storage;
-        self.assert_storage();
-    }
 }
 
 #[cfg(test)]

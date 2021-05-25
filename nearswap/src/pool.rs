@@ -16,22 +16,14 @@ use crate::*;
 use std::fmt;
 
 /// PoolInfo is a helper structure to extract public data from a Pool
-#[cfg(not(test))]
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+// TOOD: #[cfg_attr(feature = "test", derive(Debug, PartialEq))]
 pub struct PoolInfo {
     /// balance in yNEAR
     pub ynear: U128,
     pub tokens: U128,
     /// total amount of participation shares. Shares are represented using the same amount of
     /// tailing decimals as the NEAR token, which is 24
-    pub total_shares: U128,
-}
-
-#[cfg(test)]
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
-pub struct PoolInfo {
-    pub ynear: U128,
-    pub tokens: U128,
     pub total_shares: U128,
 }
 
@@ -47,7 +39,26 @@ impl fmt::Display for PoolInfo {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct Pool {
+pub enum Pool {
+    V1(PoolV1),
+}
+
+impl Pool {
+    fn unpack(self) -> PoolV1 {
+        match self {
+            Pool::V1(a) => a,
+        }
+    }
+}
+
+impl Into<Pool> for PoolV1 {
+    fn into(self) -> Pool {
+        Pool::V1(self)
+    }
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct PoolV1 {
     pub ynear: Balance,
     pub tokens: Balance,
     pub shares: LookupMap<AccountId, Balance>,
@@ -57,7 +68,7 @@ pub struct Pool {
     pub twap: Twap,
 }
 
-impl Pool {
+impl PoolV1 {
     pub fn new(pool_id: Vec<u8>) -> Self {
         Self {
             ynear: 0,

@@ -108,7 +108,7 @@ impl NearSwap {
         let token = AccountId::from(token);
         assert!(
             self.pools
-                .insert(&token, &Pool::new(token.as_bytes().to_vec()))
+                .insert(&token, &PoolV1::new(token.as_bytes().to_vec()).into())
                 .is_none(),
             "E1: pool already exists"
         );
@@ -118,7 +118,7 @@ impl NearSwap {
     pub fn pool_info(&self, token: &AccountId) -> Option<PoolInfo> {
         match self.pools.get(&token) {
             None => None,
-            Some(p) => Some(p.pool_info()),
+            Some(p) => Some(p.unpack().pool_info()),
         }
     }
 
@@ -805,7 +805,7 @@ mod tests {
         let initial_ynear = 30 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &initial_ynear);
-        let p = Pool {
+        let p = PoolV1 {
             ynear: initial_ynear,
             tokens: 10 * NDENOM,
             total_shares: initial_ynear,
@@ -857,7 +857,7 @@ mod tests {
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &initial_ynear);
         // Pool Ratio: 3:1
-        let p = Pool {
+        let p = PoolV1 {
             ynear: initial_ynear,
             tokens: 10 * NDENOM,
             total_shares: initial_ynear,
@@ -980,7 +980,7 @@ mod tests {
         let shares_bal = 12 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &shares_bal);
-        let p = Pool {
+        let p = PoolV1 {
             ynear: shares_bal,
             tokens: 3 * NDENOM,
             total_shares: shares_bal,
@@ -1028,7 +1028,7 @@ mod tests {
         let shares_bal = 12 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&a, &shares_bal);
-        let p = Pool {
+        let p = PoolV1 {
             ynear: shares_bal,
             tokens: 3 * NDENOM,
             total_shares: shares_bal,
@@ -1090,7 +1090,7 @@ mod tests {
         let shares_bal = 12 * NDENOM;
         let mut shares_map = LookupMap::new("123".as_bytes().to_vec());
         shares_map.insert(&acc, &shares_bal);
-        let p = Pool {
+        let p = PoolV1 {
             ynear: shares_bal,
             tokens: 22 * NDENOM,
             total_shares: shares_bal,
@@ -1227,7 +1227,7 @@ mod tests {
         let t1: AccountId = "token1".to_string();
         let t2: AccountId = "token2".to_string();
         let p1_factor = 4;
-        let p1 = Pool {
+        let p1 = PoolV1 {
             // 1:4
             ynear: G,
             tokens: p1_factor * G,
@@ -1235,7 +1235,7 @@ mod tests {
             shares: LookupMap::new("1".as_bytes().to_vec()),
             twap: Twap::new(10),
         };
-        let p2 = Pool {
+        let p2 = PoolV1 {
             // 2:1
             ynear: 2 * G,
             tokens: G,

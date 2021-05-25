@@ -13,15 +13,15 @@ impl NearSwap {
     }
 
     #[inline]
-    pub(crate) fn get_pool(&self, ref token: &AccountId) -> Pool {
+    pub(crate) fn get_pool(&self, ref token: &AccountId) -> PoolV1 {
         self.pools
             .get(token)
             .expect("Pool for this token doesn't exist")
     }
 
     #[inline]
-    pub(crate) fn set_pool(&mut self, ref token: &AccountId, pool: &Pool) {
-        self.pools.insert(token, pool);
+    pub(crate) fn set_pool(&mut self, ref token: &AccountId, pool: &PoolV1) {
+        self.pools.insert(token, pool.into());
     }
 
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
@@ -49,7 +49,7 @@ impl NearSwap {
         (self.calc_out_amount(x, X, Y), fee)
     }
 
-    pub(crate) fn _price_n2t_in(&self, token: &AccountId, ynear_in: u128) -> (Pool, u128) {
+    pub(crate) fn _price_n2t_in(&self, token: &AccountId, ynear_in: u128) -> (PoolV1, u128) {
         assert!(ynear_in > 0, "E2: balance arguments must be >0");
         let p = self.get_pool(&token);
         let (out, _) = self.calc_out_with_fee(ynear_in, p.ynear, p.tokens).into();
@@ -79,7 +79,7 @@ impl NearSwap {
     /// (prevents front running and other slippage issues).
     pub(crate) fn _swap_n2t(
         &mut self,
-        p: &mut Pool,
+        p: &mut PoolV1,
         ynear_in: Balance,
         token: &AccountId,
         min_tokens_out: Balance,
@@ -112,7 +112,7 @@ impl NearSwap {
     // (prevents front running and other slippage issues).
     pub(crate) fn _swap_t2n(
         &mut self,
-        p: &mut Pool,
+        p: &mut PoolV1,
         token: &AccountId,
         token_in: Balance,
         min_ynear_out: Balance,
@@ -146,8 +146,8 @@ impl NearSwap {
     // (prevents front running and other slippage issues).
     pub(crate) fn _swap_tokens(
         &mut self,
-        p1: &mut Pool,
-        p2: &mut Pool,
+        p1: &mut PoolV1,
+        p2: &mut PoolV1,
         token1: &AccountId,
         token1_in: Balance,
         token2: &AccountId,

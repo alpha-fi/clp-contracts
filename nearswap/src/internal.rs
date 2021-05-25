@@ -40,13 +40,13 @@ impl NearSwap {
     }
 
     /// returns swap out amount and fee.
-    pub(crate) fn calc_out_with_fee(&self, mut x: u128,  X: u128, Y: u128) -> (u128, u128) {
+    pub(crate) fn calc_out_with_fee(&self, mut x: u128, X: u128, Y: u128) -> (u128, u128) {
         if x == 0 {
             return (0, 0);
         }
-        let fee = (x*3)/1000; // 0.3% x
+        let fee = (x * 3) / 1000; // 0.3% x
         x = x - fee;
-        (self.calc_out_amount(x, X,  Y), fee)
+        (self.calc_out_amount(x, X, Y), fee)
     }
 
     pub(crate) fn _price_n2t_in(&self, token: &AccountId, ynear_in: u128) -> (Pool, u128) {
@@ -94,7 +94,7 @@ impl NearSwap {
             "User purchased {} {} for {} yNEAR",
             out_amount, token, ynear_in
         );
-        
+
         p.tokens -= out_amount;
         p.ynear += ynear_in;
 
@@ -104,7 +104,7 @@ impl NearSwap {
         d.add(token, out_amount);
 
         self.set_pool(token, p);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out_amount
     }
 
@@ -123,7 +123,7 @@ impl NearSwap {
         let out_bal = p.ynear;
         let in_amount = token_in;
 
-        let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
+        let (out_amount, _) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
         assert!(out_amount >= min_ynear_out, ERR25_MIN_AMOUNT);
         println!(
             "User {} purchased {} NEAR tokens for {} tokens",
@@ -138,7 +138,7 @@ impl NearSwap {
         d.ynear += out_amount;
 
         self.set_pool(&token, p);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out_amount
     }
 
@@ -174,7 +174,7 @@ impl NearSwap {
 
         self.set_pool(&token1, p1);
         self.set_pool(&token2, p2);
-        self.set_deposit(&user, &d);
+        self.deposits.insert(&user, &d.into());
         out
     }
 
@@ -219,17 +219,6 @@ impl NearSwap {
         self.set_pool(&token, &p);
         return true;
     }
-}
-
-#[inline]
-pub(crate) fn assert_max_pay(to_pay: u128, max: u128) {
-    assert!(
-        to_pay <= max,
-        format!(
-            "E8: selling {} tokens is bigger than required maximum",
-            to_pay
-        )
-    );
 }
 
 #[inline]

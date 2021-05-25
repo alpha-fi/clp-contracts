@@ -52,19 +52,18 @@ impl NearSwap {
         let mut d = self.get_deposit(&sender);
         let amount = env::attached_deposit();
         d.ynear += amount;
-        self.deposits.insert(&sender, &d);
+        self.deposits.insert(&sender, &d.into());
         env_log!("Deposit, {} yNEAR", amount);
     }
 
     /**
     Add tokens to account deposit whitelist
     */
-    pub fn add_to_account_whitelist(
-        &mut self, token_ids: &Vec<ValidAccountId>) {
+    pub fn add_to_account_whitelist(&mut self, token_ids: &Vec<ValidAccountId>) {
         let sender_id = env::predecessor_account_id();
         let mut d = self.get_deposit(&sender_id);
         d.add_to_whitelist(token_ids);
-        self.deposits.insert(&sender_id, &d);
+        self.deposits.insert(&sender_id, &d.into());
     }
 
     /// Record deposit of some number of tokens to this contract.
@@ -77,13 +76,12 @@ impl NearSwap {
     ) {
         let mut d = self.get_deposit(sender_id);
         assert!(
-            self.whitelisted_tokens.contains(token_id)
-                && d.tokens.contains_key(token_id),
+            self.whitelisted_tokens.contains(token_id) && d.tokens.contains_key(token_id),
             "{}",
             ERR23_TOKEN_NOT_WHITELISTED
         );
         d.add(token_id, amount);
-        self.deposits.insert(&sender_id, &d);
+        self.deposits.insert(&sender_id, &d.into());
     }
 
     /**
@@ -102,7 +100,7 @@ impl NearSwap {
         let amount = u128::from(amount);
         let mut d = self.get_deposit(&sender);
         d.remove_near(amount);
-        self.deposits.insert(&sender, &d);
+        self.deposits.insert(&sender, &d.into());
         Promise::new(recipient).transfer(amount)
     }
 
@@ -130,7 +128,7 @@ impl NearSwap {
         let mut d = self.get_deposit(&sender);
         let amount = u128::from(amount);
         d.remove(&token, amount);
-        self.deposits.insert(&sender, &d);
+        self.deposits.insert(&sender, &d.into());
 
         if is_contract {
             ext_fungible_token::ft_transfer(
@@ -155,20 +153,37 @@ impl NearSwap {
     }
 
     #[inline]
-    pub(crate) fn get_deposit(&self, from: &AccountId) -> AccountDeposit {
-        self.deposits.get(from).expect(ERR20_ACC_NOT_REGISTERED)
+    pub(crate) fn get_deposit(&self, from: &AccountId) -> AccountDepositV1 {
+        self.deposits
+            .get(from)
+            .expect(ERR20_ACC_NOT_REGISTERED)
+            .into()
     }
+}
 
-    #[inline]
-    pub(crate) fn set_deposit(&mut self, from: &AccountId, d: &AccountDeposit) {
-        self.deposits.insert(from, d);
+#[derive(BorshDeserialize, BorshSerialize)]
+pub enum AccountDeposit {
+    V1(AccountDepositV1),
+}
+
+impl From<AccountDeposit> for AccountDepositV1 {
+    fn from(account: AccountDeposit) -> Self {
+        match account {
+            AccountDeposit::V1(a) => a,
+        }
+    }
+}
+
+impl Into<AccountDeposit> for AccountDepositV1 {
+    fn into(self) -> AccountDeposit {
+        AccountDeposit::V1(self)
     }
 }
 
 /// Account deposits information and storage cost.
 #[derive(BorshSerialize, BorshDeserialize)]
 #[cfg_attr(feature = "test", derive(Default, Clone))]
-pub struct AccountDeposit {
+pub struct AccountDepositV1 {
     /// Native amount sent to the exchange.
     /// Used for storage now, but in future can be used for trading as well.
     /// MUST be always bigger than `storage_used * STORAGE_PRICE_PER_BYTE`.
@@ -179,7 +194,7 @@ pub struct AccountDeposit {
     pub tokens: HashMap<AccountId, Balance>,
 }
 
-impl AccountDeposit {
+impl AccountDepositV1 {
     /// add given token to whitelist and set balance to 0.
     /// Fails if not enough amount to cover new storage usage.
     pub(crate) fn add_to_whitelist(&mut self, token_ids: &Vec<ValidAccountId>) {
@@ -200,7 +215,7 @@ impl AccountDeposit {
     }
     /**
     deposit `token`s. If this is a first depoisit, a new record is created and the minimum
-    required storage is increased. 
+    required storage is increased.
     Fails if account is not registered or if token isn't whitelisted.
     */
     pub(crate) fn add(&mut self, token: &AccountId, amount: u128) {
@@ -260,9 +275,9 @@ impl AccountDeposit {
 
 #[cfg(test)]
 mod tests {
-    use super::AccountDeposit;
+    use super::AccountDepositV1;
     use near_sdk::env;
-    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::test_utils::VMContextBuilder;
     use near_sdk::{testing_env, MockedBlockchain};
 
     fn init_blockchain() {
@@ -270,8 +285,8 @@ mod tests {
         testing_env!(context.build());
     }
 
-    fn new_account_deposit() -> AccountDeposit {
-        AccountDeposit {
+    fn new_account_deposit() -> AccountDepositV1 {
+        AccountDepositV1 {
             ynear: 12,
             storage_used: 10,
             tokens: [("token1".to_string(), 100), ("token2".to_string(), 50)]
@@ -285,7 +300,7 @@ mod tests {
     fn add_works() {
         let mut deposit = new_account_deposit();
 
-        AccountDeposit::add(&mut deposit, &"token1".to_string(), 10);
+        AccountDepositV1::add(&mut deposit, &"token1".to_string(), 10);
         assert_eq!(deposit.tokens.get(&"token1".to_string()), Some(&110));
     }
 
@@ -293,7 +308,7 @@ mod tests {
     fn add_new_works() {
         let mut deposit = new_account_deposit();
 
-        AccountDeposit::add(&mut deposit, &"token33".to_string(), 100);
+        AccountDepositV1::add(&mut deposit, &"token33".to_string(), 100);
         assert_eq!(deposit.tokens.get(&"token33".to_string()), Some(&100));
     }
 
@@ -301,7 +316,7 @@ mod tests {
     fn remove_works() {
         let mut deposit = new_account_deposit();
 
-        AccountDeposit::remove(&mut deposit, &"token2".to_string(), 10);
+        AccountDepositV1::remove(&mut deposit, &"token2".to_string(), 10);
         assert_eq!(deposit.tokens.get(&"token2".to_string()), Some(&40));
     }
 
@@ -310,19 +325,19 @@ mod tests {
     fn remove_deposit_low() {
         let mut deposit = new_account_deposit();
 
-        AccountDeposit::remove(&mut deposit, &"token2".to_string(), 1000);
+        AccountDepositV1::remove(&mut deposit, &"token2".to_string(), 1000);
     }
 
     #[test]
     fn assert_storage_works() {
         init_blockchain();
-        let deposit = AccountDeposit {
+        let deposit = AccountDepositV1 {
             ynear: 9900000000000000000000,
             storage_used: 100,
             tokens: [("token1".to_string(), 100)].iter().cloned().collect(),
         };
 
-        AccountDeposit::assert_storage(&deposit);
+        AccountDepositV1::assert_storage(&deposit);
     }
 
     #[test]
@@ -331,13 +346,13 @@ mod tests {
         init_blockchain();
         let deposit = new_account_deposit();
 
-        AccountDeposit::assert_storage(&deposit);
+        AccountDepositV1::assert_storage(&deposit);
     }
 
     #[test]
     fn remove_near_works() {
         let amount: u128 = 990000000000000000000;
-        let mut d = AccountDeposit {
+        let mut d = AccountDepositV1 {
             ynear: amount,
             storage_used: 10,
             tokens: [("token1".to_string(), 100)].iter().cloned().collect(),

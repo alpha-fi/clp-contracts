@@ -1,9 +1,6 @@
 //! View functions for the contract.
 
-use std::collections::HashMap;
-
-use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::json_types::U128;
 use near_sdk::{near_bindgen, AccountId};
 
 use crate::*;
@@ -18,14 +15,13 @@ impl NearSwap {
     ) -> Balance {
         self.deposits
             .get(sender_id)
-            .and_then(|d| d.tokens.get(token_id).cloned())
+            .and_then(|d| AccountDepositV1::from(d).tokens.get(token_id).cloned())
             .unwrap_or_default()
     }
 
     /// Returns balance of the deposit for given user outside of any pools.
     pub fn get_deposit_token(&self, account_id: AccountId, token_id: AccountId) -> U128 {
-        self.internal_get_deposit(&account_id, &token_id)
-            .into()
+        self.internal_get_deposit(&account_id, &token_id).into()
     }
 
     /// Returns near balance of the deposit for given user outside of any pools.

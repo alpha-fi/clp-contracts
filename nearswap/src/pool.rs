@@ -2,15 +2,15 @@
 // Copyright (C) 2020 Robert Zaremba and contributors
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, Vector};
+use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
 // use std::fmt;
 
-use crate::*;
 use crate::twap::*;
+use crate::*;
 
 #[cfg(test)]
 use std::fmt;
@@ -27,7 +27,6 @@ pub struct PoolInfo {
     pub total_shares: U128,
 }
 
-
 #[cfg(test)]
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
 pub struct PoolInfo {
@@ -35,7 +34,6 @@ pub struct PoolInfo {
     pub tokens: U128,
     pub total_shares: U128,
 }
-
 
 #[cfg(test)]
 impl fmt::Display for PoolInfo {
@@ -114,9 +112,12 @@ impl Pool {
 
             // Adjust near according to max_tokens
             if max_tokens < added_tokens {
-                added_near = ((u256::from(max_tokens) * p_ynear_256) / u256::from(self.tokens) + 1).as_u128();
+                added_near = ((u256::from(max_tokens) * p_ynear_256) / u256::from(self.tokens) + 1)
+                    .as_u128();
                 added_tokens = max_tokens;
-                shares_minted = (u256::from(added_near) * u256::from(self.total_shares) / p_ynear_256).as_u128();
+                shares_minted = (u256::from(added_near) * u256::from(self.total_shares)
+                    / p_ynear_256)
+                    .as_u128();
             } else {
                 added_near = ynear;
                 shares_minted = (ynear_256 * u256::from(self.total_shares) / p_ynear_256).as_u128();
@@ -137,8 +138,8 @@ impl Pool {
         return (added_near, added_tokens, shares_minted);
     }
 
-    /// Withdraw `shares` for liquidity stored in this pool and transfer them to the caller deposit account. User can require 
-    /// getting at least `min_ynear` of Near and `min_tokens` of tokens. The function panic if the condition is not met. 
+    /// Withdraw `shares` for liquidity stored in this pool and transfer them to the caller deposit account. User can require
+    /// getting at least `min_ynear` of Near and `min_tokens` of tokens. The function panic if the condition is not met.
     /// Shares are not exchangeable between different pools.
     pub(crate) fn withdraw_liquidity(
         &mut self,
@@ -159,7 +160,7 @@ impl Pool {
                 ynear, token_amount
             )
         );
-    
+
         self.shares.insert(caller, &(current_shares - shares));
         self.total_shares -= shares;
         self.tokens -= token_amount;

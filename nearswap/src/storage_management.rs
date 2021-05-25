@@ -137,9 +137,9 @@ mod tests {
         let mut near = NearSwap {
             fee_dst: "owner".to_string(),
             owner: "owner".to_string(),
-            pools: UnorderedMap::new("p".into()),
-            deposits: LookupMap::new("d".into()),
-            whitelisted_tokens: UnorderedSet::new("w".into()),
+            pools: UnorderedMap::new(b"p".to_vec()),
+            deposits: LookupMap::new(b"d".to_vec()),
+            whitelisted_tokens: UnorderedSet::new(b"w".to_vec()),
         };
         near.deposits.insert(&"owner".to_string(), &ac.into());
 

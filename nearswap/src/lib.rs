@@ -561,7 +561,7 @@ mod tests {
 
     #[test]
     fn add_to_whitelist_works() {
-        let (mut ctx, mut c) = init_with_owner();
+        let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         // Add to nearswap whitelist
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
@@ -580,7 +580,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
     fn add_to_whitelist_failure_1() {
-        let (mut ctx, mut c) = init_with_owner();
+        let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         // Add to nearswap whitelist
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
@@ -595,7 +595,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
     fn add_to_whitelist_failure_2() {
-        let (mut ctx, mut c) = init_with_owner();
+        let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
 
         let mut d = account_deposit();
@@ -609,7 +609,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
     fn remove_from_whitelist_works_1() {
-        let (mut ctx, mut c) = init_with_owner();
+        let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
         let mut d = account_deposit();
@@ -623,12 +623,11 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E23: Token is not whitelisted"#)]
     fn remove_from_whitelist_works_2() {
-        let (mut ctx, mut c) = init_with_owner();
+        let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
         let mut d = account_deposit();
         d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
-        c.deposits.insert(&a, &d.into());
 
         d.remove_from_whitelist(&"token1".into());
         c.deposits.insert(&a, &d.into());

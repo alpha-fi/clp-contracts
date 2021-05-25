@@ -42,7 +42,7 @@ pub struct NearSwap {
     pools: UnorderedMap<AccountId, Pool>,
 
     // user deposits
-    deposits: LookupMap<AccountId, AccountDeposit>,
+    deposits: LookupMap<AccountId, Deposit>,
 
     // Set of whitelisted tokens by "owner".
     whitelisted_tokens: UnorderedSet<AccountId>,
@@ -551,8 +551,8 @@ mod tests {
         ValidAccountId::try_from(a).unwrap()
     }
 
-    fn account_deposit() -> AccountDepositV1 {
-        return AccountDepositV1 {
+    fn account_deposit() -> DepositV1 {
+        return DepositV1 {
             ynear: NDENOM,
             storage_used: 84,
             tokens: [("eth".into(), 11)].iter().cloned().collect(),
@@ -720,7 +720,7 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: 2 * ynear_deposit + NDENOM,
             storage_used: 10,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
@@ -795,7 +795,7 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
@@ -846,7 +846,7 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
@@ -903,7 +903,7 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: 2 * ynear_deposit + NDENOM,
             storage_used: 10,
             tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
@@ -989,7 +989,7 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), 11)].iter().cloned().collect(),
@@ -1037,7 +1037,7 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
-        let d = AccountDepositV1 {
+        let d = DepositV1 {
             ynear: NDENOM,
             storage_used: 84,
             tokens: [(t.clone(), 11)].iter().cloned().collect(),

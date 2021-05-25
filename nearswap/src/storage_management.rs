@@ -42,7 +42,7 @@ impl StorageManagement for NearSwap {
                     Promise::new(env::predecessor_account_id()).transfer(refund);
                 }
 
-                let acc_deposit = AccountDepositV1 {
+                let acc_deposit = DepositV1 {
                     ynear: min_balance,
                     storage_used: INIT_ACCOUNT_STORAGE,
                     tokens: HashMap::new(),
@@ -80,7 +80,7 @@ impl StorageManagement for NearSwap {
         assert_one_yocto();
         let account_id = env::predecessor_account_id();
         if let Some(d) = self.deposits.get(&account_id) {
-            let d = AccountDepositV1::from(d);
+            let d = DepositV1::from(d);
             assert!(
                 d.tokens.is_empty(),
                 "ERR_STORAGE_UNREGISTER_TOKENS_NOT_EMPTY"
@@ -128,7 +128,7 @@ mod tests {
     }
 
     fn new_near_swap() -> NearSwap {
-        let ac = AccountDepositV1 {
+        let ac = DepositV1 {
             ynear: 9900000000000000000000,
             storage_used: 10,
             tokens: HashMap::new(),

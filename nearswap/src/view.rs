@@ -15,7 +15,7 @@ impl NearSwap {
     ) -> Balance {
         self.deposits
             .get(sender_id)
-            .and_then(|d| AccountDepositV1::from(d).tokens.get(token_id).cloned())
+            .and_then(|d| DepositV1::from(d).tokens.get(token_id).cloned())
             .unwrap_or_default()
     }
 

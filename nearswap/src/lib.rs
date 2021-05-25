@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2020 Robert Zaremba and contributors
 
-use internal::{assert_max_pay, assert_min_buy};
+use internal::assert_min_buy;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{
-    assert_one_yocto, env, near_bindgen, AccountId,
-    Balance, PanicOnDefault, Promise, StorageUsage
+    assert_one_yocto, env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise, StorageUsage,
 };
 
 mod constants;
@@ -17,18 +16,17 @@ mod ft_token;
 mod internal;
 pub mod pool;
 mod storage_management;
-pub mod types;
-mod view;
-pub mod util;
 pub mod twap;
+pub mod types;
+pub mod util;
+mod view;
 
+use crate::constants::*;
 use crate::deposit::*;
 use crate::errors::*;
-use crate::twap::*;
 pub use crate::pool::*;
 use crate::types::*;
 use crate::util::*;
-use crate::constants::*;
 
 // a way to optimize memory management
 near_sdk::setup_alloc!();
@@ -61,9 +59,9 @@ impl NearSwap {
         Self {
             fee_dst: o.clone(),
             owner: o,
-            pools: UnorderedMap::new("p".into()),
-            deposits: LookupMap::new("d".into()),
-            whitelisted_tokens: UnorderedSet::new("w".into()),
+            pools: UnorderedMap::new(b"p".to_vec()),
+            deposits: LookupMap::new(b"d".to_vec()),
+            whitelisted_tokens: UnorderedSet::new(b"w".to_vec()),
         }
     }
 
@@ -96,7 +94,6 @@ impl NearSwap {
         self.assert_owner();
         self.whitelisted_tokens.remove(token.as_ref());
     }
-    
 
     /**********************
      POOL MANAGEMENT
@@ -214,8 +211,7 @@ impl NearSwap {
         );
 
         let mut d = self.get_deposit(&caller);
-        let (ynear, token_amount) = 
-            p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
+        let (ynear, token_amount) = p.withdraw_liquidity(&caller, min_ynear, min_tokens, shares);
 
         env_log!(
             "Reedeming {:?} shares for {} NEAR and {} tokens",
@@ -308,8 +304,7 @@ impl NearSwap {
 
         let mut p1 = self.get_pool(&token_in);
         let mut p2 = self.get_pool(&token_out);
-        let tokens_out =
-            self._price_swap_tokens_in(&token_in, &token_out, tokens_in);
+        let tokens_out = self._price_swap_tokens_in(&token_in, &token_out, tokens_in);
         assert_min_buy(tokens_out, min_tokens_out);
         let tokens_swap_out = self._swap_tokens(
             &mut p1, &mut p2, &token_in, tokens_in, &token_out, tokens_out,
@@ -321,7 +316,7 @@ impl NearSwap {
     /**
     Update storage using deposit update storage function
     start_storage: storage before performing any operation
-    Note: 
+    Note:
     - This function must be called after performing all the operations to get the
     correct storage
     - This is unsafe when we have other deposit instance around this function call,
@@ -466,10 +461,12 @@ impl NearSwap {
 
 #[cfg(test)]
 mod tests {
+    use crate::twap::Twap;
+
     use super::*;
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
-    use std::convert::{TryInto, TryFrom};
     use near_sdk_sim::to_yocto;
+    use std::convert::{TryFrom, TryInto};
 
     struct Accounts {
         current: AccountId,
@@ -554,15 +551,12 @@ mod tests {
         ValidAccountId::try_from(a).unwrap()
     }
 
-    fn account_deposit() -> AccountDeposit {
-        return AccountDeposit {
+    fn account_deposit() -> AccountDepositV1 {
+        return AccountDepositV1 {
             ynear: NDENOM,
             storage_used: 84,
-            tokens: [("eth".into(), 11)]
-                .iter()
-                .cloned()
-                .collect(),
-        }
+            tokens: [("eth".into(), 11)].iter().cloned().collect(),
+        };
     }
 
     #[test]
@@ -638,7 +632,7 @@ mod tests {
         let mut account_deposit = account_deposit();
         account_deposit.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
         c.set_deposit(&a.clone(), &account_deposit);
-        
+
         account_deposit.remove_from_whitelist(&"token1".into());
         c.set_deposit(&a.clone(), &account_deposit);
 
@@ -730,16 +724,18 @@ mod tests {
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let account_deposit = AccountDeposit {
-            ynear: 2*ynear_deposit + NDENOM,
+        let d = AccountDepositV1 {
+            ynear: 2 * ynear_deposit + NDENOM,
             storage_used: 10,
-            tokens: [(t.clone(), token_deposit * 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
-        c.set_deposit(&a.clone(), &account_deposit);
-        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
+        c.set_deposit(&a.clone(), &d);
+        c.add_liquidity(
+            t.clone(),
+            ynear_deposit.into(),
+            token_deposit.into(),
+            U128(0),
+        );
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
@@ -768,7 +764,12 @@ mod tests {
 
         println!(">> adding liquidity - second time");
 
-        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
+        c.add_liquidity(
+            t.clone(),
+            ynear_deposit.into(),
+            (token_deposit * 10).into(),
+            U128(0),
+        );
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
@@ -798,13 +799,10 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let account_deposit = AccountDeposit {
+        let account_deposit = AccountDepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
-            tokens: [(t.clone(), token_deposit * 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
         c.set_deposit(&a.clone(), &account_deposit);
 
@@ -820,7 +818,12 @@ mod tests {
         };
         c.pools.insert(&t, &p);
 
-        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), U128(0));
+        c.add_liquidity(
+            t.clone(),
+            ynear_deposit.into(),
+            (token_deposit * 10).into(),
+            U128(0),
+        );
 
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
@@ -847,13 +850,10 @@ mod tests {
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
-        let account_deposit = AccountDeposit {
+        let account_deposit = AccountDepositV1 {
             ynear: ynear_deposit + NDENOM,
             storage_used: 84,
-            tokens: [(t.clone(), token_deposit * 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
         c.set_deposit(&a.clone(), &account_deposit);
 
@@ -876,7 +876,10 @@ mod tests {
         c.add_liquidity(t.clone(), ynear_deposit.into(), max_tokens.into(), U128(0));
 
         let adjusted_near = expected_adjusted_near(max_tokens, p.ynear, p.tokens);
-        assert!(adjusted_near < ynear_deposit, "Adjusted near is greater than near deposit");
+        assert!(
+            adjusted_near < ynear_deposit,
+            "Adjusted near is greater than near deposit"
+        );
         let p_info = c.pool_info(&t).expect("Pool should exist");
         let expected_pool = PoolInfo {
             ynear: (adjusted_near + p.ynear).into(),
@@ -897,24 +900,26 @@ mod tests {
         let token_deposit = 10 * NDENOM;
         let ynear_deposit_with_storage = ynear_deposit;
 
-        let (mut ctx, mut c) =  _init(ynear_deposit_with_storage);
+        let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
         // in unit tests we can't do cross contract calls, so we can't check token1 updates.
         check_and_create_pool(&mut c, &t);
 
-        let account_deposit = AccountDeposit {
-            ynear: 2*ynear_deposit + NDENOM,
+        let account_deposit = AccountDepositV1 {
+            ynear: 2 * ynear_deposit + NDENOM,
             storage_used: 10,
-            tokens: [(t.clone(), token_deposit * 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), token_deposit * 11)].iter().cloned().collect(),
         };
         c.set_deposit(&a.clone(), &account_deposit);
 
-        c.add_liquidity(t.clone(), ynear_deposit.into(), token_deposit.into(), U128(0));
+        c.add_liquidity(
+            t.clone(),
+            ynear_deposit.into(),
+            token_deposit.into(),
+            U128(0),
+        );
 
         let mut p = c.pool_info(&t).expect("Pool should exist");
         let mut expected_pool = PoolInfo {
@@ -945,7 +950,12 @@ mod tests {
 
         let min_shares = to_yocto("30");
 
-        c.add_liquidity(t.clone(), ynear_deposit.into(), (token_deposit * 10).into(), min_shares.into());
+        c.add_liquidity(
+            t.clone(),
+            ynear_deposit.into(),
+            (token_deposit * 10).into(),
+            min_shares.into(),
+        );
         p = c.pool_info(&t).expect("Pool should exist");
         expected_pool = PoolInfo {
             ynear: (ynear_deposit * 2).into(),
@@ -983,13 +993,10 @@ mod tests {
         };
         c.set_pool(&t, &p);
 
-        let account_deposit = AccountDeposit {
+        let account_deposit = AccountDepositV1 {
             ynear: NDENOM,
             storage_used: 84,
-            tokens: [(t.clone(), 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), 11)].iter().cloned().collect(),
         };
         c.set_deposit(&acc.clone(), &account_deposit);
 
@@ -1030,17 +1037,14 @@ mod tests {
             tokens: 3 * NDENOM,
             total_shares: shares_bal,
             shares: shares_map,
-            twap: Twap::new(10)
+            twap: Twap::new(10),
         };
         c.set_pool(&t, &p);
 
-        let account_deposit = AccountDeposit {
+        let account_deposit = AccountDepositV1 {
             ynear: NDENOM,
             storage_used: 84,
-            tokens: [(t.clone(), 11)]
-                .iter()
-                .cloned()
-                .collect(),
+            tokens: [(t.clone(), 11)].iter().cloned().collect(),
         };
         c.set_deposit(&acc.clone(), &account_deposit);
         return (t.clone(), c);
@@ -1141,7 +1145,7 @@ mod tests {
         // #  test in prices  #
 
         // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
-        // `out` is rounded down, that's why in the first test we have 0 out. 
+        // `out` is rounded down, that's why in the first test we have 0 out.
         assert_out(1, 10, 10, 0);
         assert_out(1, G, G, 0);
         assert_out(2, G, G, 1);
@@ -1178,7 +1182,7 @@ mod tests {
 
         // ## test same supply ## - we expect y = (x * Y * X) / (x + X)^2
         // where x will be in_amount*(0.997) - (after deducting 3% fee)
-        // `out` is rounded down, that's why in the first test we have 0 out. 
+        // `out` is rounded down, that's why in the first test we have 0 out.
         assert_out(1, 10, 10);
         assert_out(1, G, G);
         assert_out(2, G, G);
@@ -1212,9 +1216,9 @@ mod tests {
     }
 
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
-        let x = u256::from(amount - (amount*3)/1000);
+        let x = u256::from(amount - (amount * 3) / 1000);
         let X = u256::from(in_bal);
-        let numerator = ( x * u256::from(out_bal) * X);
+        let numerator = (x * u256::from(out_bal) * X);
         let mut denominator = (x + X);
         denominator *= denominator;
         return (numerator / denominator).as_u128();

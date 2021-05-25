@@ -21,7 +21,6 @@ pub mod types;
 pub mod util;
 mod view;
 
-use crate::constants::*;
 use crate::deposit::*;
 use crate::errors::*;
 pub use crate::pool::*;
@@ -468,6 +467,7 @@ mod tests {
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
     use near_sdk_sim::to_yocto;
     use std::convert::{TryFrom, TryInto};
+    use crate::constants::*;
 
     struct Accounts {
         current: AccountId,

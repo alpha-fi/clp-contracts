@@ -1,20 +1,12 @@
-use std::convert::TryFrom;
-
-use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::AccountId;
-use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount};
-
-use near_sdk_sim::transaction::ExecutionStatus;
-use nearswap::{NearSwapContract, PoolInfo};
-use std::collections::HashMap;
-use sample_token::ContractContract as SampleToken;
+use near_sdk::json_types::{U128};
+use near_sdk_sim::{call, to_yocto, view };
 
 mod simulation_utils;
 use simulation_utils::*;
 
 #[test]
 fn swap_test() {
-    let (root, owner, nearswap) = deploy(&"owner".to_string());
+    let (_root, owner, nearswap) = deploy(&"owner".to_string());
     let token1 = sample_token(&owner, dai(), vec![clp_contract()]);
     let token2 = sample_token(&owner, eth(), vec![clp_contract()]);
     call!(
@@ -143,6 +135,7 @@ fn assert_close(a1: U128, a2: u128, margin: u128) {
     let diff = if a1 > a2 { a1 - a2 } else { a2 - a1 };
     assert!(
         diff <= margin,
+        "{}",
         format!(
             "Expect to be close (margin={}):\n  left: {}\n right: {}\n  diff: {}\n",
             margin, a1, a2, diff

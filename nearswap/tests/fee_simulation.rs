@@ -1,14 +1,8 @@
-use std::convert::TryFrom;
-
-use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::AccountId;
-use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount};
+use near_sdk::json_types::{U128};
+use near_sdk_sim::{call, to_yocto, view};
 use uint::construct_uint;
 
-use near_sdk_sim::transaction::ExecutionStatus;
-use nearswap::{NearSwapContract, PoolInfo};
-use std::collections::HashMap;
-use sample_token::ContractContract as SampleToken;
+use nearswap::{PoolInfo};
 
 mod simulation_utils;
 use simulation_utils::*;
@@ -96,7 +90,7 @@ fn fee_simulation_test() {
     .assert_success();
     print!("Alice Registered!");
     // Alice buy token by paying 5 NEAR
-    let mut before_swap_token = view!(
+    let before_swap_token = view!(
         nearswap.get_deposit_token(alice.account_id.clone(), dai())
     ).unwrap_json::<U128>();
     assert_close(before_swap_token, to_yocto("0"), 0);
@@ -113,7 +107,7 @@ fn fee_simulation_test() {
         deposit = 1
     ).assert_success();
 
-    let mut after_swap_token = view!(
+    let after_swap_token = view!(
             nearswap.get_deposit_token(alice.account_id, dai())
         ).unwrap_json::<U128>();
 
@@ -153,7 +147,6 @@ fn fee_simulation_test() {
         nearswap.withdraw_liquidity(dai(), lp1_shares, U128(1), U128(1))
     ).assert_success();
 
-    let pool_after = view!(nearswap.pool_info(&dai())).unwrap_json::<PoolInfo>();
     let after_withdraw_token_lp1 = view!(
         nearswap.get_deposit_token(lp1.account_id.clone(), dai())
     ).unwrap_json::<U128>();
@@ -200,11 +193,12 @@ construct_uint! {
 }
 
 // Mock calculation of price without deducting fee
+#[allow(non_snake_case)]
 fn calc_out_expected(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
     let X = u256::from(in_bal);
     let x = u256::from(amount);
-    let numerator = ( x * u256::from(out_bal) * X);
-    let mut denominator = (x + X);
+    let numerator = x * u256::from(out_bal) * X;
+    let mut denominator = x + X;
     denominator *= denominator;
     return (numerator / denominator).as_u128();
 }
@@ -222,6 +216,7 @@ fn assert_close(a1: U128, a2: u128, margin: u128) {
     let diff = if a1 > a2 { a1 - a2 } else { a2 - a1 };
     assert!(
         diff <= margin,
+        "{}",
         format!(
             "Expect to be close (margin={}):\n  left: {}\n right: {}\n  diff: {}\n",
             margin, a1, a2, diff

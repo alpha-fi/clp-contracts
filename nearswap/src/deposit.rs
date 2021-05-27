@@ -66,6 +66,16 @@ impl NearSwap {
         self.deposits.insert(&sender_id, &d.into());
     }
 
+    /**
+    Remove tokens from account deposit whitelist
+    */
+    pub fn remove_from_account_whitelist(&mut self, token_id: &ValidAccountId) {
+        let sender_id = env::predecessor_account_id();
+        let mut d = self.get_deposit(&sender_id);
+        d.remove_from_whitelist(token_id);
+        self.deposits.insert(&sender_id, &d.into());
+    }
+
     /// Record deposit of some number of tokens to this contract.
     /// Fails if account is not registered or if token isn't whitelisted.
     pub(crate) fn deposit_token(
@@ -209,8 +219,9 @@ impl DepositV1 {
 
     /// Remove `token_id` from this account whitelist and remove balance.
     /// Panics if the `token_id` balance is not 0.
-    pub(crate) fn remove_from_whitelist(&mut self, token_id: &AccountId) {
-        let amount = self.tokens.remove(token_id).unwrap_or_default();
+    pub(crate) fn remove_from_whitelist(&mut self, token_id: &ValidAccountId) {
+        let t = token_id.as_ref();
+        let amount = self.tokens.remove(t).unwrap_or_default();
         assert_eq!(amount, 0, "{}", ERR24_NON_ZERO_TOKEN_BALANCE);
     }
     /**

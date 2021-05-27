@@ -625,7 +625,7 @@ mod tests {
         let mut d = account_deposit();
         d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
 
-        d.remove_from_whitelist(&"token1".into());
+        d.remove_from_whitelist(&to_va("token1".into()));
         c.deposits.insert(&a, &d.into());
 
         c.deposit_token(&a.clone(), &"token1".into(), 10);

@@ -1,7 +1,7 @@
 #################
 #   Sample Token    #
 
-include ../Makefile_common.mk
+include ../../Makefile_common.mk
 
 export TOKEN1=token1.nearswap.testnet
 

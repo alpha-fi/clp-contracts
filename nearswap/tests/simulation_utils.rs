@@ -12,6 +12,7 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     NEARSWAP_WASM_BYTES => "../res/nearswap.wasm",
 }
 
+#[allow(dead_code)]
 pub fn deploy(creator: &str) -> (UserAccount, UserAccount, ContractAccount<NearSwapContract>) {
     let root = init_simulator(None);
     let owner = root.create_user("owner".to_string(), to_yocto("100000"));
@@ -53,6 +54,7 @@ pub fn sample_token(
     t
 }
 
+#[allow(dead_code)]
 pub fn mint(
     token: &ContractAccount<SampleToken>, recipient: &UserAccount,
     creator: &UserAccount, amount: u128
@@ -80,25 +82,28 @@ pub fn to_va(a: AccountId) -> ValidAccountId {
     ValidAccountId::try_from(a).unwrap()
 }
 
+#[allow(dead_code)]
 pub fn to_u128(a: U128) -> u128 {
     return u128::try_from(a).unwrap();
 }
 
+#[allow(dead_code)]
 pub fn create_pools(
     nearswap: &ContractAccount<NearSwapContract>,
     owner: &UserAccount) {
     call!(
         owner,
-        nearswap.create_pool(to_va("dai".into()))
+        nearswap.create_pool(to_va(dai()))
     )
     .assert_success();
     call!(
         owner,
-        nearswap.create_pool(to_va("eth".into()))
+        nearswap.create_pool(to_va(eth()))
     )
     .assert_success();
 }
 
+#[allow(dead_code)]
 pub fn register_deposit_acc(
     nearswap: &ContractAccount<NearSwapContract>,
     owner: &UserAccount, amount: u128) {

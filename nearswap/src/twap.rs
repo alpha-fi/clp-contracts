@@ -64,7 +64,7 @@ impl Twap {
     + `price1`:  price of first token
     + `price2`: price of second token.
     */
-    fn initialize(&mut self, time: u64, price1: u128, price2: u128) -> u64 {
+    pub fn initialize(&mut self, time: u64, price1: u128, price2: u128) -> u64 {
         self.observations.push(&Observation {
             block_timestamp: time,
             num_of_observations: 1,
@@ -83,7 +83,7 @@ impl Twap {
     + `price1`: price of first token.
     + `price2`: price of second token.
     */
-    fn write(&mut self, block_timestamp: u64, price1: u128, price2: u128) -> u64 {
+    pub(crate) fn write(&mut self, block_timestamp: u64, price1: u128, price2: u128) -> u64 {
         let o = &self.observations.get(self.current_idx).unwrap();
         if block_timestamp == o.block_timestamp {
             self.observations.replace(
@@ -216,7 +216,7 @@ impl Twap {
         return (mean1, mean2);
     }
 
-    pub(crate) fn log_observation(&mut self, timestamp: u64, price1: u128, price2: u128) -> u64 {
+    pub fn log_observation(&mut self, timestamp: u64, price1: u128, price2: u128) -> u64 {
         // update current index
         if self.observations.len() == 0 {
             self.current_idx = self.initialize(timestamp, price1, price2);

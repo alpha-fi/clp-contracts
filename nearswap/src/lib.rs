@@ -707,13 +707,13 @@ mod tests {
         assert_eq!(pools, expected);
     }
 
-    //#[test]
+    #[test]
     fn add_liquidity_happy_path() {
         let ynear_deposit = 3 * NDENOM;
         let token_deposit = 1 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit;
 
-        let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
+        // attached_near is 1 yocto
+        let (mut ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -785,13 +785,13 @@ mod tests {
         );
     }
 
-    //#[test]
+    #[test]
     fn add_liquidity2_happy_path() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit;
 
-        let (ctx, mut c) = _init(ynear_deposit_with_storage);
+        // attached_near is 1 yocto
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -840,9 +840,9 @@ mod tests {
     fn add_liquidity3_happy_path_adjust_ynear() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit;
 
-        let (ctx, mut c) = _init(ynear_deposit_with_storage);
+        // attached_near is 1 yocto
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -894,9 +894,9 @@ mod tests {
     fn add_liquidity_min_shares_path() {
         let ynear_deposit = 30 * NDENOM;
         let token_deposit = 10 * NDENOM;
-        let ynear_deposit_with_storage = ynear_deposit;
 
-        let (mut ctx, mut c) = _init(ynear_deposit_with_storage);
+        // attached_near is 1 yocto
+        let (mut ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 

@@ -64,7 +64,7 @@ impl Twap {
     + `price1`:  price of first token
     + `price2`: price of second token.
     */
-    fn initialize(&mut self, time: u64, price1: u128, price2: u128) -> u64 {
+    pub fn initialize(&mut self, time: u64, price1: u128, price2: u128) -> u64 {
         self.observations.push(&Observation {
             block_timestamp: time,
             num_of_observations: 1,
@@ -83,7 +83,7 @@ impl Twap {
     + `price1`: price of first token.
     + `price2`: price of second token.
     */
-    fn write(&mut self, block_timestamp: u64, price1: u128, price2: u128) -> u64 {
+    pub(crate) fn write(&mut self, block_timestamp: u64, price1: u128, price2: u128) -> u64 {
         let o = &self.observations.get(self.current_idx).unwrap();
         if block_timestamp == o.block_timestamp {
             self.observations.replace(
@@ -216,7 +216,7 @@ impl Twap {
         return (mean1, mean2);
     }
 
-    pub(crate) fn log_observation(&mut self, timestamp: u64, price1: u128, price2: u128) -> u64 {
+    pub fn log_observation(&mut self, timestamp: u64, price1: u128, price2: u128) -> u64 {
         // update current index
         if self.observations.len() == 0 {
             self.current_idx = self.initialize(timestamp, price1, price2);
@@ -286,8 +286,8 @@ impl Observation {
 mod tests {
     use super::*;
 
-    use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::{testing_env, BlockHeight, MockedBlockchain};
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
 
     fn init_blockchain() {
         let context = VMContextBuilder::new();
@@ -295,15 +295,14 @@ mod tests {
     }
 
     // returns twap with observation vector with timestamp [1, 2, 3, 4, 5, 6, 7, 9, 10]
-    fn setup_twap(timestamp: u64) -> Twap {
+    fn setup_twap() -> Twap {
         let max_length = 10;
         let mut twap: Twap = Twap::new(max_length);
-        let mut current_idx;
 
         // fill all places
         for i in 1..11 {
             let timestamp = i;
-            current_idx = twap.log_observation(timestamp, 1, 1);
+            twap.log_observation(timestamp, 1, 1);
         }
 
         return twap;
@@ -314,7 +313,7 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = Twap::new(10);
-        let current_idx = twap.log_observation(1, 1, 1);
+        twap.log_observation(1, 1, 1);
 
         assert!(twap.observations.len() == 1, "Mismatch");
         assert!(
@@ -332,10 +331,10 @@ mod tests {
         init_blockchain();
 
         let mut twap: Twap = Twap::new(10);
-        let mut current_idx = twap.log_observation(1, 1, 1);
+        twap.log_observation(1, 1, 1);
 
         let timestamp = 12;
-        current_idx = twap.log_observation(timestamp, 100, 2);
+        twap.log_observation(timestamp, 100, 2);
 
         assert!(twap.observations.len() == 2, "Length Mismatch");
         assert!(twap.observations.get(1).unwrap().num_of_observations == 2);
@@ -349,7 +348,7 @@ mod tests {
         );
 
         // write on same timestamp
-        current_idx = twap.log_observation(timestamp, 10, 10);
+        twap.log_observation(timestamp, 10, 10);
 
         // verify number of observations is 3 but observation length should be 2
         assert!(twap.observations.len() == 2, "length 2 Mismatch");
@@ -369,12 +368,13 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused_assignments)]
     fn overwrite_works() {
         init_blockchain();
 
         let mut twap: Twap = Twap::new(10);
         let mut current_idx;
-        let max_length = 10;
+
         // fill all places
         for i in 1..11 {
             let timestamp = i + 1;
@@ -417,8 +417,7 @@ mod tests {
     fn simple_binary_search_works() {
         init_blockchain();
 
-        let twap: Twap = setup_twap(1);
-        let max_length = 10;
+        let twap: Twap = setup_twap();
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         let mut returned_index = twap.binary_search(5);
@@ -436,7 +435,7 @@ mod tests {
     fn binary_edge_case_works() {
         init_blockchain();
 
-        let twap: Twap = setup_twap(1);
+        let twap: Twap = setup_twap();
         let max_length = 10;
 
         // current observation timestamp array [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -447,19 +446,18 @@ mod tests {
     fn pivoted_binary_search_works() {
         init_blockchain();
 
-        let mut twap: Twap = setup_twap(1);
-        let max_length = 10;
+        let mut twap: Twap = setup_twap();
 
         // current array [1, 2, 3, 4, 5, 6, 8, 9, 10]
         // add more value (that should overwrite last updated value)
-        let mut current_idx = twap.log_observation(13, 10, 10);
+        twap.log_observation(13, 10, 10);
 
         let mut result_index = twap.binary_search(11);
-        println!("SSS {} {}", result_index, current_idx);
+
         assert!(result_index == 0, "Wrong Index");
 
-        current_idx = twap.log_observation(20, 10, 10);
-        current_idx = twap.log_observation(21, 10, 10);
+        twap.log_observation(20, 10, 10);
+        twap.log_observation(21, 10, 10);
         // Updated array [13, 20, 21, 4, 5, 6, 7, 8, 9, 10]
 
         result_index = twap.binary_search(3);
@@ -499,7 +497,7 @@ mod tests {
         let timestamp = 1;
         let max_length = 10;
         let mut twap: Twap = Twap::new(max_length);
-        let mut current_idx = twap.log_observation(timestamp, 1, 1);
+        twap.log_observation(timestamp, 1, 1);
 
         let min_2_timestamp = timestamp + to_nanoseconds(120);
 
@@ -528,13 +526,13 @@ mod tests {
         let timestamp = 1;
         let max_length = 10;
         let mut twap: Twap = Twap::new(max_length);
-        let mut current_idx = twap.log_observation(timestamp, 1, 1);
+        twap.log_observation(timestamp, 1, 1);
 
         let min_2_timestamp = timestamp + to_nanoseconds(120);
 
         twap.log_observation(min_2_timestamp, 3, 3);
         // calculate mean for last 5 mins, though array starts from 1 min
-        let mut res = twap.calculate_mean(Mean::M5min);
+        let res = twap.calculate_mean(Mean::M5min);
 
         assert_eq!(3, res.0, "Wrong mean - 1");
         assert_eq!(3, res.1, "Wrong mean - 1");

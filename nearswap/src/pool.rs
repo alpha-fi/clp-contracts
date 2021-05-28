@@ -2,7 +2,7 @@
 // Copyright (C) 2020 Robert Zaremba and contributors
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, Vector};
+use near_sdk::collections::{LookupMap};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
@@ -155,6 +155,7 @@ impl Pool {
         let token_amount = (shares2 * u256::from(self.tokens) / total_shares2).as_u128();
         assert!(
             ynear >= min_ynear && token_amount >= min_tokens,
+            "{}",
             format!(
                 "E6: redeeming (ynear={}, tokens={}), which is smaller than the required minimum",
                 ynear, token_amount

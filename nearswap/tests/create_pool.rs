@@ -1,13 +1,7 @@
-use std::convert::TryFrom;
+use near_sdk::json_types::{U128};
+use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view};
 
-use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::AccountId;
-use near_sdk_sim::{call, deploy, init_simulator, to_yocto, view, ContractAccount, UserAccount};
-
-use near_sdk_sim::transaction::ExecutionStatus;
 use nearswap::{NearSwapContract, PoolInfo};
-use std::collections::HashMap;
-use sample_token::ContractContract as SampleToken;
 
 mod simulation_utils;
 use simulation_utils::*;
@@ -28,7 +22,7 @@ fn add_liquidity() {
         init_method: new(to_va("owner".to_string()))
     );
     let token1 = sample_token(&owner, dai(), vec![clp_contract()]);
-    let token2 = sample_token(&owner, eth(), vec![clp_contract()]);
+    let _token2 = sample_token(&owner, eth(), vec![clp_contract()]);
     call!(
         owner,
         nearswap.extend_whitelisted_tokens(vec![to_va(dai()), to_va(eth())])

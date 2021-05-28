@@ -21,7 +21,6 @@ pub mod types;
 pub mod util;
 mod view;
 
-use crate::constants::*;
 use crate::deposit::*;
 use crate::errors::*;
 pub use crate::pool::*;
@@ -204,6 +203,7 @@ impl NearSwap {
         let current_shares = p.shares.get(&caller).unwrap_or(0);
         assert!(
             current_shares >= shares,
+            "{}",
             format!(
                 "E5: can't withdraw more shares then currently owned ({})",
                 current_shares
@@ -246,7 +246,7 @@ impl NearSwap {
         assert_one_yocto();
         let ynear: u128 = ynear_in.into();
         let min_tokens: u128 = min_tokens.into();
-        assert!(ynear > 0 && min_tokens > 0, ERR02_POSITIVE_ARGS);
+        assert!(ynear > 0 && min_tokens > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let (mut p, tokens_out) = self._price_n2t_in(&token, ynear);
         assert_min_buy(tokens_out, min_tokens);
@@ -271,7 +271,7 @@ impl NearSwap {
         assert_one_yocto();
         let tokens_paid: u128 = tokens_paid.into();
         let min_ynear: u128 = min_ynear.into();
-        assert!(tokens_paid > 0 && min_ynear > 0, ERR02_POSITIVE_ARGS);
+        assert!(tokens_paid > 0 && min_ynear > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let mut p = self.get_pool(&token);
         let (near_out, _) = self.calc_out_with_fee(tokens_paid, p.tokens, p.ynear);
@@ -300,7 +300,7 @@ impl NearSwap {
         assert_one_yocto();
         let tokens_in: u128 = tokens_in.into();
         let min_tokens_out: u128 = min_tokens_out.into();
-        assert!(min_tokens_out > 0 && tokens_in > 0, ERR02_POSITIVE_ARGS);
+        assert!(min_tokens_out > 0 && tokens_in > 0, "{}", ERR02_POSITIVE_ARGS);
 
         let mut p1 = self.get_pool(&token_in);
         let mut p2 = self.get_pool(&token_out);
@@ -467,6 +467,7 @@ mod tests {
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
     use near_sdk_sim::to_yocto;
     use std::convert::{TryFrom, TryInto};
+    use crate::constants::*;
 
     struct Accounts {
         current: AccountId,
@@ -518,11 +519,6 @@ mod tests {
                 accounts: accounts,
                 vm: vm,
             };
-        }
-
-        pub fn set_deposit(&mut self, attached_deposit: Balance) {
-            self.vm.attached_deposit = attached_deposit;
-            testing_env!(self.vm.clone());
         }
     }
 
@@ -584,7 +580,7 @@ mod tests {
         let a = ctx.accounts.predecessor.clone();
         // Add to nearswap whitelist
         c.extend_whitelisted_tokens(vec![to_va("token1".into()), to_va("token2".into())]);
-        let mut d = account_deposit();
+        let d = account_deposit();
         c.deposits.insert(&a, &d.into());
 
         // deposit should not work
@@ -598,7 +594,7 @@ mod tests {
         let (ctx, mut c) = init_with_owner();
         let a = ctx.accounts.predecessor.clone();
 
-        let mut d = account_deposit();
+        let d = account_deposit();
         c.deposits.insert(&a, &d.into());
 
         // deposit should not work
@@ -629,7 +625,7 @@ mod tests {
         let mut d = account_deposit();
         d.add_to_whitelist(&vec![to_va("token1".into()), to_va("token2".into())]);
 
-        d.remove_from_whitelist(&"token1".into());
+        d.remove_from_whitelist(&to_va("token1".into()));
         c.deposits.insert(&a, &d.into());
 
         c.deposit_token(&a.clone(), &"token1".into(), 10);
@@ -713,7 +709,7 @@ mod tests {
         let token_deposit = 1 * NDENOM;
 
         // attached_near is 1 yocto
-        let (mut ctx, mut c) = _init(1);
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -896,7 +892,7 @@ mod tests {
         let token_deposit = 10 * NDENOM;
 
         // attached_near is 1 yocto
-        let (mut ctx, mut c) = _init(1);
+        let (ctx, mut c) = _init(1);
         let t = ctx.accounts.token1.clone();
         let a = ctx.accounts.predecessor.clone();
 
@@ -1049,7 +1045,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E6: redeeming"#)]
     fn withdraw_happy_path_failure_1() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares_bal = 12 * NDENOM;
         let amount = shares_bal / 3;
@@ -1061,7 +1057,7 @@ mod tests {
     #[test]
     #[should_panic(expected = r#"E6: redeeming"#)]
     fn withdraw_happy_path_failure_2() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares_bal = 12 * NDENOM;
         let amount = shares_bal / 3;
@@ -1073,7 +1069,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "E5: can't withdraw more shares then currently owned")]
     fn withdraw_happy_path_failure_3() {
-        let (mut t, mut c) = prepare_for_withdraw();
+        let (t, mut c) = prepare_for_withdraw();
 
         let shares = 24 * NDENOM;
         let min_near = U128::from(1);
@@ -1211,11 +1207,12 @@ mod tests {
         assert!(x > y, "Tokens output incorrect");
     }
 
+    #[allow(non_snake_case)]
     fn expected_calc_price_fee(amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         let x = u256::from(amount - (amount * 3) / 1000);
         let X = u256::from(in_bal);
-        let numerator = (x * u256::from(out_bal) * X);
-        let mut denominator = (x + X);
+        let numerator = x * u256::from(out_bal) * X;
+        let mut denominator = x + X;
         denominator *= denominator;
         return (numerator / denominator).as_u128();
     }
@@ -1277,6 +1274,7 @@ mod tests {
         let diff = if a1 > a2 { a1 - a2 } else { a2 - a1 };
         assert!(
             diff <= margin,
+            "{}",
             format!(
                 "Expect to be close (margin={}):\n  left: {}\n right: {}\n  diff: {}\n",
                 margin, a1, a2, diff

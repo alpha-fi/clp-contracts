@@ -69,7 +69,7 @@ impl StorageManagement for NearSwap {
         // storage available
         let available = account_deposit.ynear - account_deposit.storage_usage();
         let amount = if let Some(a) = amount { a.0 } else { available };
-        assert!(amount <= available, ERR14_NOT_ENOUGH_NEAR_DEPOSITED);
+        assert!(amount <= available, "{}", ERR14_NOT_ENOUGH_NEAR_DEPOSITED);
         Promise::new(account_id.clone()).transfer(amount);
         self.storage_balance_of(account_id.try_into().unwrap())
             .unwrap()
@@ -171,6 +171,6 @@ mod tests {
         )
         .is_none();
 
-        assert!(result, true);
+        assert!(result, "{}", true);
     }
 }

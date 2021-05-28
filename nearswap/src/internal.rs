@@ -27,6 +27,7 @@ impl NearSwap {
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
     /// in the pool is `in_bal` and `out_bal` of paid tokens and buying tokens respectively.
     #[inline]
+    #[allow(non_snake_case)]
     pub(crate) fn calc_out_amount(&self, in_amount: u128, in_bal: u128, out_bal: u128) -> u128 {
         // formula: y = (x * Y * X) / (x + X)^2
         let x = u256::from(in_amount);
@@ -40,6 +41,7 @@ impl NearSwap {
     }
 
     /// returns swap out amount and fee.
+    #[allow(non_snake_case)]
     pub(crate) fn calc_out_with_fee(&self, mut x: u128, X: u128, Y: u128) -> (u128, u128) {
         if x == 0 {
             return (0, 0);
@@ -88,8 +90,8 @@ impl NearSwap {
         let out_bal = p.tokens;
         let in_amount = ynear_in;
 
-        let (out_amount, fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
-        assert!(out_amount >= min_tokens_out, ERR25_MIN_AMOUNT);
+        let (out_amount, _fee) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
+        assert!(out_amount >= min_tokens_out, "{}", ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} for {} yNEAR",
             out_amount, token, ynear_in
@@ -124,7 +126,7 @@ impl NearSwap {
         let in_amount = token_in;
 
         let (out_amount, _) = self.calc_out_with_fee(in_amount, in_bal, out_bal);
-        assert!(out_amount >= min_ynear_out, ERR25_MIN_AMOUNT);
+        assert!(out_amount >= min_ynear_out, "{}", ERR25_MIN_AMOUNT);
         println!(
             "User {} purchased {} NEAR tokens for {} tokens",
             user, out_amount, token_in
@@ -157,7 +159,7 @@ impl NearSwap {
         let (swap_amount, _) = self.calc_out_with_fee(token1_in, p1.tokens, p1.ynear);
         let (out, _) = self.calc_out_with_fee(swap_amount, p2.ynear, p2.tokens);
 
-        assert!(out >= min_token2_out, ERR25_MIN_AMOUNT);
+        assert!(out >= min_token2_out, "{}", ERR25_MIN_AMOUNT);
         println!(
             "User purchased {} {} tokens for {} {} tokens",
             out, token2, token1_in, token1,
@@ -197,7 +199,7 @@ impl NearSwap {
         assert!(amount_u > 0, "E2: amount must be >0");
         let mut p = self.get_pool(&token);
         let shares = p.shares.get(&sender).unwrap_or(0);
-        assert!(shares >= amount_u, ERR11_NOT_ENOUGH_SHARES);
+        assert!(shares >= amount_u, "{}", ERR11_NOT_ENOUGH_SHARES);
         p.shares.insert(&sender, &(shares - amount_u));
         p.shares.insert(
             &recipient,
@@ -225,6 +227,7 @@ impl NearSwap {
 pub(crate) fn assert_min_buy(to_buy: u128, min: u128) {
     assert!(
         to_buy >= min,
+        "{}",
         format!(
             "E7: buying {} tokens is smaller than required minimum",
             to_buy

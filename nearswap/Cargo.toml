@@ -18,4 +18,4 @@ near-contract-standards = "3.1.0"
 [dev-dependencies]
 #near-primitives = { git = "https://github.com/nearprotocol/nearcore.git" }
 near-sdk-sim = "3.1.0"
-sample-token = {path = "../sample-token"}
+sample-token = {path = "../other-contracts/sample-token"}

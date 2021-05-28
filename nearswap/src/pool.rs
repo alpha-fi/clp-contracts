@@ -76,7 +76,6 @@ impl Pool {
         }
     }
 
-    // TODO: Add unit tests: empty pool, existing pool
     /**
     Rebalances the pool by assigning new liquidity. It doesn't perform any transfer.
     Liquidiyt must come from the contract deposits.
@@ -168,5 +167,110 @@ impl Pool {
         self.ynear -= ynear;
 
         return (ynear, token_amount);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
+
+    fn setup_pool() -> Pool {
+        let token = "eth".to_string();
+        return Pool::new(token.as_bytes().to_vec());
+    }
+
+    fn expected_added_liquidity(
+        ynear: u128, max_tokens: u128, pool: &Pool
+    ) -> (u128, u128, u128) {
+        let ynear_256 = u256::from(ynear);
+        let p_ynear_256 = u256::from(pool.ynear);
+        let mut added_tokens = (ynear_256 * u256::from(pool.tokens) / p_ynear_256 + 1).as_u128();
+        let shares_minted;
+        let added_near;
+
+        // Adjust near according to max_tokens
+        if max_tokens < added_tokens {
+            added_near = ((u256::from(max_tokens) * p_ynear_256) / u256::from(pool.tokens) + 1)
+                .as_u128();
+            added_tokens = max_tokens;
+            shares_minted = (u256::from(added_near) * u256::from(pool.total_shares)
+                / p_ynear_256)
+                .as_u128();
+        } else {
+            added_near = ynear;
+            shares_minted = (ynear_256 * u256::from(pool.total_shares) / p_ynear_256).as_u128();
+        }
+        return (added_near, added_tokens, shares_minted);
+    }
+
+    fn expected_withdraw(shares: u128, pool: &Pool) -> (u128, u128) {
+        let total_shares2 = u256::from(pool.total_shares);
+        let shares2 = u256::from(shares);
+        let ynear = (shares2 * u256::from(pool.ynear) / total_shares2).as_u128();
+        let token_amount = (shares2 * u256::from(pool.tokens) / total_shares2).as_u128();
+        return(ynear, token_amount);
+    }
+
+    // Empty pool
+    #[test]
+    fn new_pool() {
+        let pool: Pool = setup_pool();
+
+        assert!(pool.ynear == 0, "Pool is not empty");
+        assert!(pool.tokens == 0, "Pool is not empty");
+        assert!(pool.total_shares == 0, "Pool is not empty");
+    }
+
+    // Existing pool
+    #[test]
+    fn add_liquidity_pool() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        assert!(pool.ynear == 100, "liquidity added is incorrect");
+        assert!(pool.tokens == 200, "liquidity added is incorrect");
+        assert!(pool.total_shares == 100, "liquidity added is incorrect");
+
+        let (near_before, tokens_before, shares_before) = (pool.ynear, pool.tokens, pool.total_shares);
+        let (near, tokens, shares) = expected_added_liquidity(200, 400, &pool);
+        
+        // add liquidity again
+        pool.add_liquidity(&caller, 200, 400, 0);
+
+        assert!(near_before + near == pool.ynear, "liquidity added is incorrect");
+        assert!(tokens_before + tokens == pool.tokens, "liquidity added is incorrect");
+        assert!(shares_before + shares == pool.total_shares, "liquidity added is incorrect");
+    }
+
+    #[test]
+    fn withdraw_liquidity_pool() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let (near_before, tokens_before, shares_before) = (pool.ynear, pool.tokens, pool.total_shares);
+        let (expected_near, expected_tokens) = expected_withdraw(50, &pool);
+
+        pool.withdraw_liquidity(&caller, 0, 0, 50);
+
+        // withdraw shares
+        assert!(pool.ynear == near_before - expected_near, "liquidity removed is incorrect");
+        assert!(pool.tokens == tokens_before - expected_tokens, "liquidity removed is incorrect");
+        assert!(pool.total_shares == shares_before - 50, "liquidity removed is incorrect");
     }
 }

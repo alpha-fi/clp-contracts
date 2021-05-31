@@ -257,6 +257,7 @@ mod tests {
         let (near_added2, tokens_added2, shares_minted2) = pool.add_liquidity(&caller, 100, 100, 0);
 
         assert!(near_added2 == expected_near2, "liquidity added is incorrect");
+        assert!(near_added2 == 100, "liquidity added is incorrect");
         assert!(tokens_added2 == expected_tokens2, "liquidity added is incorrect");
         assert!(shares_minted2 == expected_shares2, "liquidity added is incorrect");
     }

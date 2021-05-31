@@ -243,15 +243,22 @@ mod tests {
         assert!(pool.tokens == 200, "liquidity added is incorrect");
         assert!(pool.total_shares == 100, "liquidity added is incorrect");
 
-        let (near_before, tokens_before, shares_before) = (pool.ynear, pool.tokens, pool.total_shares);
-        let (near, tokens, shares) = expected_added_liquidity(200, 400, &pool);
+        let (expected_near, expected_tokens, expected_shares) = expected_added_liquidity(200, 400, &pool);
         
         // add liquidity again
-        pool.add_liquidity(&caller, 200, 400, 0);
+        let (near_added, tokens_added, shares_minted) = pool.add_liquidity(&caller, 200, 400, 0);
 
-        assert!(near_before + near == pool.ynear, "liquidity added is incorrect");
-        assert!(tokens_before + tokens == pool.tokens, "liquidity added is incorrect");
-        assert!(shares_before + shares == pool.total_shares, "liquidity added is incorrect");
+        assert!(near_added == expected_near, "liquidity added is incorrect");
+        assert!(tokens_added == expected_tokens, "liquidity added is incorrect");
+        assert!(shares_minted == expected_shares, "liquidity added is incorrect");
+
+        let (expected_near2, expected_tokens2, expected_shares2) = expected_added_liquidity(100, 100, &pool);
+        // add liquidity again with ratio 1:1(100:100)
+        let (near_added2, tokens_added2, shares_minted2) = pool.add_liquidity(&caller, 100, 100, 0);
+
+        assert!(near_added2 == expected_near2, "liquidity added is incorrect");
+        assert!(tokens_added2 == expected_tokens2, "liquidity added is incorrect");
+        assert!(shares_minted2 == expected_shares2, "liquidity added is incorrect");
     }
 
     #[test]

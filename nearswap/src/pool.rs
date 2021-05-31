@@ -280,4 +280,33 @@ mod tests {
         assert!(pool.tokens == tokens_before - expected_tokens, "liquidity removed is incorrect");
         assert!(pool.total_shares == shares_before - 50, "liquidity removed is incorrect");
     }
+
+    #[test]
+    #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    fn withdraw_liquidity_pool_fail_scenario_1() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        // tries to withdraw more liquidity than deposited
+        pool.withdraw_liquidity(&caller, 0, 0, 400);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    fn withdraw_liquidity_pool_fail_scenario_2() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let fake_caller = "fakecaller".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        // tries to withdraw liquidity by fakeCaller
+        pool.withdraw_liquidity(&fake_caller, 0, 0, 50);
+    }
 }

@@ -262,6 +262,40 @@ mod tests {
     }
 
     #[test]
+    fn withdraw_liquidity_with_min() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let min_ynear = 50;
+        let min_tokens = 100;
+        // withdraw liquidity with min required shares
+        let (ynear, token) = pool.withdraw_liquidity(&caller, min_ynear, min_tokens, 50);
+
+        assert!(ynear >= min_ynear, "Incorrect liquidity withdrawn");
+        assert!(token >= min_tokens, "Incorrect liquidity withdrawn");
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming (ynear=50, tokens=100), which is smaller than the required minimum"#)]
+    fn withdraw_liquidity_with_min_fail() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let min_ynear = 55;
+        let min_tokens = 100;
+        // withdraw liquidity with min required shares
+        pool.withdraw_liquidity(&caller, min_ynear, min_tokens, 50);
+    }
+
+    #[test]
     fn withdraw_liquidity_pool() {
         init_blockchain();
 

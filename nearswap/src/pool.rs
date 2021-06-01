@@ -257,12 +257,15 @@ mod tests {
         let (near_added2, tokens_added2, shares_minted2) = pool.add_liquidity(&caller, 100, 100, 0);
 
         assert!(near_added2 == expected_near2, "liquidity added is incorrect");
-        assert!(near_added2 == 100, "liquidity added is incorrect");
+        // adjusted near because pool ratio is 1:2
+        assert_eq!(near_added2, 51, "liquidity added is incorrect");
         assert!(tokens_added2 == expected_tokens2, "liquidity added is incorrect");
         assert!(shares_minted2 == expected_shares2, "liquidity added is incorrect");
     }
 
     #[test]
+    // In this scenario we are withdrawing liquidity
+    // with the conditions of min shares
     fn withdraw_liquidity_with_min() {
         init_blockchain();
 
@@ -318,6 +321,8 @@ mod tests {
 
     #[test]
     #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    // In this scenario liquidity provider tries to withdraw more liquidity
+    // than he has submitted
     fn withdraw_liquidity_pool_fail_scenario_1() {
         init_blockchain();
 
@@ -332,6 +337,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    // In this scenario non-liquidity provider tries to withdraw liquidity
     fn withdraw_liquidity_pool_fail_scenario_2() {
         init_blockchain();
 

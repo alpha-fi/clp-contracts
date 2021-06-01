@@ -76,7 +76,6 @@ impl Pool {
         }
     }
 
-    // TODO: Add unit tests: empty pool, existing pool
     /**
     Rebalances the pool by assigning new liquidity. It doesn't perform any transfer.
     Liquidiyt must come from the contract deposits.
@@ -168,5 +167,187 @@ impl Pool {
         self.ynear -= ynear;
 
         return (ynear, token_amount);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use near_sdk::test_utils::{VMContextBuilder};
+    use near_sdk::{testing_env, MockedBlockchain};
+
+    fn init_blockchain() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+    }
+
+    fn setup_pool() -> Pool {
+        let token = "eth".to_string();
+        return Pool::new(token.as_bytes().to_vec());
+    }
+
+    fn expected_added_liquidity(
+        ynear: u128, max_tokens: u128, pool: &Pool
+    ) -> (u128, u128, u128) {
+        let ynear_256 = u256::from(ynear);
+        let p_ynear_256 = u256::from(pool.ynear);
+        let mut added_tokens = (ynear_256 * u256::from(pool.tokens) / p_ynear_256 + 1).as_u128();
+        let shares_minted;
+        let added_near;
+
+        // Adjust near according to max_tokens
+        if max_tokens < added_tokens {
+            added_near = ((u256::from(max_tokens) * p_ynear_256) / u256::from(pool.tokens) + 1)
+                .as_u128();
+            added_tokens = max_tokens;
+            shares_minted = (u256::from(added_near) * u256::from(pool.total_shares)
+                / p_ynear_256)
+                .as_u128();
+        } else {
+            added_near = ynear;
+            shares_minted = (ynear_256 * u256::from(pool.total_shares) / p_ynear_256).as_u128();
+        }
+        return (added_near, added_tokens, shares_minted);
+    }
+
+    fn expected_withdraw(shares: u128, pool: &Pool) -> (u128, u128) {
+        let total_shares2 = u256::from(pool.total_shares);
+        let shares2 = u256::from(shares);
+        let ynear = (shares2 * u256::from(pool.ynear) / total_shares2).as_u128();
+        let token_amount = (shares2 * u256::from(pool.tokens) / total_shares2).as_u128();
+        return(ynear, token_amount);
+    }
+
+    // Empty pool
+    #[test]
+    fn new_pool() {
+        let pool: Pool = setup_pool();
+
+        assert!(pool.ynear == 0, "Pool is not empty");
+        assert!(pool.tokens == 0, "Pool is not empty");
+        assert!(pool.total_shares == 0, "Pool is not empty");
+    }
+
+    // Existing pool
+    #[test]
+    fn add_liquidity_pool() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        assert!(pool.ynear == 100, "liquidity added is incorrect");
+        assert!(pool.tokens == 200, "liquidity added is incorrect");
+        assert!(pool.total_shares == 100, "liquidity added is incorrect");
+
+        let (expected_near, expected_tokens, expected_shares) = expected_added_liquidity(200, 400, &pool);
+        
+        // add liquidity again
+        let (near_added, tokens_added, shares_minted) = pool.add_liquidity(&caller, 200, 400, 0);
+
+        assert!(near_added == expected_near, "liquidity added is incorrect");
+        assert!(tokens_added == expected_tokens, "liquidity added is incorrect");
+        assert!(shares_minted == expected_shares, "liquidity added is incorrect");
+
+        let (expected_near2, expected_tokens2, expected_shares2) = expected_added_liquidity(100, 100, &pool);
+        // add liquidity again with ratio 1:1(100:100)
+        let (near_added2, tokens_added2, shares_minted2) = pool.add_liquidity(&caller, 100, 100, 0);
+
+        assert!(near_added2 == expected_near2, "liquidity added is incorrect");
+        // adjusted near because pool ratio is 1:2
+        assert_eq!(near_added2, 51, "liquidity added is incorrect");
+        assert!(tokens_added2 == expected_tokens2, "liquidity added is incorrect");
+        assert!(shares_minted2 == expected_shares2, "liquidity added is incorrect");
+    }
+
+    #[test]
+    // In this scenario we are withdrawing liquidity
+    // with the conditions of min shares
+    fn withdraw_liquidity_with_min() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let min_ynear = 50;
+        let min_tokens = 100;
+        // withdraw liquidity with min required shares
+        let (ynear, token) = pool.withdraw_liquidity(&caller, min_ynear, min_tokens, 50);
+
+        assert!(ynear >= min_ynear, "Incorrect liquidity withdrawn");
+        assert!(token >= min_tokens, "Incorrect liquidity withdrawn");
+    }
+
+    #[test]
+    #[should_panic(expected = r#"E6: redeeming (ynear=50, tokens=100), which is smaller than the required minimum"#)]
+    fn withdraw_liquidity_with_min_fail() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let min_ynear = 55;
+        let min_tokens = 100;
+        // withdraw liquidity with min required shares
+        pool.withdraw_liquidity(&caller, min_ynear, min_tokens, 50);
+    }
+
+    #[test]
+    fn withdraw_liquidity_pool() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        let (near_before, tokens_before, shares_before) = (pool.ynear, pool.tokens, pool.total_shares);
+        let (expected_near, expected_tokens) = expected_withdraw(50, &pool);
+
+        pool.withdraw_liquidity(&caller, 0, 0, 50);
+
+        // withdraw shares
+        assert!(pool.ynear == near_before - expected_near, "liquidity removed is incorrect");
+        assert!(pool.tokens == tokens_before - expected_tokens, "liquidity removed is incorrect");
+        assert!(pool.total_shares == shares_before - 50, "liquidity removed is incorrect");
+    }
+
+    #[test]
+    #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    // In this scenario liquidity provider tries to withdraw more liquidity
+    // than he has submitted
+    fn withdraw_liquidity_pool_fail_scenario_1() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        // tries to withdraw more liquidity than deposited
+        pool.withdraw_liquidity(&caller, 0, 0, 400);
+    }
+
+    #[test]
+    #[should_panic(expected = r#"attempt to subtract with overflow"#)]
+    // In this scenario non-liquidity provider tries to withdraw liquidity
+    fn withdraw_liquidity_pool_fail_scenario_2() {
+        init_blockchain();
+
+        let caller = "account".to_string();
+        let fake_caller = "fakecaller".to_string();
+        let mut pool: Pool = setup_pool();
+
+        pool.add_liquidity(&caller, 100, 200, 0);
+
+        // tries to withdraw liquidity by fakeCaller
+        pool.withdraw_liquidity(&fake_caller, 0, 0, 50);
     }
 }

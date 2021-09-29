@@ -44,9 +44,14 @@ pub enum Pool {
 }
 
 impl Pool {
-    fn unpack(self) -> PoolV1 {
+    pub fn unpack(self) -> PoolV1 {
         match self {
             Pool::V1(a) => a,
+        }
+    }
+    pub fn ynear(self) -> u128 {
+        match self {
+            Pool::V1(a) => a.ynear,
         }
     }
 }
@@ -77,6 +82,11 @@ impl PoolV1 {
             total_shares: 0,
             twap: Twap::new(65535),
         }
+    }
+
+    // TODO: remove
+    pub fn pack(self) -> Pool {
+        Pool::V1(self)
     }
 
     pub fn pool_info(&self) -> PoolInfo {

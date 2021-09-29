@@ -378,7 +378,7 @@ impl NearSwap {
     pub fn total_supply(&self, token: AccountId) -> U128 {
         match self.pools.get(&token) {
             None => 0.into(),
-            Some(p) => p.total_shares.into(),
+            Some(p) => p.unpack().total_shares.into(),
         }
     }
 
@@ -445,13 +445,14 @@ impl NearSwap {
     pub fn remove_pool(&mut self, token: AccountId) {
         self.assert_owner();
         if let Some(p) = self.pools.remove(&token) {
+            let ynear = p.ynear();
             env_log!(
                 "killing {} pool and transferring {} to {}",
                 token,
-                p.ynear,
+                ynear,
                 &self.owner,
             );
-            Promise::new(self.owner.to_string()).transfer(p.ynear);
+            Promise::new(self.owner.to_string()).transfer(ynear);
         }
     }
 }

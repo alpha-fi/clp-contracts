@@ -17,11 +17,12 @@ impl NearSwap {
         self.pools
             .get(token)
             .expect("Pool for this token doesn't exist")
+            .unpack()
     }
 
     #[inline]
     pub(crate) fn set_pool(&mut self, ref token: &AccountId, pool: &PoolV1) {
-        self.pools.insert(token, pool.into());
+        self.pools.insert(token, &pool.pack());
     }
 
     /// Calculates amout of tokens a user buys for `in_amount` tokens, when a total balance
@@ -137,7 +138,7 @@ impl NearSwap {
         d.remove(token, in_amount);
         d.ynear += out_amount;
 
-        self.set_pool(&token, p);
+        self.set_pool(token, p);
         self.deposits.insert(&user, &d.into());
         out_amount
     }

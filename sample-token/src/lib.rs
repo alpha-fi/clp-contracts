@@ -4,7 +4,7 @@ use near_contract_standards::fungible_token::metadata::{
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::{near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, env};
+use near_sdk::{env, log, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue};
 
 near_sdk::setup_alloc!();
 
@@ -23,13 +23,18 @@ impl Contract {
         }
     }
 
-    pub fn mint(&mut self, account_id: ValidAccountId, amount: U128) {
-        self.token.internal_register_account(account_id.as_ref());
-        self.token
-            .internal_deposit(account_id.as_ref(), amount.into());
+    pub fn ft_mint(&mut self, receiver_id: ValidAccountId, amount: U128, memo: Option<String>) {
+        log!(
+            "minting {} tokens to {}, memo: {}",
+            amount.0,
+            receiver_id,
+            memo.unwrap_or_default()
+        );
+        self.token.internal_register_account(receiver_id.as_ref());
+        self.token.internal_deposit(receiver_id.as_ref(), amount.0);
     }
 
-    pub fn burn(&mut self, account_id: ValidAccountId, amount: U128) {
+    pub fn ft_burn(&mut self, account_id: ValidAccountId, amount: U128) {
         self.token
             .internal_withdraw(account_id.as_ref(), amount.into());
     }

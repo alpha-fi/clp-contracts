@@ -30,7 +30,10 @@ impl Contract {
             receiver_id,
             memo.unwrap_or_default()
         );
-        self.token.internal_register_account(receiver_id.as_ref());
+        let a = receiver_id.as_ref();
+        if !self.token.accounts.contains_key(a) {
+            self.token.internal_register_account(a);
+        }
         self.token.internal_deposit(receiver_id.as_ref(), amount.0);
     }
 

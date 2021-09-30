@@ -49,7 +49,15 @@ near_contract_standards::impl_fungible_token_storage!(Contract, token);
 #[near_bindgen]
 impl FungibleTokenMetadataProvider for Contract {
     fn ft_metadata(&self) -> FungibleTokenMetadata {
-        unimplemented!()
+        FungibleTokenMetadata {
+            spec: "v0.1.0".to_string(),
+            name: "test token".to_string(),
+            symbol: "afi-tt".to_string(),
+            icon: None,
+            reference: None,
+            reference_hash: None,
+            decimals: 24,
+        }
     }
 }
 
